@@ -52,3 +52,20 @@ test('preserves partially edited drafts but validates reusable product names and
   state.products=[{id:crypto.randomUUID(),name:'',size:'',price:'',photo:''}];assert.throws(()=>validateWorkspace(state));
   const bad=sample();bad.draft.format='square';assert.throws(()=>validateWorkspace(bad));
 });
+test('supports twelve retail offers and preserves the three-offer limit for older posters',async()=>{
+  const state=sample();state.draft.items=Array.from({length:12},(_,i)=>({...state.draft.items[0],name:'Offer '+(i+1)}));
+  assert.throws(()=>validateWorkspace(state));
+  state.draft.template='retail';state.draft.theme='red';assert.deepEqual(validateWorkspace(state),state);
+  const env=environment();assert.equal((await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision:0,data:state}}),env)).status,200);
+  assert.deepEqual((await (await worker.fetch(request('/api/workspace'),env)).json()).data,state);
+  state.draft.items.push({...state.draft.items[0]});assert.throws(()=>validateWorkspace(state));
+  state.draft.items=state.draft.items.slice(0,3);state.draft.template='unknown';assert.throws(()=>validateWorkspace(state));env.sql.close();
+});
+test('saves a shop logo and refuses another account’s logo',async()=>{
+  const env=environment(),image=new Uint8Array([255,216,255,224,0,16,255,217]);
+  const uploaded=await worker.fetch(request('/api/photos',{method:'POST',body:image,headers:{'content-type':'image/jpeg'}}),env);const {id}=await uploaded.json();
+  const state=sample();state.shop.logo=id;
+  assert.equal((await worker.fetch(request('/api/workspace',{owner:'bob',method:'PUT',body:{revision:0,data:state}}),env)).status,400);
+  assert.equal((await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision:0,data:state}}),env)).status,200);
+  assert.equal((await (await worker.fetch(request('/api/workspace'),env)).json()).data.shop.logo,id);env.sql.close();
+});

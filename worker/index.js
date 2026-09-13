@@ -16,12 +16,17 @@ function item(value) {
 export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
-  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 3 || !['green','blue','orange'].includes(d.theme) || !['poster','status'].includes(d.format)) throw fail('Choose a valid poster layout and up to three products.');
+  const template = d.template ?? 'simple';
+  if (!['simple','retail'].includes(template)) throw fail('Choose a poster template.');
+  const maxItems = template === 'retail' ? 12 : 3;
+  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > maxItems || !['green','blue','orange','red'].includes(d.theme) || !['poster','status'].includes(d.format)) throw fail('Choose a valid layout. Retail flyers hold up to 12 products; simple posters hold up to 3.');
+  const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
+  if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');
   const date = text(d.date,10,'the offer date');
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail('Check the offer date.');
   const seen = new Set();
   const products = data.products.map(p => { const id = text(p.id,36,'the saved product'); if (!/^[0-9a-f-]{36}$/.test(id) || seen.has(id)) throw fail('Invalid saved product.'); seen.add(id); const v = item(p); if (!v.name) throw fail('Give your saved product a name.'); return {id,...v}; });
-  return {shop:{name:text(data.shop.name,50,'the shop name'),phone:text(data.shop.phone,24,'the phone number'),location:text(data.shop.location,60,'the location')},products,draft:{headline:text(d.headline,45,'the headline'),date,theme:d.theme,format:d.format,items:d.items.map(item)}};
+  return {shop:{name:text(data.shop.name,50,'the shop name'),phone:text(data.shop.phone,24,'the phone number'),location:text(data.shop.location,60,'the location'),...(data.shop.logo!==undefined?{logo}:{})},products,draft:{headline:text(d.headline,45,'the headline'),date,theme:d.theme,format:d.format,...(d.template!==undefined?{template}:{}),items:d.items.map(item)}};
 }
 async function readLimited(request, limit) {
   if (Number(request.headers.get('content-length')) > limit) throw fail('This file or form is too large.',413);
@@ -46,7 +51,7 @@ async function handleAPI(request,env,url) {
     let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,MAX_BODY)));}catch(e){if(e.status)throw e;throw fail('Could not read these changes.');}
     if(!Number.isInteger(body.revision)||body.revision<0)throw fail('Reload your saved workspace before saving.');
     const data=validateWorkspace(body.data);
-    const photoIds=[...new Set([...data.products,...data.draft.items].map(i=>i.photo).filter(Boolean))];
+    const photoIds=[...new Set([...data.products,...data.draft.items,{photo:data.shop.logo}].map(i=>i.photo).filter(Boolean))];
     if(photoIds.length){const rows=await database.prepare('SELECT id FROM product_photos WHERE owner = ?').bind(owner).all();const owned=new Set(rows.results.map(r=>r.id));if(photoIds.some(id=>!owned.has(id)))throw fail('A product photo could not be found in your account. Add it again.',400);}
     const revision=body.revision;
     const row=await database.prepare('INSERT INTO poster_workspaces (owner,data,revision,updated_at) SELECT ?, ?, 1, ? WHERE ? = 0 OR EXISTS (SELECT 1 FROM poster_workspaces WHERE owner = ?) ON CONFLICT(owner) DO UPDATE SET data = excluded.data, revision = poster_workspaces.revision + 1, updated_at = excluded.updated_at WHERE poster_workspaces.revision = ? RETURNING revision').bind(owner,JSON.stringify(data),new Date().toISOString(),revision,owner,revision).first();
