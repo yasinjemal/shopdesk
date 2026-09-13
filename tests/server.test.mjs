@@ -69,3 +69,15 @@ test('saves a shop logo and refuses another account’s logo',async()=>{
   assert.equal((await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision:0,data:state}}),env)).status,200);
   assert.equal((await (await worker.fetch(request('/api/workspace'),env)).json()).data.shop.logo,id);env.sql.close();
 });
+test('round-trips both new flyer designs and their optional finishing preferences',async()=>{
+  const env=environment();let revision=0;
+  for(const template of ['bold','market']){
+    const state=sample();state.draft.template=template;state.draft.trimPhotos=true;state.draft.cleanNames=false;
+    state.draft.items=Array.from({length:12},()=>({...state.draft.items[0]}));
+    assert.equal((await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision,data:state}}),env)).status,200);revision++;
+    assert.deepEqual((await (await worker.fetch(request('/api/workspace'),env)).json()).data,state);
+    state.draft.items.push({...state.draft.items[0]});assert.throws(()=>validateWorkspace(state));
+    state.draft.items.pop();state.draft.trimPhotos='yes';assert.throws(()=>validateWorkspace(state));
+  }
+  env.sql.close();
+});
