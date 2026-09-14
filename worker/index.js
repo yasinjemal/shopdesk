@@ -17,9 +17,13 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio'].includes(template)) throw fail('Choose a poster template.');
-  const maxItems = template === 'simple' ? 3 : 12;
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature'].includes(template)) throw fail('Choose a poster template.');
+  const maxItems = template === 'simple' ? 3 : 25;
   const finishing={};
+  if(d.itemCount!==undefined){
+    if(!Number.isInteger(d.itemCount)||d.itemCount<1||d.itemCount>25||!Array.isArray(d.items)||d.itemCount>d.items.length)throw fail('Choose between 1 and 25 items.');
+    finishing.itemCount=d.itemCount;
+  }
   if(d.purpose!==undefined){if(!['offers','spotlight','event','opening'].includes(d.purpose))throw fail('Choose a flyer purpose.');finishing.purpose=d.purpose;}
   for(const [key,max] of [['details',180],['eventDate',10],['eventTime',40],['venue',80],['heroPhoto',36]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the project details');
   if(finishing.eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.eventDate))throw fail('Check the event date.');
@@ -27,7 +31,7 @@ export function validateWorkspace(data) {
   for(const key of ['trimPhotos','cleanNames','showDate'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
   if(d.business!==undefined){if(!['grocery','fashion','food','beauty','services','general'].includes(d.business))throw fail('Choose a business type.');finishing.business=d.business;}
   for(const [key,max] of [['eyebrow',28],['cta',40],['terms',80]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the poster wording');
-  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > maxItems || !['green','blue','orange','red','plum','charcoal'].includes(d.theme) || !['poster','status'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 12 offers; simple posters hold up to 3.');
+  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry'].includes(d.theme) || !['poster','status'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
   const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
   if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');
   const date = text(d.date,10,'the offer date');

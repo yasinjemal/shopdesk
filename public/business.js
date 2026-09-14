@@ -21,5 +21,16 @@
       contact:[cta,data.phone].filter(Boolean).join(': '),
       date:announcement?[(data.eventDateText||'Your event date'),data.eventTime].filter(Boolean).join(' · '):data.showDate===false?'':'Valid until '+(data.dateText||'your selected date')};
   }
-  root.ShopDeskBusiness={profiles,get,applyPreset,copy};
+  function visibleItems(draft){
+    const items=draft.items||[],limit=draft.purpose==='spotlight'?1:draft.template==='simple'?3:25;
+    const count=Number.isInteger(draft.itemCount)?draft.itemCount:items.length;
+    return items.slice(0,Math.min(limit,count));
+  }
+  function resizeItems(items,count){
+    if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose between 1 and 25 items.');
+    const next=items.map(i=>({...i}));
+    while(next.length<count)next.push({name:'',size:'',price:'',photo:''});
+    return {items:next,itemCount:count};
+  }
+  root.ShopDeskBusiness={profiles,get,applyPreset,copy,visibleItems,resizeItems};
 })(typeof window!=='undefined'?window:globalThis);

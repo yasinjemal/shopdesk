@@ -1,6 +1,6 @@
 (function(root) {
   'use strict';
-  const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0']};
+  const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0'],teal:['#075e64','#bceae1','#f2fbfa'],gold:['#20232c','#e7c574','#faf8f1'],berry:['#941c50','#ffe0ec','#fff8fb']};
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const cropCache=new WeakMap();
   let trimPhotos=false;
@@ -61,10 +61,11 @@
   }
   function draw(canvas,data,images=new Map()){
     trimPhotos=!!data.trimPhotos;
-    data={...data,copy:root.ShopDeskBusiness.copy(data)};
+    data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
     if(['event','opening'].includes(data.purpose))return drawAnnouncement(canvas,data,images);
     if(data.purpose==='spotlight')return drawSpotlight(canvas,data,images);
+    if(['super','ribbon','signature'].includes(data.template)||data.items.length>12)return drawCatalogue(canvas,data,images);
     if(['boutique','menu','studio'].includes(data.template))return drawBusiness(canvas,data,images);
     if(['bold','market'].includes(data.template))return drawDesigned(canvas,data,images);
     if(data.template==='retail')return drawRetail(canvas,data,images);
@@ -105,8 +106,9 @@
     return layout;
   }
   function retailGeometry(format,count){
-    if(!Number.isInteger(count)||count<1||count>12)throw new Error('Retail flyers need 1 to 12 products.');
-    const status=format==='status',height=status?1920:1350,columns=count<=3?1:count<=6?2:3,rows=Math.ceil(count/columns);
+    if(count>12)return catalogueGeometry(format,count);
+    if(!Number.isInteger(count)||count<1||count>25)throw new Error('Retail flyers need 1 to 25 products.');
+    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns);
     const top=status?410:310,bottom=height-(status?300:180),gap=20,w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,top,bottom,columns,rows,cards:Array.from({length:count},(_,i)=>({x:40+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h})),footerY:bottom+36};
   }
@@ -128,7 +130,7 @@
   }
   function drawRetail(canvas,data,images){
     const layout=retailGeometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822'}[data.theme]||'#cc1726';const dark='#15231d';
+    const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50'}[data.theme]||'#cc1726';const dark='#15231d';
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,layout.height);
     const top=layout.status?125:22,logo=data.logo?images.get(data.logo):null;
     if(logo){contain(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your business',183,top+46,853,43,dark,800);}
@@ -174,8 +176,9 @@
     return layout;
   }
   function designedGeometry(template,format,count){
-    if(!Number.isInteger(count)||count<1||count>12)throw new Error('Flyers need 1 to 12 products.');
-    const status=format==='status',height=status?1920:1350,columns=count<=3?1:count<=6?2:3,rows=Math.ceil(count/columns),gap=18;
+    if(count>12)return catalogueGeometry(format,count);
+    if(!Number.isInteger(count)||count<1||count>25)throw new Error('Flyers need 1 to 25 products.');
+    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns),gap=18;
     const top=(template==='bold'?370:340)+(status?100:0),bottom=height-(status?290:190),w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,columns,rows,top,bottom,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:40+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
   }
@@ -189,7 +192,7 @@
   function drawDesigned(canvas,data,images){
     const layout=designedGeometry(data.template,data.format,data.items.length),bold=data.template==='bold';
     canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822'}[data.theme]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
+    const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50'}[data.theme]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
     ctx.fillStyle=bold?'#f3f4f1':'#ffffff';ctx.fillRect(0,0,1080,layout.height);
     const offset=layout.status?100:0,logo=data.logo?images.get(data.logo):null;
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,bold?106+offset:layout.top-14);
@@ -239,15 +242,16 @@
     return layout;
   }
   function businessGeometry(template,format,count){
-    if(!Number.isInteger(count)||count<1||count>12)throw new Error('Choose 1 to 12 items.');
+    if(count>12)return catalogueGeometry(format,count);
+    if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose 1 to 25 items.');
     const status=format==='status',height=status?1920:1350,offset=status?100:0;
-    const gallery=template==='boutique',columns=gallery?(count<=3?1:count<=6?2:3):(count<=6?1:2),rows=Math.ceil(count/columns);
+    const gallery=template==='boutique',columns=gallery?gridColumns(count):(count<=6?1:count<=12?2:count<=18?3:4),rows=Math.ceil(count/columns);
     const top=350+offset,bottom=height-(status?290:200),gap=gallery?18:12,w=(984-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,top,bottom,columns,rows,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:48+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
   }
   function drawBusiness(canvas,data,images){
     const layout=businessGeometry(data.template,data.format,data.items.length),gallery=data.template==='boutique',menu=data.template==='menu';
-    const brand={red:'#b91d30',green:'#1b5642',blue:'#203e63',orange:'#97441f',plum:'#613b59',charcoal:'#292822'}[data.theme]||'#292822';
+    const brand={red:'#b91d30',green:'#1b5642',blue:'#203e63',orange:'#97441f',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50'}[data.theme]||'#292822';
     const ink='#272823',paper=gallery?'#faf7f1':menu?'#fff8ec':'#f5f3f6',offset=layout.status?100:0;
     canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this poster.');
     ctx.fillStyle=paper;ctx.fillRect(0,0,1080,layout.height);
@@ -309,7 +313,7 @@
   function projectSurface(canvas,data){
     const height=data.format==='status'?1920:1350,offset=data.format==='status'?100:0;
     canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#b91d30',green:'#174d3c',blue:'#1c365f',orange:'#943c1d',plum:'#613b59',charcoal:'#292822'}[data.theme]||'#174d3c';
+    const brand={red:'#b91d30',green:'#174d3c',blue:'#1c365f',orange:'#943c1d',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50'}[data.theme]||'#174d3c';
     return {ctx,height,offset,brand};
   }
   function projectBrand(ctx,data,images,y,ink){
@@ -355,5 +359,97 @@
     fit(ctx,data.copy.contact,48,fy+95,984,28,brand,600);fit(ctx,data.copy.terms,48,fy+144,710,20,'#617265',400);projectCredit(ctx,data,fy+144,'#617265');
     return {height,top,bottom,cards:[{x:48,y:top,w:984,h:cardH}],footerY:fy};
   }
-  root.ShopDeskPoster={draw,geometry,retailGeometry,designedGeometry,businessGeometry,contentBounds,displayName,packWarning};
+
+  function gridColumns(count){return count<=3?1:count<=6?2:count<=12?3:count<=20?4:5;}
+  function catalogueGeometry(format,count){
+    if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose 1 to 25 items.');
+    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns),gap=count>12?14:18;
+    const top=(count>12?266:340)+(status?100:0),bottom=height-(status?280:180),w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
+    const cards=Array.from({length:count},(_,i)=>{
+      const row=Math.floor(i/columns),onRow=Math.min(columns,count-row*columns),inset=(columns-onRow)*(w+gap)/2;
+      return {x:40+inset+(i%columns)*(w+gap),y:top+row*(h+gap),w,h};
+    });
+    return {height,status,columns,rows,top,bottom,cards,footerY:bottom+22};
+  }
+  function catalogueCard(ctx,item,c,image,style){
+    const {brand,accent,ink,mode,unit}=style,dense=c.w<265,pad=dense?8:14;
+    const innerW=c.w-pad*2,innerH=c.h-pad*2,horizontal=c.w/c.h>1.65&&c.w>290;
+    roundBox(ctx,c.x,c.y,c.w,c.h,mode==='signature'?2:9,'#ffffff',mode==='signature'?'#d6cfbb':'#dfE4e4');
+    ctx.save();ctx.beginPath();ctx.rect(c.x+1,c.y+1,c.w-2,c.h-2);ctx.clip();
+    if(mode==='ribbon'){ctx.fillStyle=brand;ctx.fillRect(c.x,c.y,4,c.h);}
+    let x=c.x+pad,w=innerW;
+    if(horizontal&&image){const photoW=innerW*.44;contain(ctx,image,x,c.y+pad,photoW-12,innerH);x+=photoW;w-=photoW;}
+    const priceH=Math.min(100,Math.max(dense?36:48,innerH*.23)),sizeH=dense?20:26;
+    const priceY=c.y+c.h-pad-priceH,sizeY=priceY-sizeH,nameBottom=sizeY-7;
+    const nameWidth=w-8,nameSize=dense?20:Math.min(40,w*.105),title=lines(ctx,item.name||'Item name',nameWidth,nameSize,2),nameH=title.lines.length*(title.font+3);
+    if(image&&!horizontal){
+      const photoH=Math.max(12,nameBottom-nameH-c.y-pad-7);
+      contain(ctx,image,x,c.y+pad,w,photoH);
+    }
+    if(image)nameLines(ctx,item.name||'Item name',x+4,nameBottom,nameWidth,title.font,nameH,2,ink);
+    else{
+      const available=sizeY-c.y-pad-10;
+      nameLines(ctx,item.name||'Item name',x+5,c.y+pad+available*.67,w-10,Math.min(50,w*.14),available*.8,3,brand);
+    }
+    const filled=mode==='super'||mode==='bold'||mode==='retail';
+    if(filled){ctx.fillStyle=brand;ctx.fillRect(x,sizeY,w,sizeH);}
+    fit(ctx,item.size||unit,x+6,sizeY+sizeH*.74,w-12,dense?18:21,filled?'#ffffff':brand,600);
+    if(mode==='signature'){ctx.fillStyle=accent;ctx.fillRect(x,priceY,w,2);}
+    drawPrice(ctx,item.price,x,priceY+(mode==='signature'?3:0),w,priceH-(mode==='signature'?3:0),filled?accent:mode==='ribbon'?'#edf3f8':null,filled?'#161e24':brand);
+    ctx.restore();
+  }
+  function drawCatalogue(canvas,data,images){
+    const layout=catalogueGeometry(data.format,data.items.length),{height,top,footerY:fy}=layout,offset=layout.status?100:0,dense=data.items.length>12;
+    const mode=data.template,signature=['signature','boutique'].includes(mode),ribbon=mode==='ribbon',clean=['market','studio','menu'].includes(mode);
+    const brand=(themes[data.theme]||themes.red)[0],accent=data.theme==='gold'?'#e7c574':signature?'#d9c28c':data.theme==='berry'?'#ffe0ec':'#ffe132',ink='#17232a';
+    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    ctx.fillStyle=signature?'#f7f5ef':clean?'#ffffff':'#f1f4f5';ctx.fillRect(0,0,1080,height);
+    const logo=data.logo?images.get(data.logo):null,brandY=offset+18,brandBottom=offset+96;
+    ctx.fillStyle=signature?brand:'#ffffff';ctx.fillRect(0,0,1080,brandBottom);
+    if(logo){contain(ctx,logo,40,brandY,100,61);fit(ctx,data.shop||'Your business',162,brandY+43,878,38,signature?'#ffffff':ink,800);}
+    else fit(ctx,data.shop||'Your business',40,brandY+44,1000,41,signature?'#ffffff':ink,800);
+    const by=brandBottom,headingBottom=top-55,headingH=headingBottom-by;
+    if(signature){
+      ctx.fillStyle=accent;ctx.fillRect(40,by+16,46,3);
+      fit(ctx,data.copy.eyebrow,100,by+24,940,18,brand,600);
+      nameLines(ctx,data.headline||'Discover the collection.',40,headingBottom-10,1000,dense?47:63,headingH-48,2,brand);
+    }else if(ribbon){
+      ctx.fillStyle=brand;ctx.beginPath();ctx.moveTo(0,by);ctx.lineTo(1040,by);ctx.lineTo(1080,headingBottom);ctx.lineTo(0,headingBottom);ctx.closePath();ctx.fill();
+      ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(1012,by);ctx.lineTo(1040,by);ctx.lineTo(1080,headingBottom);ctx.lineTo(1052,headingBottom);ctx.closePath();ctx.fill();
+      fit(ctx,data.copy.eyebrow,40,by+27,930,19,'#ffffff',700);
+      nameLines(ctx,data.headline||'Your favourites. Great prices.',40,headingBottom-18,940,dense?46:65,headingH-57,2,'#ffffff');
+    }else if(clean){
+      ctx.fillStyle=brand;ctx.fillRect(40,by+5,1000,3);fit(ctx,data.copy.eyebrow,40,by+31,1000,19,brand,700);
+      nameLines(ctx,data.headline||'Discover what we offer.',40,headingBottom-9,1000,dense?46:63,headingH-52,2,brand);
+    }else{
+      ctx.fillStyle=brand;ctx.fillRect(0,by,1080,headingH);
+      roundBox(ctx,40,by+10,1000,29,3,accent);
+      fit(ctx,data.copy.eyebrow,52,by+31,976,19,'#17232a',800);
+      nameLines(ctx,data.headline||'Big value. Every day.',40,headingBottom-16,1000,dense?47:68,headingH-58,2,'#ffffff');
+      ctx.fillStyle=accent;ctx.fillRect(0,headingBottom-5,1080,5);
+    }
+    fit(ctx,data.copy.date,40,top-22,1000,22,brand,600);
+    for(const [i,item] of data.items.entries())catalogueCard(ctx,item,layout.cards[i],item.photo?images.get(item.photo):null,{brand,accent,ink,mode:signature?'signature':mode,unit:data.copy.unit});
+    if(signature){
+      ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.strokeRect(40,fy,1000,108);
+      ctx.fillStyle=accent;ctx.fillRect(40,fy,7,108);
+      fit(ctx,data.location||data.shop||'',60,fy+39,960,30,brand,700);
+      fit(ctx,data.copy.contact,60,fy+80,960,25,brand,500);
+    }else if(ribbon){
+      ctx.fillStyle=brand;ctx.fillRect(0,fy,1080,54);fit(ctx,data.location||data.shop||'',40,fy+36,1000,30,'#ffffff',700);
+      ctx.fillStyle=accent;ctx.fillRect(0,fy+54,1080,52);fit(ctx,data.copy.contact,40,fy+88,1000,26,'#17232a',700);
+    }else if(clean){
+      ctx.fillStyle=brand;ctx.fillRect(40,fy,1000,3);
+      fit(ctx,data.location||data.shop||'',40,fy+42,1000,30,brand,700);
+      fit(ctx,data.copy.contact,40,fy+83,1000,26,ink,500);
+    }else{
+      ctx.fillStyle=brand;ctx.fillRect(0,fy,1080,108);ctx.fillStyle=accent;ctx.fillRect(0,fy,1080,5);
+      fit(ctx,data.location||data.shop||'',40,fy+44,1000,30,'#ffffff',800);
+      fit(ctx,data.copy.contact,40,fy+85,1000,26,'#ffffff',600);
+    }
+    fit(ctx,data.copy.terms,40,fy+141,726,19,'#516068',400);projectCredit(ctx,data,fy+141,'#516068');
+    return layout;
+  }
+
+  root.ShopDeskPoster={draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,contentBounds,displayName,packWarning};
 })(typeof window!=='undefined'?window:globalThis);

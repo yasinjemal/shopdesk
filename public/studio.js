@@ -32,7 +32,7 @@
   function newDraft(source,business,purpose){
     let draft=suggest({...source,business,purpose});
     const expiry=new Date();expiry.setDate(expiry.getDate()+7);draft.date=[expiry.getFullYear(),String(expiry.getMonth()+1).padStart(2,'0'),String(expiry.getDate()).padStart(2,'0')].join('-');
-    Object.assign(draft,{purpose,heroPhoto:'',details:'',eventDate:'',eventTime:'',venue:'',items:[{name:'',size:'',price:'',photo:''}]});
+    Object.assign(draft,{purpose,heroPhoto:'',details:'',eventDate:'',eventTime:'',venue:'',itemCount:1,items:[{name:'',size:'',price:'',photo:''}]});
     return draft;
   }
   function addClient(state,name,business,purpose,title){

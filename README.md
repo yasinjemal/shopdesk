@@ -2,11 +2,15 @@
 
 ShopDesk helps small businesses and freelance designers create promotional flyers, save client projects, and manage everyday pricing and cash calculations.
 
-Current source snapshot: version 7, exported 14 September 2026 from commit `538a50cccaa622a369e4d3bb6693a7a130c5549a`.
+Current application: version 8, updated 14 September 2026.
 
 ## Features included
 
 - Flyer designs for retail, food, fashion, beauty, and service businesses.
+- Choose 1–25 products or services; layouts adapt automatically. The simple poster remains limited to three visible offers.
+- Reduce the product count without losing the remaining items; increase it again to restore them.
+- Super Saver, Corner Ribbon, and Signature Collection designs with distinct headers, price labels, and footers.
+- Nine colour palettes, including Ocean teal, Midnight gold, and Berry pink.
 - Custom colours, logos, product photos, headlines, prices, contact details, and expiry dates.
 - Promotional offers, menus, price lists, single-offer spotlights, events, and grand-opening announcements.
 - Poster (4:5) and WhatsApp Status (9:16) PNG exports.
@@ -49,6 +53,6 @@ Account identity comes from the trusted Sites authentication layer through the `
 
 ## Source backup and saved business data
 
-This package contains the current application source, tests, migrations, and these setup notes. It does **not** contain saved clients, projects, product photos, logos, or other live database and bucket contents. Those remain in the running application's storage and require a separate data export for a full backup.
+This repository contains the current application source, tests, migrations, and these setup notes. It does **not** contain saved clients, projects, product photos, logos, or other live database and bucket contents. Those remain in the running application's storage and require a separate data export for a full backup.
 
-This is a source snapshot, without prior Git commit history. It contains no installed dependencies or generated build output.
+The initial GitHub import was a source snapshot. Earlier Sites commits were not imported. Installed dependencies and generated build output are excluded.
