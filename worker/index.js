@@ -20,6 +20,10 @@ export function validateWorkspace(data) {
   if (!['simple','retail','bold','market','boutique','menu','studio'].includes(template)) throw fail('Choose a poster template.');
   const maxItems = template === 'simple' ? 3 : 12;
   const finishing={};
+  if(d.purpose!==undefined){if(!['offers','spotlight','event','opening'].includes(d.purpose))throw fail('Choose a flyer purpose.');finishing.purpose=d.purpose;}
+  for(const [key,max] of [['details',180],['eventDate',10],['eventTime',40],['venue',80],['heroPhoto',36]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the project details');
+  if(finishing.eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.eventDate))throw fail('Check the event date.');
+  if(finishing.heroPhoto&&!/^[0-9a-f-]{36}$/.test(finishing.heroPhoto))throw fail('Invalid main photo.');
   for(const key of ['trimPhotos','cleanNames','showDate'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
   if(d.business!==undefined){if(!['grocery','fashion','food','beauty','services','general'].includes(d.business))throw fail('Choose a business type.');finishing.business=d.business;}
   for(const [key,max] of [['eyebrow',28],['cta',40],['terms',80]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the poster wording');
@@ -31,6 +35,19 @@ export function validateWorkspace(data) {
   const seen = new Set();
   const products = data.products.map(p => { const id = text(p.id,36,'the saved product'); if (!/^[0-9a-f-]{36}$/.test(id) || seen.has(id)) throw fail('Invalid saved product.'); seen.add(id); const v = item(p); if (!v.name) throw fail('Give your saved product a name.'); return {id,...v}; });
   return {shop:{name:text(data.shop.name,50,'the shop name'),phone:text(data.shop.phone,24,'the phone number'),location:text(data.shop.location,60,'the location'),...(data.shop.logo!==undefined?{logo}:{})},products,draft:{headline:text(d.headline,45,'the headline'),date,theme:d.theme,format:d.format,...(d.template!==undefined?{template}:{}),...finishing,items:d.items.map(item)}};
+}
+export function validateStudio(data){
+  if(data?.schemaVersion!==2||!Array.isArray(data.clients)||data.clients.length<1||data.clients.length>20)throw fail('Check your saved clients.');
+  const seen=new Set();let count=0;
+  function unique(value){const id=text(value,36,'the client or project');if(!/^[0-9a-f-]{36}$/.test(id)||seen.has(id))throw fail('Invalid client or project.');seen.add(id);return id;}
+  const clients=data.clients.map(c=>{
+    const id=unique(c.id);if(!Array.isArray(c.projects)||!c.projects.length)throw fail('Each client needs a project.');
+    let shop,products;
+    const projects=c.projects.map(p=>{if(++count>100)throw fail('You can save up to 100 projects.');const projectId=unique(p.id),title=text(p.title,60,'the project name');if(!title)throw fail('Name your project.');const workspace=validateWorkspace({shop:c.shop,products:c.products,draft:p.draft});shop=workspace.shop;products=workspace.products;return {id:projectId,title,draft:workspace.draft};});
+    return {id,shop,products,projects};
+  });
+  const client=clients.find(c=>c.id===data.activeClientId);if(!client?.projects.some(p=>p.id===data.activeProjectId))throw fail('Choose a project belonging to this client.');
+  return {schemaVersion:2,activeClientId:data.activeClientId,activeProjectId:data.activeProjectId,clients};
 }
 async function readLimited(request, limit) {
   if (Number(request.headers.get('content-length')) > limit) throw fail('This file or form is too large.',413);
@@ -46,19 +63,22 @@ function protectWrite(request) {
 async function handleAPI(request,env,url) {
   const owner=user(request); const database=db(env);
   if(request.method!=='GET')protectWrite(request);
-  if(url.pathname==='/api/workspace' && request.method==='GET'){
+  const studio=url.pathname==='/api/studio',workspace=studio||url.pathname==='/api/workspace';
+  if(workspace && request.method==='GET'){
     const record=await database.prepare('SELECT data, revision FROM poster_workspaces WHERE owner = ?').bind(owner).first();
+    if(!studio&&record&&JSON.parse(record.data).schemaVersion===2)throw fail('Designer Mode is ready. Refresh ShopDesk to open your clients and projects.',409);
     return json({data:record?JSON.parse(record.data):null,revision:record?.revision??0});
   }
-  if(url.pathname==='/api/workspace' && request.method==='PUT'){
+  if(workspace && request.method==='PUT'){
     if(!request.headers.get('content-type')?.startsWith('application/json'))throw fail('Send the saved workspace as JSON.',415);
-    let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,MAX_BODY)));}catch(e){if(e.status)throw e;throw fail('Could not read these changes.');}
+    let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,studio?1500000:MAX_BODY)));}catch(e){if(e.status)throw e;throw fail('Could not read these changes.');}
     if(!Number.isInteger(body.revision)||body.revision<0)throw fail('Reload your saved workspace before saving.');
-    const data=validateWorkspace(body.data);
-    const photoIds=[...new Set([...data.products,...data.draft.items,{photo:data.shop.logo}].map(i=>i.photo).filter(Boolean))];
+    const data=studio?validateStudio(body.data):validateWorkspace(body.data);
+    const workspaces=studio?data.clients.flatMap(c=>c.projects.map(p=>({shop:c.shop,products:c.products,draft:p.draft}))):[data];
+    const photoIds=[...new Set(workspaces.flatMap(w=>[...w.products,...w.draft.items,{photo:w.shop.logo},{photo:w.draft.heroPhoto}]).map(i=>i.photo).filter(Boolean))];
     if(photoIds.length){const rows=await database.prepare('SELECT id FROM product_photos WHERE owner = ?').bind(owner).all();const owned=new Set(rows.results.map(r=>r.id));if(photoIds.some(id=>!owned.has(id)))throw fail('A product photo could not be found in your account. Add it again.',400);}
     const revision=body.revision;
-    const row=await database.prepare('INSERT INTO poster_workspaces (owner,data,revision,updated_at) SELECT ?, ?, 1, ? WHERE ? = 0 OR EXISTS (SELECT 1 FROM poster_workspaces WHERE owner = ?) ON CONFLICT(owner) DO UPDATE SET data = excluded.data, revision = poster_workspaces.revision + 1, updated_at = excluded.updated_at WHERE poster_workspaces.revision = ? RETURNING revision').bind(owner,JSON.stringify(data),new Date().toISOString(),revision,owner,revision).first();
+    const row=await database.prepare("INSERT INTO poster_workspaces (owner,data,revision,updated_at) SELECT ?, ?, 1, ? WHERE ? = 0 OR EXISTS (SELECT 1 FROM poster_workspaces WHERE owner = ?) ON CONFLICT(owner) DO UPDATE SET data = excluded.data, revision = poster_workspaces.revision + 1, updated_at = excluded.updated_at WHERE poster_workspaces.revision = ? AND (? = 1 OR COALESCE(json_extract(poster_workspaces.data, '$.schemaVersion'), 1) <> 2) RETURNING revision").bind(owner,JSON.stringify(data),new Date().toISOString(),revision,owner,revision,studio?1:0).first();
     if(!row)throw fail('This workspace changed in another tab. Reload the saved version before making more changes.',409);
     return json({revision:row.revision});
   }

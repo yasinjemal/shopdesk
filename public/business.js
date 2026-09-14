@@ -15,10 +15,11 @@
     return next;
   }
   function copy(data){
-    const p=get(data.business),cta=data.cta??p.cta;
+    const p=get(data.business),cta=data.cta??p.cta,announcement=['event','opening'].includes(data.purpose);
     return {eyebrow:data.eyebrow??p.eyebrow,terms:data.terms??p.terms,unit:p.unit,
+      location:announcement?(data.venue||data.location):data.location,
       contact:[cta,data.phone].filter(Boolean).join(': '),
-      date:data.showDate===false?'':'Valid until '+(data.dateText||'your selected date')};
+      date:announcement?[(data.eventDateText||'Your event date'),data.eventTime].filter(Boolean).join(' · '):data.showDate===false?'':'Valid until '+(data.dateText||'your selected date')};
   }
   root.ShopDeskBusiness={profiles,get,applyPreset,copy};
 })(typeof window!=='undefined'?window:globalThis);

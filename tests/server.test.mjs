@@ -2,7 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import worker, { validateWorkspace } from '../worker/index.js';
+import worker, { validateWorkspace, validateStudio } from '../worker/index.js';
+
+import '../public/business.js';
+import '../public/studio.js';
 
 function environment(){
   const sql=new DatabaseSync(':memory:');sql.exec(readFileSync(new URL('../drizzle/0000_quick_mandrill.sql',import.meta.url),'utf8'));
@@ -95,4 +98,32 @@ test('saves business designs and custom wording without changing legacy workspac
     }
   }
   assert.deepEqual(validateWorkspace(sample()),sample());env.sql.close();
+});
+
+test('upgrades a legacy workspace, retains all clients and projects, and rejects stale or old-editor writes',async()=>{
+  const env=environment(),old=sample();
+  await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision:0,data:old}}),env);
+  const imported=await (await worker.fetch(request('/api/studio'),env)).json();assert.deepEqual(imported.data,old);
+  let state=ShopDeskStudio.upgrade(imported.data),first=structuredClone(state.clients[0]);
+  state=ShopDeskStudio.addClient(state,'New Salon','beauty','event','Launch day');
+  const {client,project}=ShopDeskStudio.active(state);project.draft.eventDate='2026-10-01';project.draft.eventTime='09:00';project.draft.venue='Town Hall';project.draft.details='Join our opening celebration.';
+  state=ShopDeskStudio.duplicate(state);assert.deepEqual(state.clients[0],first);assert.equal(state.clients[1].projects.length,2);
+  const put=(data,revision,owner='alice',path='/api/studio')=>worker.fetch(request(path,{owner,method:'PUT',body:{revision,data}}),env);
+  assert.equal((await put(state,1)).status,200);assert.deepEqual((await (await worker.fetch(request('/api/studio'),env)).json()).data,state);
+  assert.equal((await put(state,1)).status,409);assert.equal((await put(old,2,'alice','/api/workspace')).status,409);
+  assert.equal((await worker.fetch(request('/api/workspace'),env)).status,409);
+  assert.equal((await (await worker.fetch(request('/api/studio',{owner:'bob'}),env)).json()).data,null);
+  const mismatch=structuredClone(state);mismatch.activeClientId=first.id;assert.throws(()=>validateStudio(mismatch));
+  const duplicate=structuredClone(state);duplicate.clients[1].projects[0].id=first.projects[0].id;assert.throws(()=>validateStudio(duplicate));
+  const cross=await put(state,2,'alice');assert.equal(cross.status,200);
+  assert.equal((await worker.fetch(request('/api/studio',{method:'PUT',headers:{origin:'https://unrelated.test'},body:{revision:3,data:state}}),env)).status,403);
+  env.sql.close();
+});
+test('validates photo ownership in inactive clients and event main photos',async()=>{
+  const env=environment(),image=new Uint8Array([255,216,255,224,0,16,255,217]);
+  const {id}=await (await worker.fetch(request('/api/photos',{owner:'bob',method:'POST',body:image,headers:{'content-type':'image/jpeg'}}),env)).json();
+  let state=ShopDeskStudio.upgrade(sample());state.clients[0].projects[0].draft.heroPhoto=id;
+  state=ShopDeskStudio.addClient(state,'Other client','general','opening','Opening');
+  assert.equal((await worker.fetch(request('/api/studio',{method:'PUT',body:{revision:0,data:state}}),env)).status,400);
+  assert.equal((await (await worker.fetch(request('/api/studio'),env)).json()).data,null);env.sql.close();
 });

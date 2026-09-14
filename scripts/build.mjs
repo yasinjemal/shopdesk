@@ -4,6 +4,7 @@ for (const [file, type] of Object.entries({'index.html':'text/html; charset=utf-
   assets['/' + (file === 'index.html' ? '' : file)] = {body: await readFile('public/' + file, 'utf8'),type};
 }
 assets['/business.js'] = {body:await readFile('public/business.js','utf8'),type:'text/javascript; charset=utf-8'};
+assets['/studio.js'] = {body:await readFile('public/studio.js','utf8'),type:'text/javascript; charset=utf-8'};
 const source = await readFile('worker/index.js','utf8');
 const manifest = JSON.parse(await readFile('.openai/hosting.json','utf8'));
 if (manifest.static || manifest.d1 !== 'DB' || manifest.r2 !== 'BUCKET') throw new Error('Expected DB and BUCKET bindings for saved posters.');

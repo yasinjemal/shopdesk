@@ -2,7 +2,9 @@
   'use strict';
   const money=value=>'R'+Number(value).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   function plan(data){
+    if(data&&['event','opening'].includes(data.purpose))return [{name:'01-full-flyer.png',label:'Full flyer',detail:'Announcement · 4:5',data:{...data,format:'poster'}},{name:'02-status-1-of-1.png',label:'Status 1 of 1',detail:'Announcement · 9:16',data:{...data,format:'status',packPage:{index:1,total:1}}}];
     if(!data||!Array.isArray(data.items)||data.items.length<1||data.items.length>12)throw new Error('Choose 1 to 12 offers for your promotion pack.');
+    if(data.purpose==='spotlight'&&data.items.length!==1)throw new Error('Choose one offer for a Spotlight flyer.');
     const base={...data,items:data.items.map(item=>({...item}))};
     if(base.template==='simple'&&base.items.length>3)throw new Error('Choose a flyer design for more than three offers.');
     const pages=Math.ceil(base.items.length/4),outputs=[{name:'01-full-flyer.png',label:'Full flyer',detail:base.items.length+' '+(base.items.length===1?'offer':'offers')+' · 4:5',data:{...base,format:'poster'}}];
@@ -15,12 +17,12 @@
     return outputs;
   }
   function caption(data){
-    const rows=data.items.map(item=>{
+    const rows=['event','opening'].includes(data.purpose)?[]:data.items.map(item=>{
       const name=data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name;
       return name+(item.size?' · '+item.size:'')+' — '+money(item.price);
     });
     const copy=root.ShopDeskBusiness.copy(data);
-    return [data.shop,data.headline,'',...rows,'',...[copy.date,data.location,copy.contact,copy.terms].filter(Boolean)].join('\n');
+    return [data.shop,data.headline,'',...rows,...(data.purpose&&data.purpose!=='offers'&&data.details?[data.details]:[]),'',...[copy.date,copy.location,copy.contact,copy.terms].filter(Boolean)].join('\n');
   }
   const table=Uint32Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
   function crc32(bytes){let crc=0xffffffff;for(const b of bytes)crc=table[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;}
