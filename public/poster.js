@@ -1,6 +1,6 @@
 (function(root) {
   'use strict';
-  const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff']};
+  const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0']};
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const cropCache=new WeakMap();
   let trimPhotos=false;
@@ -61,7 +61,9 @@
   }
   function draw(canvas,data,images=new Map()){
     trimPhotos=!!data.trimPhotos;
+    data={...data,copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
+    if(['boutique','menu','studio'].includes(data.template))return drawBusiness(canvas,data,images);
     if(['bold','market'].includes(data.template))return drawDesigned(canvas,data,images);
     if(data.template==='retail')return drawRetail(canvas,data,images);
     const layout=geometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;
@@ -71,8 +73,9 @@
     ctx.fillStyle=accent;ctx.fillRect(60,layout.status?116:40,70,6);
     const header=layout.status?190:112;
     const logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,60,header-65,120,90);fit(ctx,data.shop||'Your shop',205,header,815,44,accent,600);}
-    else fit(ctx,data.shop||'Your shop',60,header,960,44,accent,600);
+    if(logo){contain(ctx,logo,60,header-65,120,90);fit(ctx,data.shop||'Your business',205,header,815,44,accent,600);}
+    else fit(ctx,data.shop||'Your business',60,header,960,44,accent,600);
+    fit(ctx,data.copy.eyebrow,60,header+43,960,20,accent,600);
     fit(ctx,data.headline||'Your special offers',60,header+96,960,64,'#ffffff',800);
     data.items.forEach((item,index)=>{
       const card=layout.cards[index],image=item.photo?images.get(item.photo):null;
@@ -84,18 +87,18 @@
       }
       const spacious=card.h>420;
       const nameY=card.y+(spacious?card.h*.29:67);
-      fit(ctx,item.name||'Product name',x,nameY,width,spacious?64:49,bg,700);
+      fit(ctx,item.name||'Offer name',x,nameY,width,spacious?64:49,bg,700);
       if(item.size)fit(ctx,item.size,x,nameY+(spacious?59:44),width,spacious?38:31,bg,400);
       const price=(item.price!==''&&Number.isFinite(Number(item.price))&&Number(item.price)>0)?money(item.price):'R —';
       const priceY=spacious?card.y+card.h*.7:card.y+card.h-40;
       fit(ctx,price,x,priceY,width,spacious?138:Math.min(112,card.h*.38),bg,800);
-      if(spacious)fit(ctx,'EACH',x,priceY+50,width,25,bg,600);
+      if(spacious)fit(ctx,data.copy.unit.toUpperCase(),x,priceY+50,width,25,bg,600);
     });
     const y=layout.footerY;
-    fit(ctx,'Valid until '+(data.dateText||'your selected date'),60,y,960,30,'#ffffff',500);
-    const contact=[data.location,data.phone].filter(Boolean).join('  •  ');
+    fit(ctx,data.copy.date,60,y,960,30,'#ffffff',500);
+    const contact=[data.location,data.copy.contact].filter(Boolean).join('  •  ');
     if(contact)fit(ctx,contact,60,y+56,960,32,accent,500);
-    fit(ctx,'While stocks last.',60,y+109,600,24,'#ffffff',400);
+    fit(ctx,data.copy.terms,60,y+109,600,24,'#ffffff',400);
     fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?735:870,y+109,data.packPage?285:150,22,accent,600);
     return layout;
   }
@@ -123,30 +126,30 @@
   }
   function drawRetail(canvas,data,images){
     const layout=retailGeometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912'}[data.theme]||'#cc1726';const dark='#15231d';
+    const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822'}[data.theme]||'#cc1726';const dark='#15231d';
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,layout.height);
     const top=layout.status?125:22,logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your shop',183,top+46,853,43,dark,800);}
-    else fit(ctx,data.shop||'Your shop',40,top+49,1000,44,dark,800);
+    if(logo){contain(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your business',183,top+46,853,43,dark,800);}
+    else fit(ctx,data.shop||'Your business',40,top+49,1000,44,dark,800);
     const bannerY=top+89,bannerH=126;ctx.fillStyle=brand;ctx.fillRect(0,bannerY,1080,bannerH);ctx.fillStyle='#ffe132';ctx.fillRect(0,bannerY+bannerH-9,1080,9);
-    fit(ctx,'SHOP SPECIALS',40,bannerY+30,1000,19,'#ffffff',700);
+    fit(ctx,data.copy.eyebrow,40,bannerY+30,1000,19,'#ffffff',700);
     fit(ctx,data.headline||'Everyday essentials. Great prices.',40,bannerY+91,1000,60,'#ffffff',800);
-    fit(ctx,'Offers valid until '+(data.dateText||'your selected date'),40,bannerY+164,1000,25,dark,600);
+    fit(ctx,data.copy.date,40,bannerY+164,1000,25,dark,600);
     for(const [index,item] of data.items.entries()){
       const c=layout.cards[index],image=item.photo?images.get(item.photo):null;
       if(image&&c.w/c.h>1.1){
         const imageWidth=c.w*.49,labelX=c.x+imageWidth+12,labelW=c.w-imageWidth-12;
         contain(ctx,image,c.x+4,c.y+4,imageWidth-12,c.h-8);
         const priceH=Math.min(105,Math.max(55,c.h*.27)),packH=Math.min(35,Math.max(23,c.h*.09)),priceY=c.y+c.h-priceH,packY=priceY-packH;
-        const name=lines(ctx,item.name||'Product name',labelW-8,Math.min(38,Math.max(21,labelW*.115)),3);
+        const name=lines(ctx,item.name||'Offer name',labelW-8,Math.min(38,Math.max(21,labelW*.115)),3);
         const textY=Math.max(c.y+name.font,packY-15-(name.lines.length-1)*(name.font+4));
         for(const [j,line] of name.lines.entries())fit(ctx,line,labelX+4,textY+j*(name.font+4),labelW-8,name.font,dark,700);
-        ctx.fillStyle=brand;ctx.fillRect(labelX,packY,labelW,packH);fit(ctx,item.size||'Each',labelX+8,packY+packH*.75,labelW-16,packH*.65,'#ffffff',700);
+        ctx.fillStyle=brand;ctx.fillRect(labelX,packY,labelW,packH);fit(ctx,item.size||data.copy.unit,labelX+8,packY+packH*.75,labelW-16,packH*.65,'#ffffff',700);
         drawPrice(ctx,item.price,labelX,priceY,labelW,priceH);
         continue;
       }
       const priceH=Math.min(105,Math.max(43,c.h*.2)),sizeH=Math.min(35,Math.max(21,c.h*.085)),nameSize=Math.min(34,Math.max(21,c.h*.085));
-      const nameBlock=lines(ctx,item.name||'Product name',c.w-12,nameSize,2),nameH=nameBlock.lines.length*(nameBlock.font+3);
+      const nameBlock=lines(ctx,item.name||'Offer name',c.w-12,nameSize,2),nameH=nameBlock.lines.length*(nameBlock.font+3);
       const priceY=c.y+c.h-priceH,sizeY=priceY-sizeH,nameY=sizeY-nameH-9,imageBottom=nameY-10;
       if(image){
         contain(ctx,image,c.x+10,c.y+7,c.w-20,Math.max(20,imageBottom-c.y-14));
@@ -154,18 +157,18 @@
       }
       else{
         ctx.fillStyle='#f7f7f1';ctx.fillRect(c.x,c.y,c.w,sizeY-c.y);
-        const title=lines(ctx,item.name||'Product name',c.w-36,Math.min(55,c.w*.13,(sizeY-c.y)*.23),3);let ty=c.y+(sizeY-c.y-title.lines.length*(title.font+8))/2+title.font;
+        const title=lines(ctx,item.name||'Offer name',c.w-36,Math.min(55,c.w*.13,(sizeY-c.y)*.23),3);let ty=c.y+(sizeY-c.y-title.lines.length*(title.font+8))/2+title.font;
         for(const line of title.lines){fit(ctx,line,c.x+18,ty,c.w-36,title.font,brand,800);ty+=title.font+8;}
       }
-      ctx.fillStyle=brand;ctx.fillRect(c.x,sizeY,c.w,sizeH);fit(ctx,item.size||'Each',c.x+10,sizeY+sizeH*.75,c.w-20,sizeH*.67,'#ffffff',700);
+      ctx.fillStyle=brand;ctx.fillRect(c.x,sizeY,c.w,sizeH);fit(ctx,item.size||data.copy.unit,c.x+10,sizeY+sizeH*.75,c.w-20,sizeH*.67,'#ffffff',700);
       drawPrice(ctx,item.price,c.x,priceY,c.w,priceH);
     }
     const fy=layout.footerY;ctx.fillStyle=brand;ctx.fillRect(0,fy-17,1080,layout.status?74:58);
-    fit(ctx,data.location||'Visit us in store',40,fy+(layout.status?24:17),1000,layout.status?36:30,'#ffffff',700);
-    if(data.phone)fit(ctx,'Contact us: '+data.phone,40,fy+(layout.status?102:80),780,28,dark,600);
-    else fit(ctx,'While stocks last.',40,fy+(layout.status?102:80),780,24,'#56615b',400);
+    fit(ctx,data.location||data.shop||'Get in touch',40,fy+(layout.status?24:17),1000,layout.status?36:30,'#ffffff',700);
+    if(data.copy.contact)fit(ctx,data.copy.contact,40,fy+(layout.status?102:80),780,28,dark,600);
+    else fit(ctx,data.copy.terms,40,fy+(layout.status?102:80),780,24,'#56615b',400);
     fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?765:876,fy+(layout.status?102:80),data.packPage?275:165,22,'#657069',600);
-    if(data.phone)fit(ctx,'While stocks last.',40,fy+(layout.status?140:113),780,18,'#657069',400);
+    if(data.copy.contact)fit(ctx,data.copy.terms,40,fy+(layout.status?140:113),780,18,'#657069',400);
     return layout;
   }
   function designedGeometry(template,format,count){
@@ -184,26 +187,26 @@
   function drawDesigned(canvas,data,images){
     const layout=designedGeometry(data.template,data.format,data.items.length),bold=data.template==='bold';
     canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12'}[data.theme]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
+    const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822'}[data.theme]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
     ctx.fillStyle=bold?'#f3f4f1':'#ffffff';ctx.fillRect(0,0,1080,layout.height);
     const offset=layout.status?100:0,logo=data.logo?images.get(data.logo):null;
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,bold?106+offset:layout.top-14);
-    if(logo){contain(ctx,logo,40,24+offset,122,70);fit(ctx,data.shop||'Your shop',184,71+offset,856,43,ink,800);}
-    else fit(ctx,data.shop||'Your shop',40,71+offset,1000,46,ink,800);
+    if(logo){contain(ctx,logo,40,24+offset,122,70);fit(ctx,data.shop||'Your business',184,71+offset,856,43,ink,800);}
+    else fit(ctx,data.shop||'Your business',40,71+offset,1000,46,ink,800);
     if(bold){
       const by=106+offset;ctx.fillStyle=brand;ctx.fillRect(0,by,1080,196);
       ctx.fillStyle='#00000016';ctx.beginPath();ctx.moveTo(875,by);ctx.lineTo(1080,by);ctx.lineTo(1080,by+196);ctx.lineTo(785,by+196);ctx.closePath();ctx.fill();
-      fit(ctx,'SHOP SPECIALS',40,by+31,1000,20,'#ffffff',700);
+      fit(ctx,data.copy.eyebrow,40,by+31,1000,20,'#ffffff',700);
       const headline=lines(ctx,data.headline||'Everyday essentials. Great prices.',1000,68,2);
       const baseline=headline.lines.length===1?by+125:by+94;
       for(const [i,line] of headline.lines.entries())fit(ctx,line,40,baseline+i*72,1000,headline.font,'#ffffff',800);
       ctx.fillStyle=accent;ctx.fillRect(0,by+188,1080,8);
-      fit(ctx,'Offers valid until '+(data.dateText||'your selected date'),40,338+offset,1000,25,ink,600);
+      fit(ctx,data.copy.date,40,338+offset,1000,25,ink,600);
     }else{
-      ctx.fillStyle=brand;ctx.fillRect(40,109+offset,1000,3);fit(ctx,'YOUR SHOP SPECIALS',40,145+offset,1000,20,brand,700);
+      ctx.fillStyle=brand;ctx.fillRect(40,109+offset,1000,3);fit(ctx,data.copy.eyebrow,40,145+offset,1000,20,brand,700);
       const headline=lines(ctx,data.headline||'Fresh finds. Everyday value.',970,64,2),baseline=headline.lines.length===1?228+offset:211+offset;
       for(const [i,line] of headline.lines.entries())fit(ctx,line,40,baseline+i*64,970,headline.font,brand,800);
-      fit(ctx,'Offers valid until '+(data.dateText||'your selected date'),40,310+offset,1000,25,ink,500);
+      fit(ctx,data.copy.date,40,310+offset,1000,25,ink,500);
     }
     for(const [index,item] of data.items.entries()){
       const c=layout.cards[index],photo=item.photo?images.get(item.photo):null,pad=12,innerW=c.w-pad*2,innerH=c.h-pad*2;
@@ -213,25 +216,93 @@
       if(horizontal){
         const photoW=innerW*.50;labelX=c.x+pad+photoW+8;labelW=innerW-photoW-8;
         if(photo)contain(ctx,photo,c.x+pad,c.y+pad,photoW-7,innerH);
-        else nameLines(ctx,item.name||'Product name',c.x+pad+5,c.y+c.h*.54,photoW-14,Math.min(48,photoW*.15),innerH*.7,3,brand);
+        else nameLines(ctx,item.name||'Offer name',c.x+pad+5,c.y+c.h*.54,photoW-14,Math.min(48,photoW*.15),innerH*.7,3,brand);
       }
       const priceY=c.y+c.h-pad-priceH,packY=priceY-packH,nameBottom=packY-12;
-      if(horizontal&&photo){nameLines(ctx,item.name||'Product name',labelX+3,nameBottom,labelW-6,Math.min(42,Math.max(21,labelW*.12)),nameBottom-(c.y+pad),3,ink);}
+      if(horizontal&&photo){nameLines(ctx,item.name||'Offer name',labelX+3,nameBottom,labelW-6,Math.min(42,Math.max(21,labelW*.12)),nameBottom-(c.y+pad),3,ink);}
       if(!horizontal){
-        const title=lines(ctx,item.name||'Product name',innerW-4,Math.min(30,Math.max(22,innerW*.08)),2),nameH=title.lines.length*(title.font+4),photoBottom=nameBottom-nameH-10;
-        if(photo){contain(ctx,photo,c.x+pad,c.y+pad,innerW,Math.max(24,photoBottom-c.y-pad));nameLines(ctx,item.name||'Product name',c.x+pad+2,nameBottom,innerW-4,title.font,nameH,2,ink);}
-        else nameLines(ctx,item.name||'Product name',c.x+pad+8,c.y+pad+(packY-c.y-pad)*.64,innerW-16,Math.min(54,innerW*.15),(packY-c.y-pad)*.8,3,brand);
+        const title=lines(ctx,item.name||'Offer name',innerW-4,Math.min(30,Math.max(22,innerW*.08)),2),nameH=title.lines.length*(title.font+4),photoBottom=nameBottom-nameH-10;
+        if(photo){contain(ctx,photo,c.x+pad,c.y+pad,innerW,Math.max(24,photoBottom-c.y-pad));nameLines(ctx,item.name||'Offer name',c.x+pad+2,nameBottom,innerW-4,title.font,nameH,2,ink);}
+        else nameLines(ctx,item.name||'Offer name',c.x+pad+8,c.y+pad+(packY-c.y-pad)*.64,innerW-16,Math.min(54,innerW*.15),(packY-c.y-pad)*.8,3,brand);
       }
       roundBox(ctx,labelX,packY,labelW,packH,bold?0:5,bold?brand:'#edf5ee');
-      fit(ctx,item.size||'Each',labelX+8,packY+packH*.75,labelW-16,Math.min(23,packH*.68),bold?'#ffffff':brand,700);
+      fit(ctx,item.size||data.copy.unit,labelX+8,packY+packH*.75,labelW-16,Math.min(23,packH*.68),bold?'#ffffff':brand,700);
       drawPrice(ctx,item.price,labelX,priceY,labelW,priceH,bold?accent:null,bold?'#151515':brand);
     }
     const fy=layout.footerY;
     if(bold){ctx.fillStyle=brand;ctx.fillRect(0,fy,1080,104);}else{ctx.fillStyle=brand;ctx.fillRect(40,fy,1000,3);}
-    fit(ctx,data.location||'Visit us in store',40,fy+39,1000,34,bold?'#ffffff':brand,700);
-    fit(ctx,data.phone?'Contact us: '+data.phone:'Ask in store about these offers',40,fy+80,1000,28,bold?'#ffffff':ink,500);
-    fit(ctx,'While stocks last.',40,fy+138,680,21,'#62736a',400);fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?765:881,fy+138,data.packPage?275:159,21,'#62736a',600);
+    fit(ctx,data.location||data.shop||'Get in touch',40,fy+39,1000,34,bold?'#ffffff':brand,700);
+    fit(ctx,data.copy.contact,40,fy+80,1000,28,bold?'#ffffff':ink,500);
+    fit(ctx,data.copy.terms,40,fy+138,680,21,'#62736a',400);fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?765:881,fy+138,data.packPage?275:159,21,'#62736a',600);
     return layout;
   }
-  root.ShopDeskPoster={draw,geometry,retailGeometry,designedGeometry,contentBounds,displayName,packWarning};
+  function businessGeometry(template,format,count){
+    if(!Number.isInteger(count)||count<1||count>12)throw new Error('Choose 1 to 12 items.');
+    const status=format==='status',height=status?1920:1350,offset=status?100:0;
+    const gallery=template==='boutique',columns=gallery?(count<=3?1:count<=6?2:3):(count<=6?1:2),rows=Math.ceil(count/columns);
+    const top=350+offset,bottom=height-(status?290:200),gap=gallery?18:12,w=(984-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
+    return {height,status,top,bottom,columns,rows,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:48+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
+  }
+  function drawBusiness(canvas,data,images){
+    const layout=businessGeometry(data.template,data.format,data.items.length),gallery=data.template==='boutique',menu=data.template==='menu';
+    const brand={red:'#b91d30',green:'#1b5642',blue:'#203e63',orange:'#97441f',plum:'#613b59',charcoal:'#292822'}[data.theme]||'#292822';
+    const ink='#272823',paper=gallery?'#faf7f1':menu?'#fff8ec':'#f5f3f6',offset=layout.status?100:0;
+    canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this poster.');
+    ctx.fillStyle=paper;ctx.fillRect(0,0,1080,layout.height);
+    const logo=data.logo?images.get(data.logo):null;
+    if(gallery){
+      ctx.fillStyle=brand;ctx.fillRect(48,34+offset,56,5);
+      if(logo){contain(ctx,logo,48,57+offset,98,67);fit(ctx,data.shop||'Your business',168,102+offset,864,43,ink,700);}
+      else fit(ctx,data.shop||'Your business',48,102+offset,984,46,ink,700);
+      fit(ctx,data.copy.eyebrow,48,158+offset,984,20,brand,600);
+      nameLines(ctx,data.headline||'Find your next favourite.',48,278+offset,984,66,105,2,brand);
+      fit(ctx,data.copy.date,48,321+offset,984,24,ink,400);
+    }else{
+      ctx.fillStyle=brand;ctx.fillRect(0,0,1080,292+offset);
+      if(logo){contain(ctx,logo,48,32+offset,98,64);fit(ctx,data.shop||'Your business',168,77+offset,864,37,'#fff',700);}
+      else fit(ctx,data.shop||'Your business',48,77+offset,984,40,'#fff',700);
+      ctx.fillStyle='#ffffff40';ctx.fillRect(48,109+offset,984,1);
+      fit(ctx,data.copy.eyebrow,48,148+offset,984,20,menu?'#ffe2b6':'#efdeed',600);
+      nameLines(ctx,data.headline||(menu?'Good food. Made for you.':'Good service. Close to home.'),48,266+offset,984,66,102,2,'#fff');
+      fit(ctx,data.copy.date,48,327+offset,984,24,brand,500);
+      if(!data.copy.date){ctx.fillStyle=brand;ctx.fillRect(48,321+offset,48,3);}
+    }
+    for(const [index,item] of data.items.entries()){
+      const c=layout.cards[index],photo=item.photo?images.get(item.photo):null;
+      if(gallery){
+        roundBox(ctx,c.x,c.y,c.w,c.h,3,'#fff','#e4dfd5');
+        const horizontal=c.w/c.h>1.35,pad=14;
+        let x=c.x+pad,w=c.w-pad*2;
+        const priceH=Math.min(78,Math.max(44,c.h*.17)),priceY=c.y+c.h-pad-priceH,detailY=priceY-9;
+        if(horizontal&&photo){const pw=c.w*.47;contain(ctx,photo,c.x+pad,c.y+pad,pw-pad*2,c.h-pad*2);x=c.x+pw;w=c.w-pw-pad;}
+        const title=lines(ctx,item.name||'Item name',w,Math.min(40,Math.max(23,w*.10)),2),nameH=title.lines.length*(title.font+4),nameBottom=detailY-34;
+        if(!horizontal&&photo)contain(ctx,photo,c.x+pad,c.y+pad,w,Math.max(20,nameBottom-nameH-c.y-pad-10));
+        nameLines(ctx,item.name||'Item name',x,nameBottom,w,title.font,Math.min(nameH,nameBottom-c.y-pad),2,ink);
+        fit(ctx,item.size||data.copy.unit,x,detailY,w,Math.min(25,c.h*.09),brand,400);
+        ctx.fillStyle='#e4dfd5';ctx.fillRect(x,priceY+2,w,1);
+        drawPrice(ctx,item.price,x,priceY+6,w,priceH-6,null,brand);
+      }else{
+        if(!menu)roundBox(ctx,c.x,c.y,c.w,c.h,12,'#fff','#e7e1e7');
+        const pad=menu?4:18,innerH=c.h-pad*2;
+        let x=c.x+pad,w=c.w-pad*2;
+        const side=Math.min(innerH-8,layout.columns===1?148:82);
+        if(photo){contain(ctx,photo,x,c.y+(c.h-side)/2,side,side);x+=side+18;w-=side+18;}
+        const priceW=Math.min(layout.columns===1?235:135,w*.40),labelW=w-priceW-18,priceX=x+w-priceW;
+        const nameSize=Math.min(layout.columns===1?43:30,Math.max(22,innerH*.27)),nameBottom=c.y+c.h*.53;
+        nameLines(ctx,item.name||'Offer name',x,nameBottom,labelW,nameSize,innerH*.58,2,ink);
+        fit(ctx,item.size||data.copy.unit,x,Math.min(c.y+c.h-16,nameBottom+34),labelW,Math.min(24,Math.max(18,innerH*.16)),brand,400);
+        if(!menu)roundBox(ctx,priceX,c.y+c.h*.5-29,priceW,58,8,paper);
+        drawPrice(ctx,item.price,priceX,c.y+c.h*.5-28,priceW,56,null,brand);
+        if(menu){ctx.strokeStyle='#d8c4ac';ctx.lineWidth=1;ctx.setLineDash([3,6]);ctx.beginPath();ctx.moveTo(c.x,c.y+c.h-1);ctx.lineTo(c.x+c.w,c.y+c.h-1);ctx.stroke();ctx.setLineDash([]);}
+      }
+    }
+    const fy=layout.footerY;
+    ctx.fillStyle=brand;ctx.fillRect(48,fy,984,2);
+    fit(ctx,data.location||data.shop||'Get in touch',48,fy+38,984,31,brand,700);
+    fit(ctx,data.copy.contact,48,fy+77,984,28,ink,600);
+    nameLines(ctx,data.copy.terms,48,fy+133,714,20,40,2,'#656761');
+    fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',800,fy+133,232,19,'#656761',500);
+    return layout;
+  }
+  root.ShopDeskPoster={draw,geometry,retailGeometry,designedGeometry,businessGeometry,contentBounds,displayName,packWarning};
 })(typeof window!=='undefined'?window:globalThis);

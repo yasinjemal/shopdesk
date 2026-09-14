@@ -1,5 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
+import '../public/business.js';
 import '../public/poster.js';
 import '../public/pack.js';
 const {plan,caption,zip,crc32}=globalThis.ShopDeskPack;

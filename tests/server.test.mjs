@@ -81,3 +81,18 @@ test('round-trips both new flyer designs and their optional finishing preference
   }
   env.sql.close();
 });
+
+test('saves business designs and custom wording without changing legacy workspaces',async()=>{
+  const env=environment();let revision=0;
+  for(const [template,business,theme] of [['boutique','fashion','charcoal'],['menu','food','orange'],['studio','beauty','plum']]){
+    const state=sample();Object.assign(state.draft,{template,business,theme,eyebrow:'OUR PRICES',cta:'Book on WhatsApp',terms:'',showDate:false,date:''});
+    state.draft.items=Array.from({length:12},(_,i)=>({name:'Offer '+(i+1),size:'45 min',price:'150',photo:''}));
+    const saved=await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision,data:state}}),env);
+    assert.equal(saved.status,200);revision++;
+    assert.deepEqual((await (await worker.fetch(request('/api/workspace'),env)).json()).data,state);
+    for(const [key,value] of [['business','unknown'],['cta','x'.repeat(41)],['terms','x'.repeat(81)],['eyebrow','x'.repeat(29)],['showDate','false']]){
+      const bad=structuredClone(state);bad.draft[key]=value;assert.throws(()=>validateWorkspace(bad));
+    }
+  }
+  assert.deepEqual(validateWorkspace(sample()),sample());env.sql.close();
+});

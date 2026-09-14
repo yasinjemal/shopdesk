@@ -19,7 +19,8 @@
       const name=data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name;
       return name+(item.size?' · '+item.size:'')+' — '+money(item.price);
     });
-    return [data.shop,data.headline,'',...rows,'','Valid until '+data.dateText,...[data.location,data.phone?'Contact us: '+data.phone:''].filter(Boolean),'While stocks last.'].join('\n');
+    const copy=root.ShopDeskBusiness.copy(data);
+    return [data.shop,data.headline,'',...rows,'',...[copy.date,data.location,copy.contact,copy.terms].filter(Boolean)].join('\n');
   }
   const table=Uint32Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
   function crc32(bytes){let crc=0xffffffff;for(const b of bytes)crc=table[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;}

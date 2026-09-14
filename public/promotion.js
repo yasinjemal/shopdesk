@@ -16,8 +16,9 @@
     finally{clearTimeout(timeout);}
   }
   function dateText(value){if(!value)return 'your selected date';const d=new Date(value+'T12:00:00');return Number.isNaN(d.getTime())?'your selected date':d.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});}
+  function profile(){return ShopDeskBusiness.get($('business-type').value);}
   function capacity(){return $('poster-template').value==='simple'?3:12;}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{headline:$('promo-headline').value,date:$('promo-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(({name,size,price,photo})=>({name,size,price,photo}))}};}
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(({name,size,price,photo})=>({name,size,price,photo}))}};}
   function changed(){if(!ready)return;dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
     if(!ready||!dirty||saving||blocked||pendingPhotos)return;
@@ -29,8 +30,8 @@
   async function loadWorkspace(){
     if(saving)return;status('Loading your saved workspace…');$('promo-fields').disabled=true;$('retry-save').hidden=true;$('reload-workspace').hidden=true;
     try{const result=await api('/api/workspace');revision=result.revision;const data=result.data;
-      if(data){$('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';$('promo-headline').value=data.draft.headline;$('promo-date').value=data.draft.date;$('promo-theme').value=data.draft.theme;$('poster-template').value=data.draft.template||'simple';$('trim-photos').checked=data.draft.trimPhotos??false;$('clean-names').checked=data.draft.cleanNames??false;finishingChosen=data.draft.trimPhotos!==undefined||data.draft.cleanNames!==undefined;document.querySelector('[name="poster-format"][value="'+data.draft.format+'"]').checked=true;items=data.draft.items;products=data.products;}
-      ready=true;dirty=false;blocked=false;lastSaveError=false;$('promo-fields').disabled=false;$('workspace-error').hidden=true;status(data?'All changes saved':'Your changes will save automatically');renderItems();renderSaved();renderLogo();await preloadPhotos();draw();
+      if(data){const p=ShopDeskBusiness.get(data.draft.business);$('business-type').value=data.draft.business||'grocery';$('promo-eyebrow').value=data.draft.eyebrow??p.eyebrow;$('promo-cta').value=data.draft.cta??p.cta;$('promo-terms').value=data.draft.terms??p.terms;$('show-date').checked=data.draft.showDate??true;$('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';$('promo-headline').value=data.draft.headline;$('promo-date').value=data.draft.date;$('promo-theme').value=data.draft.theme;$('poster-template').value=data.draft.template||'simple';$('trim-photos').checked=data.draft.trimPhotos??false;$('clean-names').checked=data.draft.cleanNames??false;finishingChosen=data.draft.trimPhotos!==undefined||data.draft.cleanNames!==undefined;document.querySelector('[name="poster-format"][value="'+data.draft.format+'"]').checked=true;items=data.draft.items;products=data.products;}
+      ready=true;dirty=false;blocked=false;lastSaveError=false;$('promo-fields').disabled=false;$('workspace-error').hidden=true;status(data?'All changes saved':'Your changes will save automatically');renderBusiness();renderItems();renderSaved();renderLogo();await preloadPhotos();draw();
     }catch(e){ready=false;status('Could not load saved products',true);$('workspace-error').textContent=e.message;$('workspace-error').hidden=false;$('retry-save').hidden=false;draw();}
   }
   $('retry-save').addEventListener('click',()=>ready?save():loadWorkspace());
@@ -47,35 +48,35 @@
   function renderItems(){
     const list=$('promo-items');list.replaceChildren();
     items.forEach((item,index)=>{
-      const box=document.createElement('div');box.className='promo-item';const heading=document.createElement('div');heading.className='item-heading';heading.textContent='PRODUCT '+(index+1);
+      const box=document.createElement('div');box.className='promo-item';const heading=document.createElement('div');heading.className='item-heading';heading.textContent=profile().item.toUpperCase()+' '+(index+1);
       if(items.length>1)heading.append(button('Remove','remove-item',()=>{items.splice(items.indexOf(item),1);renderItems();changed();}));
       const photoRow=document.createElement('div');photoRow.className='photo-row';const thumb=document.createElement('div');thumb.className='photo-thumb';
-      if(item.photo){const img=document.createElement('img');img.alt=item.name||'Product photo';img.src='/api/photos/'+item.photo;img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
-      const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add product photo'));
-      const file=document.createElement('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.setAttribute('aria-label','Choose photo for product '+(index+1));file.addEventListener('change',()=>{if(file.files[0])uploadPhoto(item,file.files[0],uploadLabel,file);});uploadLabel.append(file);photoActions.append(uploadLabel);
+      if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';img.src='/api/photos/'+item.photo;img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
+      const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add photo'));
+      const file=document.createElement('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.setAttribute('aria-label','Choose photo for item '+(index+1));file.addEventListener('change',()=>{if(file.files[0])uploadPhoto(item,file.files[0],uploadLabel,file);});uploadLabel.append(file);photoActions.append(uploadLabel);
       const hint=document.createElement('span');hint.className='field-help';hint.textContent='JPG, PNG or WebP · full image kept';photoActions.append(hint);
       if(item.photo)photoActions.append(button('Remove photo','text-button',()=>{item.photo='';renderItems();changed();}));
-      photoRow.append(thumb,photoActions);const name=field('Product name',item.name,'text',v=>item.name=v,50);name.classList.add('full');const row=document.createElement('div');row.className='field-row';
-      const sizeField=field('Pack / quantity',item.size,'text',v=>item.size=v,25);sizeField.querySelector('input').addEventListener('blur',e=>{item.size=normalSize(item.size);e.target.value=item.size;changed();});
-      row.append(sizeField,field('Selling price (R)',item.price,'number',v=>item.price=v));
-      const saveProduct=button('Save to my products','text-button save-product',()=>{
-        if(!item.name.trim()||item.price===''||Number(item.price)<=0||!Number.isFinite(Number(item.price))){toast('Enter a product name and a price above zero first.');return;}
+      photoRow.append(thumb,photoActions);const name=field(profile().item+' name',item.name,'text',v=>item.name=v,50);name.classList.add('full');const row=document.createElement('div');row.className='field-row';
+      const sizeField=field(profile().size,item.size,'text',v=>item.size=v,25);sizeField.querySelector('input').placeholder=profile().example;sizeField.querySelector('input').addEventListener('blur',e=>{item.size=normalSize(item.size);e.target.value=item.size;changed();});
+      row.append(sizeField,field('Price (R)',item.price,'number',v=>item.price=v));
+      const saveProduct=button('Save to my items','text-button save-product',()=>{
+        if(!item.name.trim()||item.price===''||Number(item.price)<=0||!Number.isFinite(Number(item.price))){toast('Enter a name and a price above zero first.');return;}
         const found=products.find(p=>p.name.trim().toLowerCase()===item.name.trim().toLowerCase()&&p.size.trim().toLowerCase()===item.size.trim().toLowerCase());
-        if(!found&&products.length>=100){toast('You can keep up to 100 saved products.');return;}
+        if(!found&&products.length>=100){toast('You can keep up to 100 saved items.');return;}
         const value={id:found?.id||crypto.randomUUID(),...item};if(found)products[products.indexOf(found)]=value;else products.push(value);
-        renderSaved();changed();clearTimeout(saveTimer);save();toast(found?'Product updated. Waiting for the saved confirmation.':'Product added to your list. Waiting for the saved confirmation.');
+        renderSaved();changed();clearTimeout(saveTimer);save();toast(found?'Item updated. Waiting for the saved confirmation.':'Item added to your list. Waiting for the saved confirmation.');
       });
       box.append(heading,photoRow,name,row,saveProduct);list.append(box);
     });
     $('item-count').textContent=items.length+' of '+capacity();$('add-item').disabled=items.length>=capacity();
     $('poster-template').querySelector('[value="simple"]').disabled=items.length>3;
-    const hints={bold:'A large headline and bold yellow price tickets. Fits up to 12 offers.',market:'A clean layout with simple prices and more space around each offer. Fits up to 12 offers.',retail:'Your classic shop flyer with strong pack labels and yellow prices. Fits up to 12 offers.',simple:'A spacious design for one to three offers.'};
+    const hints={boutique:'A quiet, elegant collection with spacious photos and understated prices. Fits up to 12 items.',menu:'A warm menu with easy-to-scan rows, portion labels and optional food photos. Fits up to 12 items.',studio:'A polished price list for treatments and services. Works with or without photos, up to 12 offers.',bold:'A large headline and bold yellow price tickets. Fits up to 12 offers.',market:'A clean layout with simple prices and more space around each offer. Fits up to 12 offers.',retail:'Your classic shop flyer with strong pack labels and yellow prices. Fits up to 12 offers.',simple:'A spacious design for one to three offers.'};
     $('template-hint').textContent=hints[$('poster-template').value]+(items.length>3?' Reduce your offers to three to use the simple design.':'');
     updatePicker();
   }
-  function renderSaved(){const select=$('saved-product'),value=select.value;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent=products.length?'Choose a product…':'No saved products yet';select.append(first);
+  function renderSaved(){const select=$('saved-product'),value=select.value;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent=products.length?'Choose an item or service…':'No saved items yet';select.append(first);
     for(const product of products){const option=document.createElement('option');option.value=product.id;option.textContent=product.name+(product.size?' · '+product.size:'')+' · '+money(product.price);select.append(option);}select.value=value;updatePicker();
-    $('saved-hint').textContent=products.length?products.length+' saved '+(products.length===1?'product':'products')+'. Select one to reuse its photo and price.':'Save a product below to reuse its details and photo.';
+    $('saved-hint').textContent=products.length?products.length+' saved '+(products.length===1?'item':'items')+'. Select one to reuse its photo and price.':'Save an item below to reuse its details and photo.';
   }
   function updatePicker(){$('use-saved').disabled=!ready||!$('saved-product').value||items.length>=capacity();}
   $('saved-product').addEventListener('change',updatePicker);
@@ -88,7 +89,20 @@
     renderItems();changed();
   });
   for(const id of ['trim-photos','clean-names'])$(id).addEventListener('change',()=>finishingChosen=true);
-  function renderLogo(){const thumb=$('logo-thumb');thumb.replaceChildren();if(logo){const img=document.createElement('img');img.src='/api/photos/'+logo;img.alt='Your shop logo';img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Logo unavailable';});thumb.append(img);}else thumb.textContent='Shop logo';$('logo-label').textContent=logo?'Change your logo':'Add your logo';$('remove-logo').hidden=!logo;}
+  const designNames={bold:'Bold Specials',market:'Fresh Market',boutique:'Boutique Collection',menu:'Kitchen Menu',studio:'Service Studio'};
+  function renderBusiness(){
+    const p=profile();$('business-suggestion').textContent='Suggested: '+designNames[p.template]+' · “'+p.headline+'” · '+p.cta+'.';
+    $('date-field').hidden=!$('show-date').checked;
+    $('add-item').textContent='+ Add a new '+p.item.toLowerCase();
+  }
+  $('business-type').addEventListener('change',()=>{renderBusiness();renderItems();changed();});
+  $('apply-business-style').addEventListener('click',()=>{
+    const d=ShopDeskBusiness.applyPreset(snapshot().draft,$('business-type').value);
+    for(const [id,key] of [['poster-template','template'],['promo-theme','theme'],['promo-headline','headline'],['promo-eyebrow','eyebrow'],['promo-cta','cta'],['promo-terms','terms']])$(id).value=d[key];
+    $('show-date').checked=d.showDate;renderBusiness();renderItems();changed();toast('Style applied. Edit the wording below to make it yours.');
+  });
+  $('show-date').addEventListener('change',renderBusiness);
+  function renderLogo(){const thumb=$('logo-thumb');thumb.replaceChildren();if(logo){const img=document.createElement('img');img.src='/api/photos/'+logo;img.alt='Your business logo';img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Logo unavailable';});thumb.append(img);}else thumb.textContent='Business logo';$('logo-label').textContent=logo?'Change your logo':'Add your logo';$('remove-logo').hidden=!logo;}
   $('remove-logo').addEventListener('click',()=>{logo='';renderLogo();changed();});
   $('logo-file').addEventListener('change',async()=>{
     const input=$('logo-file'),file=input.files[0];if(!file)return;input.disabled=true;$('remove-logo').disabled=true;pendingPhotos++;$('logo-label').textContent='Adding logo…';draw();
@@ -122,10 +136,10 @@
   function dataForPoster(){const s=snapshot();return {...s.shop,shop:s.shop.name,...s.draft,dateText:dateText(s.draft.date),items:s.draft.items.map(i=>({...i,size:normalSize(i.size)}))};}
   function validatePoster(){
     if(!ready)throw new Error('Load your saved workspace before making a poster.');
-    const d=dataForPoster();if(!d.shop.trim())throw new Error('Enter your shop name.');if(!d.headline.trim())throw new Error('Enter a headline.');if(!/^\d{4}-\d{2}-\d{2}$/.test(d.date))throw new Error('Choose the offer end date.');if(d.date<iso())throw new Error('This offer has expired. Choose today or a future end date.');
-    d.items.forEach((i,index)=>{if(!i.name.trim())throw new Error('Enter the name for product '+(index+1)+'.');ShopDeskLogic.number(i.price,'Price for product '+(index+1),.01,1000000);});
+    const d=dataForPoster();if(!d.shop.trim())throw new Error('Enter your business name.');if(!d.headline.trim())throw new Error('Enter a headline.');if(d.showDate&&!/^\d{4}-\d{2}-\d{2}$/.test(d.date))throw new Error('Choose the offer end date.');if(d.showDate&&d.date<iso())throw new Error('This offer has expired. Choose today or a future end date.');
+    d.items.forEach((i,index)=>{if(!i.name.trim())throw new Error('Enter the name for item '+(index+1)+'.');ShopDeskLogic.number(i.price,'Price for item '+(index+1),.01,1000000);});
     if(pendingPhotos)throw new Error('Please wait for your photo to finish uploading.');
-    if(items.length>capacity())throw new Error('Choose Retail flyer to include more than three products.');
+    if(items.length>capacity())throw new Error('Choose a flyer design to include more than three items.');
     if([logo,...d.items.map(i=>i.photo)].some(id=>id&&!images.has(id)))throw new Error('A photo or logo is still loading or unavailable. Try changing or removing it before downloading.');
     return d;
   }
@@ -136,10 +150,10 @@
     for(const id of ['create-pack','create-pack-bottom'])$(id).disabled=!valid||packBusy;
     const pages=Math.ceil(d.items.length/4);$('pack-summary').textContent='1 full flyer + '+pages+' WhatsApp Status '+(pages===1?'page':'pages')+' + a matching caption.';
     ShopDeskPoster.draw($('promo-canvas'),d,images);
-    const warnings=d.items.map((i,index)=>{const message=ShopDeskPoster.packWarning(i.name,i.size);return message?'Product '+(index+1)+': '+message:'';}).filter(Boolean);
+    const warnings=d.items.map((i,index)=>{const message=ShopDeskPoster.packWarning(i.name,i.size);return message?'Item '+(index+1)+': '+message:'';}).filter(Boolean);
     $('promo-review').hidden=!warnings.length;$('promo-review').textContent=warnings.join(' ');
     $('format-caption').textContent=statusFormat?'9:16 WhatsApp Status':'4:5 portrait';$('download-hint').textContent=statusFormat?'1080 × 1920 PNG · Ready for WhatsApp Status.':'1080 × 1350 PNG · Ready to share.';
-    $('download-promo').textContent=statusFormat?'Download Status ↓':d.template!=='simple'?'Download flyer ↓':'Download poster ↓';$('poster-note').textContent=d.trimPhotos?'Check your photo framing before sharing. Turn off Fit product photos to restore the complete images.':(d.items.length>6?'Fewer offers give each product more space on a phone.':'Your full product photos are shown.');
+    $('download-promo').textContent=statusFormat?'Download Status ↓':d.template!=='simple'?'Download flyer ↓':'Download poster ↓';$('poster-note').textContent=d.trimPhotos?'Check your photo framing before sharing. Turn off Fit photos to restore the complete images.':(d.items.length>6?'Fewer offers give each item more space on a phone.':'Your complete photos are shown.');
   }
   function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
   $('download-promo').addEventListener('click',async()=>{try{const d=validatePoster();$('download-promo').disabled=true;await document.fonts?.ready;await preloadPhotos();validatePoster();draw();$('promo-canvas').toBlob(blob=>{if(!blob){toast('Could not create your poster. Please try again.');return;}download(blob,'shopdesk-'+d.format+'-'+iso()+'.png');toast('Your '+(d.format==='status'?'Status image':'poster')+' is ready to share.');},'image/png');}catch(e){toast(e.message);}finally{draw();}});
@@ -152,7 +166,7 @@
     const url=URL.createObjectURL(blob);packURLs.push(url);
     const card=document.createElement('article');card.className='pack-preview';const wrap=document.createElement('div');wrap.className='pack-image-wrap';
     const open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener';open.setAttribute('aria-label','Open '+output.label+' at full size');
-    const img=document.createElement('img');img.src=url;img.alt=output.label+' for your shop promotion';open.append(img);wrap.append(open);
+    const img=document.createElement('img');img.src=url;img.alt=output.label+' for your business promotion';open.append(img);wrap.append(open);
     const body=document.createElement('div');body.className='pack-preview-body';const title=document.createElement('h3');title.textContent=output.label;const detail=document.createElement('p');detail.textContent=output.detail;
     const save=document.createElement('a');save.className='button secondary';save.href=url;save.download=output.name;save.textContent='Save image ↓';save.setAttribute('aria-label','Save '+output.label);
     body.append(title,detail,save);card.append(wrap,body);$('pack-previews').append(card);
@@ -175,7 +189,7 @@
       packText=ShopDeskPack.caption(data);const captionBlob=new Blob([packText],{type:'text/plain;charset=utf-8'});files.push({name:'caption.txt',blob:captionBlob});
       $('pack-caption-text').value=packText;const url=URL.createObjectURL(captionBlob);packURLs.push(url);$('download-pack-caption').href=url;
       $('pack-output').hidden=false;$('pack-progress').textContent='Your images and caption are ready. Preparing the complete download…';
-      const zip=await ShopDeskPack.zip(files);if(run!==packRun)return;packZip=zip;packName='shopdesk-promotion-until-'+data.date+'.zip';
+      const zip=await ShopDeskPack.zip(files);if(run!==packRun)return;packZip=zip;packName='shopdesk-promotion-'+(data.showDate?'until-'+data.date:'price-list')+'.zip';
       $('download-pack').disabled=false;$('pack-download-detail').textContent=files.length+' files · '+(zip.size/1000000).toFixed(1)+' MB · ZIP';
       const count=outputs.length-1;$('pack-progress').textContent='Ready: 1 flyer, '+count+' Status '+(count===1?'page':'pages')+' and your caption. Created from the offers you selected.';
     }catch(e){if(run===packRun){$('pack-error').textContent=e.message||'We could not finish the pack. Close this window and try again.';$('pack-error').hidden=false;$('pack-progress').textContent='Your pack could not be completed.';}}
@@ -186,9 +200,9 @@
   $('pack-dialog').addEventListener('close',()=>{packRun++;packBusy=false;clearPack();draw();});
   $('download-pack').addEventListener('click',()=>{if(packZip)download(packZip,packName);});
   $('copy-pack-caption').addEventListener('click',async()=>{const text=packText;try{await navigator.clipboard.writeText(text);toast('Caption copied.');}catch{download(new Blob([text],{type:'text/plain;charset=utf-8'}),'caption.txt');toast('Caption downloaded as text.');}});
-  $('promo-form').addEventListener('input',event=>{if(event.target.closest('#promo-items')||['saved-product','logo-file','poster-template'].includes(event.target.id))return;changed();});
-  $('promo-form').addEventListener('change',event=>{if(event.target.closest('#promo-items')||['saved-product','logo-file','poster-template'].includes(event.target.id))return;changed();});
+  $('promo-form').addEventListener('input',event=>{if(event.target.closest('#promo-items')||['saved-product','logo-file','poster-template','business-type'].includes(event.target.id))return;changed();});
+  $('promo-form').addEventListener('change',event=>{if(event.target.closest('#promo-items')||['saved-product','logo-file','poster-template','business-type'].includes(event.target.id))return;changed();});
   const expiry=new Date();expiry.setDate(expiry.getDate()+7);$('promo-date').value=iso(expiry);
   window.ShopDeskPromotion={draw,addProduct(product){if(!ready){toast('Wait for your saved workspace to load.');return false;}if(items.length>=capacity()){toast(capacity()===3?'Choose Retail flyer to add more products, or remove one offer.':'Your flyer already has 12 products. Remove one to add this price.');return false;}items.push({...product,photo:''});renderItems();changed();return true;}};
-  renderItems();draw();loadWorkspace();if(document.fonts?.ready)document.fonts.ready.then(draw);
+  renderBusiness();renderItems();draw();loadWorkspace();if(document.fonts?.ready)document.fonts.ready.then(draw);
 })();
