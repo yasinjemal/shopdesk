@@ -55,8 +55,8 @@ test('preserves partially edited drafts but validates reusable product names and
   state.products=[{id:crypto.randomUUID(),name:'',size:'',price:'',photo:''}];assert.throws(()=>validateWorkspace(state));
   const bad=sample();bad.draft.format='square';assert.throws(()=>validateWorkspace(bad));
 });
-test('supports twelve retail offers and preserves the three-offer limit for older posters',async()=>{
-  const state=sample();state.draft.items=Array.from({length:12},(_,i)=>({...state.draft.items[0],name:'Offer '+(i+1)}));
+test('supports twenty-five retail offers and preserves the three-offer limit for older posters',async()=>{
+  const state=sample();state.draft.items=Array.from({length:25},(_,i)=>({...state.draft.items[0],name:'Offer '+(i+1)}));
   assert.throws(()=>validateWorkspace(state));
   state.draft.template='retail';state.draft.theme='red';assert.deepEqual(validateWorkspace(state),state);
   const env=environment();assert.equal((await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision:0,data:state}}),env)).status,200);
@@ -76,7 +76,7 @@ test('round-trips both new flyer designs and their optional finishing preference
   const env=environment();let revision=0;
   for(const template of ['bold','market']){
     const state=sample();state.draft.template=template;state.draft.trimPhotos=true;state.draft.cleanNames=false;
-    state.draft.items=Array.from({length:12},()=>({...state.draft.items[0]}));
+    state.draft.items=Array.from({length:25},()=>({...state.draft.items[0]}));
     assert.equal((await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision,data:state}}),env)).status,200);revision++;
     assert.deepEqual((await (await worker.fetch(request('/api/workspace'),env)).json()).data,state);
     state.draft.items.push({...state.draft.items[0]});assert.throws(()=>validateWorkspace(state));
@@ -89,7 +89,7 @@ test('saves business designs and custom wording without changing legacy workspac
   const env=environment();let revision=0;
   for(const [template,business,theme] of [['boutique','fashion','charcoal'],['menu','food','orange'],['studio','beauty','plum']]){
     const state=sample();Object.assign(state.draft,{template,business,theme,eyebrow:'OUR PRICES',cta:'Book on WhatsApp',terms:'',showDate:false,date:''});
-    state.draft.items=Array.from({length:12},(_,i)=>({name:'Offer '+(i+1),size:'45 min',price:'150',photo:''}));
+    state.draft.items=Array.from({length:25},(_,i)=>({name:'Offer '+(i+1),size:'45 min',price:'150',photo:''}));
     const saved=await worker.fetch(request('/api/workspace',{method:'PUT',body:{revision,data:state}}),env);
     assert.equal(saved.status,200);revision++;
     assert.deepEqual((await (await worker.fetch(request('/api/workspace'),env)).json()).data,state);

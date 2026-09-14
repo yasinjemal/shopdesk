@@ -22,5 +22,5 @@ test('events export dates and venue without requiring product prices or inheriti
   const data={...project.draft,shop:client.shop.name,location:client.shop.location,phone:client.shop.phone,eventDateText:'1 October 2026'};
   const outputs=ShopDeskPack.plan(data);assert.equal(outputs.length,2);assert.deepEqual(outputs.map(p=>p.data.format),['poster','status']);
   const caption=ShopDeskPack.caption(data);assert.ok(caption.includes('1 October 2026 · 10:00'));assert.ok(caption.includes('Community Hall'));assert.ok(caption.includes('Come celebrate with us.'));assert.ok(!caption.includes('stocks'));assert.ok(!caption.includes('R0'));assert.ok(!caption.includes('Maize'));
-  assert.throws(()=>ShopDeskPack.plan({...data,purpose:'spotlight',items:[...data.items,...data.items]}));
+  assert.throws(()=>ShopDeskPack.plan({...data,itemCount:undefined,purpose:'spotlight',items:[...data.items,...data.items]}));
 });

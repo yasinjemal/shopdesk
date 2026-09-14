@@ -6,7 +6,7 @@ import '../public/pack.js';
 const {plan,caption,zip,crc32}=globalThis.ShopDeskPack;
 const sample=count=>({shop:'Smiley Grocery Shop',logo:'logo-photo',headline:'Fresh deals. Everyday value.',date:'2026-09-30',dateText:'30 September 2026',phone:'+27607055533',location:'Mkomjana village',format:'status',theme:'red',template:'bold',trimPhotos:true,cleanNames:true,items:Array.from({length:count},(_,i)=>({name:'Offer '+(i+1),size:'12.5 kg',price:String(100+i),photo:'photo-'+i}))});
 test('every offer appears exactly once across balanced Status pages, with a full portrait flyer',()=>{
-  for(let count=1;count<=12;count++){
+  for(let count=1;count<=25;count++){
     const input=sample(count),original=structuredClone(input),outputs=plan(input),pages=outputs.slice(1);
     assert.deepEqual(input,original);assert.equal(outputs[0].data.format,'poster');assert.deepEqual(outputs[0].data.items,input.items);
     assert.equal(pages.length,Math.ceil(count/4));assert.deepEqual(pages.flatMap(page=>page.data.items),input.items);
@@ -17,7 +17,7 @@ test('every offer appears exactly once across balanced Status pages, with a full
     }
     assert.ok(Math.max(...pages.map(p=>p.data.items.length))-Math.min(...pages.map(p=>p.data.items.length))<=1);
   }
-  assert.throws(()=>plan(sample(0)));assert.throws(()=>plan(sample(13)));assert.throws(()=>plan({...sample(4),template:'simple'}));
+  assert.throws(()=>plan(sample(0)));assert.throws(()=>plan(sample(26)));assert.throws(()=>plan({...sample(4),template:'simple'}));
   assert.equal(plan({...sample(3),template:'simple'}).length,2);
 });
 test('caption uses the same names, pack sizes, prices and expiry as the images',()=>{
