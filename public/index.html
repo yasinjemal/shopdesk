@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ShopDesk — Your everyday shop tools</title>
+  <meta name="description" content="Price your products, make a promotion and balance your daily cash. Free practical tools for South African shop owners.">
+  <meta name="theme-color" content="#103e35">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23103e35'/%3E%3Cpath d='M12 13h16v5H17v4h11v6H12v-5h11v-4H12z' fill='%23b8f088'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
+</head>
+<body>
+<a class="skip" href="#workspace">Skip to tools</a>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" href="#promotion" aria-label="ShopDesk home"><span class="brand-mark">s<span>·</span></span>ShopDesk<span class="brand-dot">.</span></a>
+    <p class="nav-label">YOUR DAILY TOOLKIT</p>
+    <nav aria-label="Shop tools">
+      <button class="nav-item active" data-page="pricing"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h2m4 0h2m-8 4h2m4 0h2m-8 3h2m4 0h2"/></svg><span>Price a product</span><span class="nav-number">01</span></button>
+      <button class="nav-item" data-page="promotion"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 15-6v16L4 14zm4 6 2 5M21 9v6"/></svg><span>Make a promotion</span><span class="nav-number">02</span></button>
+      <button class="nav-item" data-page="cash"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 9h18m-5 5h2"/></svg><span>Close today's cash</span><span class="nav-number">03</span></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="learn-icon">↗</div><h3>A little learning.<br>A better business.</h3><p>Build your business skills with free HP LIFE courses.</p><a href="https://www.life-global.org/allcourses?page=1" target="_blank" rel="noopener noreferrer">Explore free courses <span>↗</span></a></div>
+    <div class="sidebar-footer">Built for the everyday hustle.</div>
+  </aside>
+  <div class="main-shell">
+    <header class="topbar"><div><span class="breadcrumb">Shop tools</span><span class="crumb-divider">/</span><span id="current-tool">Product pricing</span></div><span class="free-tag">Free to use</span></header>
+    <main id="workspace" tabindex="-1">
+      <section class="page active" id="page-pricing" aria-labelledby="pricing-title">
+        <div class="page-heading"><div><p class="eyebrow">01 / PRODUCT PRICING</p><h1 id="pricing-title">Every rand counts.</h1><p>Know your costs. Set your price. Protect your profit.</p></div><button class="button quiet" id="example">↻ Load potato example</button></div>
+        <div class="workspace-grid">
+          <div class="panel input-panel"><div class="panel-heading"><h2>What are you selling?</h2><span class="subtle-pill">Bulk → small packs</span></div>
+            <form id="pricing-form" novalidate>
+              <label class="field full">Product name<input id="product" type="text" maxlength="60" value="Potatoes" autocomplete="off"></label>
+              <div class="field-row"><label class="field">Bulk purchase cost<div class="input-wrap"><span>R</span><input id="cost" type="number" value="240" min="0" step="0.01" inputmode="decimal"></div></label><label class="field">Transport & other costs<div class="input-wrap"><span>R</span><input id="extras" type="number" value="20" min="0" step="0.01" inputmode="decimal"></div></label></div>
+              <div class="field-row three"><label class="field">Bulk quantity<div class="input-wrap"><input id="bulk" type="number" value="40" min="0.01" step="any" inputmode="decimal"><span>kg</span></div></label><label class="field">Size of each pack<div class="input-wrap"><input id="pack" type="number" value="1" min="0.01" step="any" inputmode="decimal"><span>kg</span></div></label><label class="field">Expected wastage<div class="input-wrap"><input id="waste" type="number" value="5" min="0" max="99.9" step="0.1" inputmode="decimal"><span>%</span></div></label></div>
+              <div class="inline-note"><span aria-hidden="true">ⓘ</span> Include delivery and packaging in your extra costs.</div>
+              <div class="form-divider"></div>
+              <div class="panel-heading compact"><h2>Choose your profit target</h2></div>
+              <fieldset class="segmented"><legend class="sr-only">Profit target method</legend><label><input type="radio" name="basis" value="margin" checked><span>Gross margin</span></label><label><input type="radio" name="basis" value="markup"><span>Markup</span></label></fieldset>
+              <div class="field-row target-row"><label class="field"><span id="target-label">Target gross margin</span><div class="input-wrap"><input id="target" type="number" value="30" min="0" max="99.9" step="0.1" inputmode="decimal"><span>%</span></div></label><label class="field">Round selling price up<select id="round"><option value="0.5">To the next 50c</option><option value="1">To the next R1</option><option value="0.01">To the next cent</option></select></label></div>
+              <p class="field-help" id="basis-help">Margin is the share of your selling price left after product costs.</p>
+            </form>
+          </div>
+          <div class="result-column"><div class="price-card" aria-live="polite"><div class="result-label"><span>YOUR SELLING PRICE</span><span class="result-badge">PER PACK</span></div><div class="price-display" id="selling-price">R10.00</div><p id="price-caption">for each 1 kg pack of potatoes</p><div class="price-line"></div><div class="result-pair"><span>Cost per pack</span><strong id="unit-cost">R6.84</strong></div><div class="result-pair"><span>Gross profit per pack</span><strong class="lime" id="unit-profit">R3.16</strong></div><div class="profit-bar" aria-hidden="true"><div id="cost-bar"></div></div><div class="bar-legend"><span><i></i> Product cost</span><span><i></i> Gross profit</span></div><div class="margin-row"><div><strong id="actual-margin">31.6%</strong><span>Actual margin</span></div><div><strong id="actual-markup">46.2%</strong><span>Actual markup</span></div></div><button class="button lime-button" id="use-price">Make a promotion with this price <span>↗</span></button><p class="result-footnote">Gross profit excludes your shop's running expenses.</p></div><div class="validation" id="price-error" role="alert" hidden></div>
+          <div class="panel batch-card"><div class="panel-heading"><h2>Your whole batch</h2><span class="subtle" id="batch-weight">40 kg purchased</span></div><div class="batch-row"><span>Full packs you can sell</span><strong id="packs">38</strong></div><div class="batch-row"><span>Total sales if all packs sell</span><strong id="revenue">R380.00</strong></div><div class="batch-row total"><span>Estimated gross profit</span><strong id="batch-profit">R120.00</strong></div></div></div>
+        </div>
+        <div class="bottom-tip"><span class="tip-symbol">✦</span><p><strong>Small change, real difference.</strong> Check your price again when your supplier's price changes.</p><a href="https://www.life-global.org/allcourses?page=1" target="_blank" rel="noopener noreferrer">Learn business basics ↗</a></div>
+      </section>
+      <section class="page" id="page-promotion" aria-labelledby="promotion-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">02 / PROMOTION MAKER</p><h1 id="promotion-title">Your design workspace.</h1><p>Keep each client’s projects together. Create, duplicate and make it theirs.</p></div><div class="save-indicator"><span id="save-status" role="status">Loading your saved workspace…</span><button class="text-button" id="retry-save" hidden>Try again</button><button class="text-button" id="reload-workspace" hidden>Reload saved version</button></div></div>
+        <p id="workspace-error" class="validation" role="alert" hidden></p>
+        <fieldset class="designer-bar" id="designer-fields" disabled>
+          <legend class="sr-only">Clients and projects</legend>
+          <div class="panel-heading"><h2>Designer Mode</h2><span class="subtle-pill" id="studio-count">Your saved workspace</span></div>
+          <div class="designer-selects"><label class="field">Client<select id="client-picker" aria-label="Switch client"></select></label><label class="field">Saved project<select id="project-picker" aria-label="Switch project"></select></label></div>
+          <div class="designer-actions"><button class="button secondary" type="button" id="new-client">+ New client</button><button class="button secondary" type="button" id="new-project">+ New project</button><button class="button quiet" type="button" id="duplicate-project">Duplicate project</button></div>
+          <p class="field-help">Business details and saved items belong to the client. Each project keeps its own design and offers.</p>
+        </fieldset>
+        <div class="pack-launcher"><div><h2>Your promotion pack</h2><p id="pack-summary">One flyer, Status pages and a matching caption.</p></div><button class="button primary" id="create-pack" disabled>Create promotion pack <span aria-hidden="true">↗</span></button></div>
+        <div class="workspace-grid promo-workspace"><div class="panel input-panel"><form id="promo-form" novalidate><fieldset id="promo-fields" disabled>
+          <label class="field full">Project name<input id="project-name" maxlength="60" value="My first flyer" placeholder="e.g. September specials"></label>
+          <div class="panel-heading"><h2>Client details</h2><span class="subtle-pill">Saved for next time</span></div>
+          <label class="field full">Business name<input id="shop-name" type="text" maxlength="50" value="Your local shop" autocomplete="organization"></label>
+          <div class="photo-row shop-logo"><div class="photo-thumb" id="logo-thumb">Shop logo</div><div class="photo-actions"><label class="photo-upload"><span id="logo-label">Add your logo</span><input id="logo-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose your business logo"></label><span class="field-help">Optional · JPG, PNG or WebP</span><button class="text-button" type="button" id="remove-logo" hidden>Remove logo</button></div></div>
+          <div class="field-row"><label class="field">Contact number (optional)<input id="promo-phone" type="tel" maxlength="24" placeholder="e.g. 072 123 4567" autocomplete="tel"></label><label class="field">Location (optional)<input id="promo-location" maxlength="60" placeholder="e.g. Mkomjana village"></label></div>
+          <div class="form-divider"></div><div class="panel-heading"><h2>Your poster</h2><span class="subtle-pill">Live preview</span></div>
+          <div class="business-picker">
+            <label class="field full">Business type<select id="business-type"><option value="grocery">Grocery &amp; general retail</option><option value="fashion">Clothing &amp; accessories</option><option value="food">Food, takeaway &amp; bakery</option><option value="beauty">Salon, barber &amp; beauty</option><option value="services">Repairs, cleaning &amp; other services</option><option value="general">Other business</option></select></label>
+            <p id="business-suggestion" class="field-help"></p><button type="button" class="button secondary full-width" id="apply-business-style">Use suggested style &amp; wording</button>
+            <p class="field-help">Updates the design, colour, headline, messages and date visibility. Your business details, items and prices stay as entered.</p>
+          </div>
+          <label class="field full">What are you making?<select id="flyer-purpose"><option value="offers">Offers, menu or price list</option><option value="spotlight">Single-offer spotlight</option><option value="event">Event invitation</option><option value="opening">Grand opening</option></select></label>
+          <label class="field full" id="template-field">Poster design<select id="poster-template" aria-describedby="template-hint"><option value="bold" selected>Bold Specials</option><option value="market">Fresh Market</option><option value="boutique">Boutique Collection · new</option><option value="menu">Kitchen Menu · new</option><option value="studio">Service Studio · new</option><option value="retail">Classic retail flyer</option><option value="simple">Simple poster · up to 3 offers</option></select></label>
+          <p class="template-hint" id="template-hint">A bold header, product grid and yellow price labels. Use clear photos on a white background for the best result.</p>
+          <label class="field full">Small heading (optional)<input id="promo-eyebrow" maxlength="28" value="SHOP SPECIALS" placeholder="e.g. OUR SERVICES"></label>
+          <label class="field full">Headline<input id="promo-headline" type="text" maxlength="45" value="Fresh deals. Everyday value."></label>
+          <label class="check-line" id="date-toggle"><input id="show-date" type="checkbox" checked><span>Show an offer end date<small>Turn off for a menu or ongoing price list.</small></span></label>
+          <div class="field-row"><label class="field" id="date-field">Offer valid until<input id="promo-date" type="date"></label><label class="field">Poster colour<select id="promo-theme"><option value="red" selected>Specials red</option><option value="green">ShopDesk green</option><option value="blue">Midnight blue</option><option value="orange">Sunset orange</option><option value="plum">Soft plum</option><option value="charcoal">Warm charcoal</option></select></label></div>
+          <div id="announcement-fields" hidden>
+            <div class="field-row"><label class="field">Event / opening date<input id="event-date" type="date"></label><label class="field">Time (optional)<input id="event-time" maxlength="40" placeholder="e.g. 09:00–17:00"></label></div>
+            <label class="field full">Venue (optional)<input id="event-venue" maxlength="80" placeholder="Uses the client's location if left blank"></label>
+            <div class="photo-row"><div class="photo-thumb" id="hero-thumb">Main photo</div><div class="photo-actions"><label class="photo-upload"><span id="hero-label">Add main photo</span><input id="hero-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose main event photo"></label><button class="text-button" type="button" id="remove-hero" hidden>Remove main photo</button><span class="field-help">Optional · your complete photo is kept</span></div></div>
+          </div>
+          <label class="field full" id="details-field" hidden>Extra details (optional)<textarea id="promo-details" maxlength="180" rows="3" placeholder="What should customers know?"></textarea></label>
+          <label class="field full">Order or booking message (optional)<input id="promo-cta" maxlength="40" value="Contact us" placeholder="e.g. Book an appointment"><span class="field-help">Appears with your contact number on the poster and caption.</span></label>
+          <label class="field full">Footer note (optional)<input id="promo-terms" maxlength="80" value="While stocks last." placeholder="e.g. Please book ahead."></label>
+          <fieldset class="segmented format-options"><legend class="sr-only">Poster size</legend><label><input name="poster-format" type="radio" value="poster" checked><span>Poster · 4:5</span></label><label><input name="poster-format" type="radio" value="status"><span>WhatsApp Status · 9:16</span></label></fieldset>
+          <div class="flyer-finishing"><label><input id="trim-photos" type="checkbox" checked><span><strong>Fit photos</strong><small>Trim blank outer borders so your items appear larger. Turn off to show the complete image.</small></span></label><label><input id="clean-names" type="checkbox" checked><span><strong>Keep pack sizes in the label</strong><small>Hide a repeated weight in the product name when both amounts match.</small></span></label></div>
+          <div id="offer-fields"><div class="form-divider"></div><div class="panel-heading compact"><h2>Items on your poster</h2><span class="subtle" id="item-count">1 of 12</span></div>
+          <div class="saved-picker"><label class="field">Reuse a saved item or service<select id="saved-product"><option value="">No saved products yet</option></select></label><button class="button secondary" type="button" id="use-saved" disabled>Add to poster</button></div>
+          <p class="field-help" id="saved-hint">Save a product below to reuse its details and photo.</p>
+          <div id="promo-items"></div><button class="button quiet full-width" type="button" id="add-item">+ Add a new product</button></div>
+        </fieldset></form><p id="promo-review" class="review-note" role="status" hidden></p><p id="promo-error" class="validation" role="alert" hidden></p>
+          <div class="action-row"><button class="button primary" id="download-promo" disabled>Download poster ↓</button><button class="button secondary" id="copy-promo" disabled>Copy offer text</button></div><p class="field-help" id="download-hint">1080 × 1350 PNG · Ready to share.</p><button class="button secondary full-width pack-bottom-button" id="create-pack-bottom" disabled>Create the full promotion pack</button>
+        </div><div class="poster-column"><div class="preview-caption"><span>YOUR POSTER</span><span id="format-caption">4:5 portrait</span></div><canvas id="promo-canvas" width="1080" height="1350" aria-label="Preview of your promotion poster"></canvas><p class="field-help" id="poster-note">Photos are optional. Your offers take centre stage.</p><div class="poster-quality"><span>✓ Clear prices</span><span>✓ Photos optional</span><span>✓ High-resolution download</span></div></div></div>
+      </section>
+      <section class="page" id="page-cash" aria-labelledby="cash-title" hidden>
+        <div class="page-heading"><div><p class="eyebrow">03 / DAILY CASH CLOSING</p><h1 id="cash-title">Close the day with clarity.</h1><p>Check the cash in your till against what should be there.</p></div></div>
+        <div class="workspace-grid"><div class="panel input-panel"><div class="panel-heading"><h2>Today's cash movements</h2><span class="subtle-pill">Cash only</span></div><form id="cash-form" novalidate><label class="field full">Trading date<input id="cash-date" type="date"></label><div class="field-row"><label class="field">Opening till float<div class="input-wrap"><span>R</span><input id="opening" type="number" min="0" step="0.01" value="500" inputmode="decimal"></div></label><label class="field">Cash sales collected<div class="input-wrap"><span>R</span><input id="sales" type="number" min="0" step="0.01" value="3500" inputmode="decimal"></div></label></div><div class="field-row"><label class="field">Other cash added<div class="input-wrap"><span>R</span><input id="added" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div></label><label class="field">Expenses paid from till<div class="input-wrap"><span>R</span><input id="expenses" type="number" min="0" step="0.01" value="250" inputmode="decimal"></div></label></div><div class="field-row"><label class="field">Refunds paid in cash<div class="input-wrap"><span>R</span><input id="refunds" type="number" min="0" step="0.01" value="0" inputmode="decimal"></div></label><label class="field">Cash taken out / banked<div class="input-wrap"><span>R</span><input id="withdrawn" type="number" min="0" step="0.01" value="1500" inputmode="decimal"></div></label></div><div class="inline-note"><span aria-hidden="true">ⓘ</span> Exclude card payments, EFTs and credit sales. Enter cash sales before refunds; count each movement once.</div><div class="form-divider"></div><label class="field full">Actual cash counted in the till<div class="input-wrap prominent-input"><span>R</span><input id="counted" type="number" min="0" step="0.01" value="2250" inputmode="decimal"></div></label><label class="field full">Closing note (optional)<textarea id="cash-note" rows="2" maxlength="500" placeholder="Record anything you need to follow up."></textarea></label></form><p class="field-help">Example amounts are filled in. Replace them with your figures.</p></div><div class="result-column"><div class="panel cash-result" aria-live="polite"><div class="result-label"><span>EXPECTED CASH IN TILL</span></div><div class="cash-big" id="expected">R2,250.00</div><div class="cash-status" id="cash-status"><span id="cash-status-icon">✓</span><div><strong id="cash-status-title">Your till balances</strong><p id="cash-status-description">Cash counted matches expected cash.</p></div></div><div class="batch-row"><span>Actual cash counted</span><strong id="actual-cash">R2,250.00</strong></div><div class="batch-row total"><span>Difference</span><strong id="cash-difference">R0.00</strong></div><button class="button primary full-width" id="download-cash">Download closing summary ↓</button><p class="field-help">Keep a text summary for your records.</p></div><div class="validation" id="cash-error" role="alert" hidden></div><div class="panel formula-card"><h2>How the cash adds up</h2><p>Opening float + cash sales + other cash added − expenses − refunds − cash taken out.</p><p><strong>A balanced till is a cash check.</strong> It does not tell you your business profit.</p></div></div></div>
+      </section>
+      <footer class="main-footer"><span>ShopDesk <span class="footer-dot">•</span> Simple tools. Better shop days.</span><span>Poster details save to your account · Cash entries reset on reload</span></footer>
+    </main>
+  </div>
+</div>
+<div id="toast" role="status" hidden></div>
+<dialog id="studio-dialog" aria-labelledby="studio-dialog-title">
+  <form id="studio-create-form">
+    <div class="panel-heading"><h2 id="studio-dialog-title">New client</h2><button class="button quiet" type="button" id="close-studio-dialog">Cancel</button></div>
+    <div id="new-client-fields"><label class="field full">Client / business name<input id="new-client-name" maxlength="50" placeholder="e.g. Smiley Kitchen"></label><label class="field full">Business type<select id="new-client-business"></select></label></div>
+    <label class="field full">Project name<input id="new-project-name" maxlength="60" placeholder="e.g. Opening day" required></label>
+    <label class="field full">Flyer purpose<select id="new-project-purpose"><option value="offers">Offers, menu or price list</option><option value="spotlight">Single-offer spotlight</option><option value="event">Event invitation</option><option value="opening">Grand opening</option></select></label>
+    <p class="validation" id="studio-create-error" hidden role="alert"></p><button class="button primary full-width" id="create-studio-entry" type="submit">Create client</button>
+  </form>
+</dialog>
+<dialog id="pack-dialog" aria-labelledby="pack-title">
+  <div class="pack-dialog-heading"><div><p class="eyebrow">ALL YOUR OFFERS</p><h2 id="pack-title">Your promotion pack</h2></div><button type="button" class="button quiet" id="close-pack" aria-label="Close promotion pack">Back to editor</button></div>
+  <p id="pack-progress" role="status">Preparing your images…</p>
+  <div id="pack-error" class="validation" role="alert" hidden></div>
+  <div id="pack-output" hidden>
+    <div class="pack-actions"><button class="button primary" id="download-pack" disabled>Download complete pack ↓</button><p id="pack-download-detail">All images and your caption in one ZIP.</p></div>
+    <p class="pack-instruction">Save the Status images individually to post them from your phone. Their numbers show the posting order.</p>
+    <div id="pack-previews" class="pack-previews"></div>
+    <div class="pack-caption"><div class="panel-heading"><h3>Matching caption</h3><button class="button secondary" id="copy-pack-caption">Copy caption</button></div><label class="sr-only" for="pack-caption-text">Promotion caption</label><textarea id="pack-caption-text" rows="9" readonly></textarea><a id="download-pack-caption" class="text-button" download="caption.txt">Download caption as text ↓</a></div>
+  </div>
+</dialog>
+</body>
+</html>
