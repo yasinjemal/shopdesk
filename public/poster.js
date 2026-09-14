@@ -96,7 +96,7 @@
     const contact=[data.location,data.phone].filter(Boolean).join('  •  ');
     if(contact)fit(ctx,contact,60,y+56,960,32,accent,500);
     fit(ctx,'While stocks last.',60,y+109,600,24,'#ffffff',400);
-    fit(ctx,'ShopDesk',870,y+109,150,22,accent,600);
+    fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?735:870,y+109,data.packPage?285:150,22,accent,600);
     return layout;
   }
   function retailGeometry(format,count){
@@ -164,7 +164,7 @@
     fit(ctx,data.location||'Visit us in store',40,fy+(layout.status?24:17),1000,layout.status?36:30,'#ffffff',700);
     if(data.phone)fit(ctx,'Contact us: '+data.phone,40,fy+(layout.status?102:80),780,28,dark,600);
     else fit(ctx,'While stocks last.',40,fy+(layout.status?102:80),780,24,'#56615b',400);
-    fit(ctx,'ShopDesk',876,fy+(layout.status?102:80),165,22,'#657069',600);
+    fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?765:876,fy+(layout.status?102:80),data.packPage?275:165,22,'#657069',600);
     if(data.phone)fit(ctx,'While stocks last.',40,fy+(layout.status?140:113),780,18,'#657069',400);
     return layout;
   }
@@ -230,7 +230,7 @@
     if(bold){ctx.fillStyle=brand;ctx.fillRect(0,fy,1080,104);}else{ctx.fillStyle=brand;ctx.fillRect(40,fy,1000,3);}
     fit(ctx,data.location||'Visit us in store',40,fy+39,1000,34,bold?'#ffffff':brand,700);
     fit(ctx,data.phone?'Contact us: '+data.phone:'Ask in store about these offers',40,fy+80,1000,28,bold?'#ffffff':ink,500);
-    fit(ctx,'While stocks last.',40,fy+138,780,21,'#62736a',400);fit(ctx,'ShopDesk',881,fy+138,159,21,'#62736a',600);
+    fit(ctx,'While stocks last.',40,fy+138,680,21,'#62736a',400);fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',data.packPage?765:881,fy+138,data.packPage?275:159,21,'#62736a',600);
     return layout;
   }
   root.ShopDeskPoster={draw,geometry,retailGeometry,designedGeometry,contentBounds,displayName,packWarning};

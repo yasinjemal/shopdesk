@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#103e35">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='11' fill='%23103e35'/%3E%3Cpath d='M12 13h16v5H17v4h11v6H12v-5h11v-4H12z' fill='%23b8f088'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
-  <script src="logic.js" defer></script><script src="poster.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
+  <script src="logic.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#workspace">Skip to tools</a>
@@ -50,6 +50,7 @@
       <section class="page" id="page-promotion" aria-labelledby="promotion-title" hidden>
         <div class="page-heading"><div><p class="eyebrow">02 / PROMOTION MAKER</p><h1 id="promotion-title">Your next special, ready.</h1><p>Pick your products, add photos and make a poster worth sharing.</p></div><div class="save-indicator"><span id="save-status" role="status">Loading your saved workspace…</span><button class="text-button" id="retry-save" hidden>Try again</button><button class="text-button" id="reload-workspace" hidden>Reload saved version</button></div></div>
         <p id="workspace-error" class="validation" role="alert" hidden></p>
+        <div class="pack-launcher"><div><h2>Your promotion pack</h2><p id="pack-summary">One flyer, Status pages and a matching caption.</p></div><button class="button primary" id="create-pack" disabled>Create promotion pack <span aria-hidden="true">↗</span></button></div>
         <div class="workspace-grid promo-workspace"><div class="panel input-panel"><form id="promo-form" novalidate><fieldset id="promo-fields" disabled>
           <div class="panel-heading"><h2>Your shop</h2><span class="subtle-pill">Saved for next time</span></div>
           <label class="field full">Shop name<input id="shop-name" type="text" maxlength="50" value="Your local shop" autocomplete="organization"></label>
@@ -67,7 +68,7 @@
           <p class="field-help" id="saved-hint">Save a product below to reuse its details and photo.</p>
           <div id="promo-items"></div><button class="button quiet full-width" type="button" id="add-item">+ Add a new product</button>
         </fieldset></form><p id="promo-review" class="review-note" role="status" hidden></p><p id="promo-error" class="validation" role="alert" hidden></p>
-          <div class="action-row"><button class="button primary" id="download-promo" disabled>Download poster ↓</button><button class="button secondary" id="copy-promo" disabled>Copy offer text</button></div><p class="field-help" id="download-hint">1080 × 1350 PNG · Ready to share.</p>
+          <div class="action-row"><button class="button primary" id="download-promo" disabled>Download poster ↓</button><button class="button secondary" id="copy-promo" disabled>Copy offer text</button></div><p class="field-help" id="download-hint">1080 × 1350 PNG · Ready to share.</p><button class="button secondary full-width pack-bottom-button" id="create-pack-bottom" disabled>Create the full promotion pack</button>
         </div><div class="poster-column"><div class="preview-caption"><span>YOUR POSTER</span><span id="format-caption">4:5 portrait</span></div><canvas id="promo-canvas" width="1080" height="1350" aria-label="Preview of your promotion poster"></canvas><p class="field-help" id="poster-note">Your products take centre stage. Photos are optional.</p><div class="poster-quality"><span>✓ Clear prices</span><span>✓ Full product photos</span><span>✓ High-resolution download</span></div></div></div>
       </section>
       <section class="page" id="page-cash" aria-labelledby="cash-title" hidden>
@@ -79,5 +80,16 @@
   </div>
 </div>
 <div id="toast" role="status" hidden></div>
+<dialog id="pack-dialog" aria-labelledby="pack-title">
+  <div class="pack-dialog-heading"><div><p class="eyebrow">ALL YOUR OFFERS</p><h2 id="pack-title">Your promotion pack</h2></div><button type="button" class="button quiet" id="close-pack" aria-label="Close promotion pack">Back to editor</button></div>
+  <p id="pack-progress" role="status">Preparing your images…</p>
+  <div id="pack-error" class="validation" role="alert" hidden></div>
+  <div id="pack-output" hidden>
+    <div class="pack-actions"><button class="button primary" id="download-pack" disabled>Download complete pack ↓</button><p id="pack-download-detail">All images and your caption in one ZIP.</p></div>
+    <p class="pack-instruction">Save the Status images individually to post them from your phone. Their numbers show the posting order.</p>
+    <div id="pack-previews" class="pack-previews"></div>
+    <div class="pack-caption"><div class="panel-heading"><h3>Matching caption</h3><button class="button secondary" id="copy-pack-caption">Copy caption</button></div><label class="sr-only" for="pack-caption-text">Promotion caption</label><textarea id="pack-caption-text" rows="9" readonly></textarea><a id="download-pack-caption" class="text-button" download="caption.txt">Download caption as text ↓</a></div>
+  </div>
+</dialog>
 </body>
 </html>

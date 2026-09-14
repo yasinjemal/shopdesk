@@ -5,6 +5,7 @@
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   let items=[{name:'Potatoes',size:'1 kg pack',price:'10.00',photo:''}],products=[],revision=0,ready=false,dirty=false,saving=false,blocked=false,change=0,saveTimer,toastTimer;
   let lastSaveError=false,pendingPhotos=0,logo='',finishingChosen=false;
+  let packRun=0,packBusy=false,packZip=null,packText='',packName='',packURLs=[];
   const images=new Map(),imageErrors=new Set(),imageLoads=new Map();
   function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
   function status(message,error=false){$('save-status').textContent=message;$('save-status').classList.toggle('save-error',error);}
@@ -130,7 +131,10 @@
   }
   function draw(){
     const d=dataForPoster(),statusFormat=d.format==='status';
-    try{validatePoster();$('promo-error').hidden=true;$('download-promo').disabled=false;$('copy-promo').disabled=false;}catch(e){$('promo-error').textContent=e.message;$('promo-error').hidden=!ready;$('download-promo').disabled=true;$('copy-promo').disabled=true;}
+    let valid=false;
+    try{validatePoster();valid=true;$('promo-error').hidden=true;$('download-promo').disabled=false;$('copy-promo').disabled=false;}catch(e){$('promo-error').textContent=e.message;$('promo-error').hidden=!ready;$('download-promo').disabled=true;$('copy-promo').disabled=true;}
+    for(const id of ['create-pack','create-pack-bottom'])$(id).disabled=!valid||packBusy;
+    const pages=Math.ceil(d.items.length/4);$('pack-summary').textContent='1 full flyer + '+pages+' WhatsApp Status '+(pages===1?'page':'pages')+' + a matching caption.';
     ShopDeskPoster.draw($('promo-canvas'),d,images);
     const warnings=d.items.map((i,index)=>{const message=ShopDeskPoster.packWarning(i.name,i.size);return message?'Product '+(index+1)+': '+message:'';}).filter(Boolean);
     $('promo-review').hidden=!warnings.length;$('promo-review').textContent=warnings.join(' ');
@@ -139,7 +143,49 @@
   }
   function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
   $('download-promo').addEventListener('click',async()=>{try{const d=validatePoster();$('download-promo').disabled=true;await document.fonts?.ready;await preloadPhotos();validatePoster();draw();$('promo-canvas').toBlob(blob=>{if(!blob){toast('Could not create your poster. Please try again.');return;}download(blob,'shopdesk-'+d.format+'-'+iso()+'.png');toast('Your '+(d.format==='status'?'Status image':'poster')+' is ready to share.');},'image/png');}catch(e){toast(e.message);}finally{draw();}});
-  $('copy-promo').addEventListener('click',async()=>{try{const d=validatePoster();const content=[d.shop,d.headline,'',...d.items.map(i=>`${d.cleanNames?ShopDeskPoster.displayName(i.name,i.size):i.name}${i.size?' · '+i.size:''} — ${money(i.price)}`),'','Valid until '+d.dateText,d.location,d.phone,'While stocks last.'].join('\n');try{await navigator.clipboard.writeText(content);toast('Offer text copied. Paste it into your customer message.');}catch{download(new Blob([content],{type:'text/plain;charset=utf-8'}),'shopdesk-offer.txt');toast('Offer text downloaded.');}}catch(e){toast(e.message);}});
+  $('copy-promo').addEventListener('click',async()=>{try{const content=ShopDeskPack.caption(validatePoster());try{await navigator.clipboard.writeText(content);toast('Offer text copied. Paste it into your customer message.');}catch{download(new Blob([content],{type:'text/plain;charset=utf-8'}),'shopdesk-offer.txt');toast('Offer text downloaded.');}}catch(e){toast(e.message);}});
+  function clearPack(){
+    $('pack-previews').replaceChildren();$('download-pack-caption').removeAttribute('href');$('pack-caption-text').value='';$('pack-download-detail').textContent='All images and your caption in one ZIP.';
+    const retired=packURLs;setTimeout(()=>retired.forEach(url=>URL.revokeObjectURL(url)),30000);packURLs=[];packZip=null;packText='';$('download-pack').disabled=true;
+  }
+  function previewPackImage(output,blob){
+    const url=URL.createObjectURL(blob);packURLs.push(url);
+    const card=document.createElement('article');card.className='pack-preview';const wrap=document.createElement('div');wrap.className='pack-image-wrap';
+    const open=document.createElement('a');open.href=url;open.target='_blank';open.rel='noopener';open.setAttribute('aria-label','Open '+output.label+' at full size');
+    const img=document.createElement('img');img.src=url;img.alt=output.label+' for your shop promotion';open.append(img);wrap.append(open);
+    const body=document.createElement('div');body.className='pack-preview-body';const title=document.createElement('h3');title.textContent=output.label;const detail=document.createElement('p');detail.textContent=output.detail;
+    const save=document.createElement('a');save.className='button secondary';save.href=url;save.download=output.name;save.textContent='Save image ↓';save.setAttribute('aria-label','Save '+output.label);
+    body.append(title,detail,save);card.append(wrap,body);$('pack-previews').append(card);
+  }
+  async function createPack(){
+    if(packBusy)return;
+    let data;try{data=validatePoster();}catch(e){toast(e.message);return;}
+    const run=++packRun;packBusy=true;clearPack();$('pack-output').hidden=true;$('pack-error').hidden=true;$('pack-progress').textContent='Preparing your promotion pack…';
+    if(!$('pack-dialog').open)$('pack-dialog').showModal();draw();
+    try{
+      await document.fonts?.ready;if(run!==packRun)return;
+      const outputs=ShopDeskPack.plan(data),files=[];
+      for(const [index,output] of outputs.entries()){
+        if(run!==packRun)return;$('pack-progress').textContent='Creating '+output.label.toLowerCase()+' ('+(index+1)+' of '+outputs.length+')…';
+        const canvas=document.createElement('canvas');ShopDeskPoster.draw(canvas,output.data,images);
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));canvas.width=1;canvas.height=1;
+        if(run!==packRun)return;if(!blob)throw new Error('An image could not be created. Close this window and try the pack again.');
+        files.push({name:output.name,blob});previewPackImage(output,blob);
+      }
+      packText=ShopDeskPack.caption(data);const captionBlob=new Blob([packText],{type:'text/plain;charset=utf-8'});files.push({name:'caption.txt',blob:captionBlob});
+      $('pack-caption-text').value=packText;const url=URL.createObjectURL(captionBlob);packURLs.push(url);$('download-pack-caption').href=url;
+      $('pack-output').hidden=false;$('pack-progress').textContent='Your images and caption are ready. Preparing the complete download…';
+      const zip=await ShopDeskPack.zip(files);if(run!==packRun)return;packZip=zip;packName='shopdesk-promotion-until-'+data.date+'.zip';
+      $('download-pack').disabled=false;$('pack-download-detail').textContent=files.length+' files · '+(zip.size/1000000).toFixed(1)+' MB · ZIP';
+      const count=outputs.length-1;$('pack-progress').textContent='Ready: 1 flyer, '+count+' Status '+(count===1?'page':'pages')+' and your caption. Created from the offers you selected.';
+    }catch(e){if(run===packRun){$('pack-error').textContent=e.message||'We could not finish the pack. Close this window and try again.';$('pack-error').hidden=false;$('pack-progress').textContent='Your pack could not be completed.';}}
+    finally{if(run===packRun){packBusy=false;draw();}}
+  }
+  for(const id of ['create-pack','create-pack-bottom'])$(id).addEventListener('click',createPack);
+  $('close-pack').addEventListener('click',()=>$('pack-dialog').close());
+  $('pack-dialog').addEventListener('close',()=>{packRun++;packBusy=false;clearPack();draw();});
+  $('download-pack').addEventListener('click',()=>{if(packZip)download(packZip,packName);});
+  $('copy-pack-caption').addEventListener('click',async()=>{const text=packText;try{await navigator.clipboard.writeText(text);toast('Caption copied.');}catch{download(new Blob([text],{type:'text/plain;charset=utf-8'}),'caption.txt');toast('Caption downloaded as text.');}});
   $('promo-form').addEventListener('input',event=>{if(event.target.closest('#promo-items')||['saved-product','logo-file','poster-template'].includes(event.target.id))return;changed();});
   $('promo-form').addEventListener('change',event=>{if(event.target.closest('#promo-items')||['saved-product','logo-file','poster-template'].includes(event.target.id))return;changed();});
   const expiry=new Date();expiry.setDate(expiry.getDate()+7);$('promo-date').value=iso(expiry);
