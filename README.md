@@ -2,7 +2,7 @@
 
 ShopDesk helps small businesses and freelance designers create promotional flyers, save client projects, and manage everyday pricing and cash calculations.
 
-Current application: version 9, updated 14 September 2026.
+Current application: version 10, updated 14 September 2026.
 
 ## Features included
 
@@ -58,3 +58,5 @@ Account identity comes from the trusted Sites authentication layer through the `
 This repository contains the current application source, tests, migrations, and these setup notes. It does **not** contain saved clients, projects, product photos, logos, or other live database and bucket contents. Those remain in the running application's storage and require a separate data export for a full backup.
 
 The initial GitHub import was a source snapshot. Earlier Sites commits were not imported. Installed dependencies and generated build output are excluded.
+
+The design library includes 16 templates, 13 palettes, four typography settings, and four price-label settings. Colour Block, The Edit, Neon Night, Warehouse Deals, Atelier and Street Kitchen each support 1–25 offers. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look.
