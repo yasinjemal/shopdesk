@@ -7,8 +7,8 @@
   <meta name="theme-color" content="#103e35">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Crect%20width='40'%20height='40'%20rx='11'%20fill='%23103e35'/%3E%3Cpath%20d='M12%2013h16v5H17v4h11v6H12v-5h11v-4H12z'%20fill='%23b8f088'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
-  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
-<script src="interface.js" defer></script></head>
+  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
+<script src="interface.js" defer></script><script src="batch.js" defer></script></head>
 <body>
 <a class="skip" href="#workspace">Skip to tools</a>
 <div class="app-shell">
@@ -77,8 +77,11 @@
           <label class="field full">Footer note (optional)<input id="promo-terms" maxlength="80" value="While stocks last." placeholder="e.g. Please book ahead."></label>
           <div id="offer-fields"><div class="panel-heading compact"><h2>Items on your poster</h2><span class="subtle" id="item-count">1 of 25</span></div>
           <div class="item-layout-control" id="item-layout-control"><label class="field">Number of products / services<select id="product-count" aria-describedby="product-count-hint"></select></label><p class="field-help" id="product-count-hint" role="status">The flyer fits your selected number of items.</p></div>
-          <div class="saved-picker"><label class="field">Reuse a saved item or service<select id="saved-product"><option value="">No saved products yet</option></select></label><button class="button secondary" type="button" id="use-saved" disabled>Add to poster</button></div>
+          <div class="batch-launchers"><button class="button secondary" type="button" id="open-bulk">Paste a product list</button><button class="button secondary" type="button" id="open-saved-grid">Choose saved products</button></div>
+          <p class="field-help" id="batch-room"></p><details class="quick-add"><summary>Add one saved item</summary>          <div class="saved-picker"><label class="field">Reuse a saved item or service<select id="saved-product"><option value="">No saved products yet</option></select></label><button class="button secondary" type="button" id="use-saved" disabled>Add to poster</button></div>
           <p class="field-help" id="saved-hint">Save a product below to reuse its details and photo.</p>
+</details>
+          <p class="feature-explainer" id="feature-explainer">Make one offer stand out: open its card and choose “Feature this offer”.</p>
           <div id="promo-items"></div><button class="button quiet full-width" type="button" id="add-item">+ Add a new product</button></div>
         </section><section class="editor-section" id="editor-business" role="tabpanel" aria-labelledby="tab-business" hidden><div class="section-heading"><h2>Business details</h2><p>Your logo and contact details, ready for every flyer.</p></div><label class="field full">Business name<input id="shop-name" type="text" maxlength="50" value="Your local shop" autocomplete="organization"></label>
           <div class="photo-row shop-logo"><div class="photo-thumb" id="logo-thumb">Shop logo</div><div class="photo-actions"><label class="photo-upload"><span id="logo-label">Add your logo</span><input id="logo-file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="Choose your business logo"></label><span class="field-help">Optional · JPG, PNG or WebP</span><button class="text-button" type="button" id="remove-logo" hidden>Remove logo</button></div></div>
@@ -120,6 +123,24 @@
     <div id="pack-previews" class="pack-previews"></div>
     <div class="pack-caption"><div class="panel-heading"><h3>Matching caption</h3><button class="button secondary" id="copy-pack-caption">Copy caption</button></div><label class="sr-only" for="pack-caption-text">Promotion caption</label><textarea id="pack-caption-text" rows="9" readonly></textarea><a id="download-pack-caption" class="text-button" download="caption.txt">Download caption as text ↓</a></div>
   </div>
+</dialog>
+<dialog id="bulk-dialog" aria-labelledby="bulk-title">
+  <div class="pack-dialog-heading"><h2 id="bulk-title">Paste your product list</h2><button type="button" class="button quiet" id="close-bulk">Cancel</button></div>
+  <div id="bulk-entry"><p class="field-help">One item per line: name, pack or details, price. You can also paste columns from a spreadsheet.</p><label class="field full">Your list<textarea id="bulk-source" rows="8" maxlength="12000" placeholder="Bluebird maize, 12.5 kg, R120&#10;Chicken portions, 2 kg, R95&#10;Haircut, 30 min, R80"></textarea></label><button type="button" class="button primary" id="review-bulk">Review products</button></div>
+  <div id="bulk-review" hidden><p class="field-help">Check each name, pack and price. Edit anything that needs correcting before adding it.</p><div id="bulk-rows"></div><p id="bulk-summary" class="field-help" role="status"></p><div class="action-row"><button type="button" class="button secondary" id="back-bulk">Back to pasted list</button><button type="button" class="button primary" id="apply-bulk">Add to flyer</button></div></div>
+  <p class="validation" id="bulk-error" role="alert" hidden></p>
+</dialog>
+<dialog id="saved-grid-dialog" aria-labelledby="saved-grid-title">
+  <div class="pack-dialog-heading"><h2 id="saved-grid-title">Choose saved products</h2><button type="button" class="button quiet" id="close-saved-grid">Cancel</button></div>
+  <p class="field-help">Select items from this client’s list. Price changes here apply to this flyer.</p><label class="field full">Search products or services<input type="search" id="saved-search" placeholder="Search a name or pack size" autocomplete="off"></label>
+  <p class="field-help" id="saved-grid-empty" hidden>No saved products yet. Save items from your flyer to reuse their photos and prices.</p><div class="saved-product-grid" id="saved-product-grid"></div>
+  <div class="batch-dialog-footer"><p id="saved-selection-count" role="status"></p><div class="action-row"><button type="button" class="button secondary" id="clear-saved-selection">Clear selection</button><button type="button" class="button primary" id="apply-saved-selection" disabled>Add selected products</button></div><p class="validation" id="saved-grid-error" role="alert" hidden></p></div>
+</dialog>
+<dialog id="photo-adjust-dialog" aria-labelledby="photo-adjust-title">
+  <div class="pack-dialog-heading"><h2 id="photo-adjust-title">Frame your product photo</h2><button type="button" class="button quiet" id="close-photo-adjust">Done</button></div>
+  <p class="field-help" id="photo-adjust-name"></p><div class="photo-adjust-stage"><canvas id="photo-adjust-canvas" aria-label="Live preview of this product on the flyer"></canvas></div>
+  <div class="photo-sliders"><label>Photo size <output id="photo-scale-value">100%</output><input id="photo-scale" type="range" min="50" max="200" value="100" step="5"></label><label>Horizontal position <output id="photo-x-value">Centre</output><input id="photo-x" type="range" min="-100" max="100" value="0" step="5"></label><label>Vertical position <output id="photo-y-value">Centre</output><input id="photo-y" type="range" min="-100" max="100" value="0" step="5"></label></div>
+  <p class="field-help">Moving or enlarging can crop the edges inside this card. Your original photo is kept.</p><p class="review-note" id="photo-adjust-warning" role="status" hidden></p><button type="button" class="button secondary full-width" id="reset-photo-adjust">Reset size and position</button>
 </dialog>
 <dialog id="preview-dialog" aria-labelledby="preview-title"><div class="pack-dialog-heading"><h2 id="preview-title">Your flyer</h2><button type="button" class="button quiet" id="close-preview">Back to editor</button></div><div class="expanded-preview-stage"><canvas id="expanded-canvas" aria-label="Full-screen preview of your flyer"></canvas></div></dialog></body>
 </html>

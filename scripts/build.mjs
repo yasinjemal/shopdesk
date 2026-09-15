@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
 const assets = {};
-for (const [file, type] of Object.entries({'index.html':'text/html; charset=utf-8','styles.css':'text/css; charset=utf-8','logic.js':'text/javascript; charset=utf-8','poster.js':'text/javascript; charset=utf-8','pack.js':'text/javascript; charset=utf-8','promotion.js':'text/javascript; charset=utf-8','app.js':'text/javascript; charset=utf-8','interface.js':'text/javascript; charset=utf-8'})) {
+for (const [file, type] of Object.entries({'index.html':'text/html; charset=utf-8','styles.css':'text/css; charset=utf-8','logic.js':'text/javascript; charset=utf-8','poster.js':'text/javascript; charset=utf-8','pack.js':'text/javascript; charset=utf-8','promotion.js':'text/javascript; charset=utf-8','app.js':'text/javascript; charset=utf-8','interface.js':'text/javascript; charset=utf-8','items.js':'text/javascript; charset=utf-8','batch.js':'text/javascript; charset=utf-8'})) {
   assets['/' + (file === 'index.html' ? '' : file)] = {body: await readFile('public/' + file, 'utf8'),type};
 }
 assets['/business.js'] = {body:await readFile('public/business.js','utf8'),type:'text/javascript; charset=utf-8'};
