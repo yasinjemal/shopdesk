@@ -7,9 +7,9 @@
   const priceKeys = ['cost','extras','bulk','pack','waste','target','round'];
   let currentPrice = null, currentCash = null, toastTimer;
   const drawPoster = () => ShopDeskPromotion.draw();
-  const pageNames = {pricing:'Product pricing',promotion:'Promotion maker',cash:'Daily cash closing'};
+  const pageNames = {pricing:'Product pricing',promotion:'Flyer studio',cash:'Daily cash closing'};
   function navigate(page, updateHash = true) {
-    if (!Object.hasOwn(pageNames, page)) page = 'pricing';
+    if (!Object.hasOwn(pageNames, page)) page = 'promotion';
     document.querySelectorAll('.page').forEach(el => {el.hidden = el.id !== 'page-' + page;el.classList.toggle('active', !el.hidden);});
     document.querySelectorAll('[data-page]').forEach(el => {const active = el.dataset.page === page;el.classList.toggle('active',active);if(active) el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
     $('current-tool').textContent = pageNames[page];
@@ -53,7 +53,7 @@
   });
   $('use-price').addEventListener('click', () => {
     if(!currentPrice)return;
-    if(ShopDeskPromotion.addProduct({name:$('product').value.trim().slice(0,50)||'Product special',size:currentPrice.pack+' kg pack',price:currentPrice.price.toFixed(2)}))navigate('promotion');
+    if(ShopDeskPromotion.addProduct({name:$('product').value.trim().slice(0,50)||'Product special',size:currentPrice.pack+' kg pack',price:currentPrice.price.toFixed(2)})){navigate('promotion');window.ShopDeskInterface?.showTab('content');}
   });
   $('cash-date').value=dateISO();
   function dateText(value){const d=new Date(value+'T12:00:00');return Number.isNaN(d.getTime())?'':d.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});}
