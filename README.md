@@ -2,9 +2,11 @@
 
 ShopDesk helps small businesses and freelance designers create promotional flyers, save client projects, and manage everyday pricing and cash calculations.
 
-Current application: version 8, updated 14 September 2026.
+Current application: version 9, updated 14 September 2026.
 
 ## Features included
+
+- A redesigned workspace with Style, Content, and Business editor tabs, visual design previews, colour swatches, collapsible product cards, and an expanded flyer preview.
 
 - Flyer designs for retail, food, fashion, beauty, and service businesses.
 - Choose 1–25 products or services; layouts adapt automatically. The simple poster remains limited to three visible offers.

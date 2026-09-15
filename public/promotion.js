@@ -10,7 +10,7 @@
   let packRun=0,packBusy=false,packZip=null,packText='',packName='',packURLs=[];
   const images=new Map(),imageErrors=new Set(),imageLoads=new Map();
   function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
-  function status(message,error=false){$('save-status').textContent=message;$('save-status').classList.toggle('save-error',error);}
+  function status(message,error=false){$('save-status').textContent=message;$('save-status').dataset.state=message==='All changes saved'?'saved':error?'error':'pending';$('save-status').classList.toggle('save-error',error);}
   async function api(path,options={}) {
     const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
     try {const response=await fetch(path,{...options,credentials:'same-origin',signal:controller.signal});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'Please try again.'),{status:response.status});return data;}
@@ -103,10 +103,16 @@
   function button(text,cls,click){const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=text;b.addEventListener('click',click);return b;}
   function normalSize(s){return s.trim().replace(/(\d)\s*\.\s*(kg|g|l|ml)\b/gi,'$1 $2').replace(/(\d)\s*(kg|g|l|ml)\b/gi,'$1 $2');}
   function renderItems(){
-    const list=$('promo-items');list.replaceChildren();
+    const list=$('promo-items'),opened=new Set([...list.querySelectorAll('details[open]')].map(el=>Number(el.dataset.index)));const wasEmpty=!list.children.length;list.replaceChildren();
     activeItems().forEach((item,index)=>{
-      const box=document.createElement('div');box.className='promo-item';const heading=document.createElement('div');heading.className='item-heading';heading.textContent=profile().item.toUpperCase()+' '+(index+1);
-      if(activeCount()>1)heading.append(button('Remove','remove-item',()=>{items.splice(items.indexOf(item),1);selectedCount=Math.max(1,activeCount()-1);renderItems();changed();}));
+      const box=document.createElement('details');box.className='promo-item';box.dataset.index=String(index);box.open=opened.has(index)||(wasEmpty&&index===0);
+      const heading=document.createElement('summary');heading.className='item-heading';
+      const number=document.createElement('span');number.className='item-index';number.textContent=String(index+1);
+      const title=document.createElement('span');title.className='item-title';title.textContent=item.name||'New '+profile().item.toLowerCase();
+      const price=document.createElement('span');price.className='item-price';price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price';
+      const chevron=document.createElement('span');chevron.className='item-chevron';chevron.textContent='⌄';chevron.setAttribute('aria-hidden','true');heading.append(number,title,price,chevron);
+      const itemActions=document.createElement('div');itemActions.className='item-actions';
+      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>{items.splice(items.indexOf(item),1);selectedCount=Math.max(1,activeCount()-1);renderItems();changed();}));
       const photoRow=document.createElement('div');photoRow.className='photo-row';const thumb=document.createElement('div');thumb.className='photo-thumb';
       if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';img.src='/api/photos/'+item.photo;img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
       const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add photo'));
@@ -123,7 +129,9 @@
         const value={id:found?.id||crypto.randomUUID(),...item};if(found)products[products.indexOf(found)]=value;else products.push(value);
         renderSaved();changed();clearTimeout(saveTimer);save();toast(found?'Item updated. Waiting for the saved confirmation.':'Item added to your list. Waiting for the saved confirmation.');
       });
-      box.append(heading,photoRow,name,row,saveProduct);list.append(box);
+      name.querySelector('input').addEventListener('input',()=>title.textContent=item.name||'New '+profile().item.toLowerCase());
+      row.querySelector('input[type="number"]').addEventListener('input',()=>price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price');
+      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,itemActions);box.append(heading,body);list.append(box);
     });
     $('item-count').textContent=activeCount()+' of '+capacity();$('add-item').disabled=activeCount()>=capacity();
     $('product-count').value=String(selectedCount);
@@ -133,7 +141,7 @@
     $('add-item').textContent=kept?'+ Show next saved item':'+ Add a new '+profile().item.toLowerCase();
     $('poster-template').querySelector('[value="simple"]').disabled=activeCount()>3;
     const hints={super:'A compact sale banner, oversized price tickets and a strong contact strip. Fits up to 25 items.',ribbon:'An angled heading, framed product cards and a split contact footer. Fits up to 25 items.',signature:'An editorial masthead, refined price labels and a framed footer. Fits up to 25 items.',boutique:'A quiet, elegant collection with spacious photos and understated prices. Fits up to 25 items.',menu:'A warm menu with easy-to-scan rows, portion labels and optional food photos. Fits up to 25 items.',studio:'A polished price list for treatments and services. Works with or without photos, up to 25 offers.',bold:'A large headline and bold yellow price tickets. Fits up to 25 offers.',market:'A clean layout with simple prices and more space around each offer. Fits up to 25 offers.',retail:'Your classic shop flyer with strong pack labels and yellow prices. Fits up to 25 offers.',simple:'A spacious design for one to three offers.'};
-    $('template-hint').textContent=hints[$('poster-template').value]+(activeCount()>3?' Reduce your offers to three to use the simple design.':'');
+    $('template-hint').textContent=hints[$('poster-template').value];
     updatePicker();
   }
   function renderSaved(){const select=$('saved-product'),value=select.value;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent=products.length?'Choose an item or service…':'No saved items yet';select.append(first);
@@ -151,7 +159,7 @@
   function updatePicker(){$('use-saved').disabled=!ready||!$('saved-product').value||(emptySlot()<0&&(activeCount()>=capacity()||items.length>=25));}
   $('saved-product').addEventListener('change',updatePicker);
   $('use-saved').addEventListener('click',async()=>{const p=products.find(p=>p.id===$('saved-product').value);if(!p||!insertProduct({name:p.name,size:p.size,price:p.price,photo:p.photo}))return;await preloadPhotos();draw();});
-  $('add-item').addEventListener('click',async()=>{if(pendingPhotos)return;if(activeCount()<capacity()){const next=ShopDeskBusiness.resizeItems(items,activeCount()+1);items=next.items;selectedCount=next.itemCount;renderItems();changed();$('promo-items').lastElementChild.querySelector('input[type="text"]').focus();await preloadPhotos();draw();}});
+  $('add-item').addEventListener('click',async()=>{if(pendingPhotos)return;if(activeCount()<capacity()){const next=ShopDeskBusiness.resizeItems(items,activeCount()+1);items=next.items;selectedCount=next.itemCount;renderItems();changed();$('promo-items').lastElementChild.open=true;$('promo-items').lastElementChild.querySelector('input[type="text"]').focus();await preloadPhotos();draw();}});
   $('poster-template').addEventListener('change',()=>{
     if($('poster-template').value==='simple')selectedCount=Math.min(selectedCount,3);
     const template=$('poster-template').value;
@@ -237,6 +245,7 @@
     const warnings=(announcement()?[]:d.items).map((i,index)=>{const message=ShopDeskPoster.packWarning(i.name,i.size);return message?'Item '+(index+1)+': '+message:'';}).filter(Boolean);
     $('promo-review').hidden=!warnings.length;$('promo-review').textContent=warnings.join(' ');
     $('format-caption').textContent=statusFormat?'9:16 WhatsApp Status':'4:5 portrait';$('download-hint').textContent=statusFormat?'1080 × 1920 PNG · Ready for WhatsApp Status.':'1080 × 1350 PNG · Ready to share.';
+    window.dispatchEvent(new CustomEvent('shopdesk:preview'));
     $('download-promo').textContent=statusFormat?'Download Status ↓':d.template!=='simple'?'Download flyer ↓':'Download poster ↓';$('poster-note').textContent=d.items.length>12?'This is a compact catalogue. Use the promotion pack for larger product photos and prices across WhatsApp Status pages.':d.trimPhotos?'Check your photo framing before sharing. Turn off Fit photos to restore the complete images.':(d.items.length>6?'Fewer offers give each item more space on a phone.':'Your complete photos are shown.');
   }
   function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
