@@ -52,5 +52,9 @@
     room(state);const next=clone(state),{client,project}=active(next),copy=clone(project);
     copy.id=id();copy.title=project.title.slice(0,53)+' (copy)';client.projects.push(copy);return select(next,client.id,copy.id);
   }
-  root.ShopDeskStudio={purposes,active,upgrade,capture,select,addClient,addProject,duplicate,suggest};
+  function useTemplate(state,template){
+    const value=root.ShopDeskTemplates.validate(template),next=addProject(state,value.title,value.design.purpose);
+    active(next).project.draft=root.ShopDeskTemplates.draft(value);return next;
+  }
+  root.ShopDeskStudio={purposes,active,upgrade,capture,select,addClient,addProject,duplicate,suggest,useTemplate};
 })(typeof window!=='undefined'?window:globalThis);

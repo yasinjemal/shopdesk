@@ -59,13 +59,15 @@
   }
   function renderDesigner(){
     $('designer-fields').disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked;
+    $('start-project').disabled=$('designer-fields').disabled;
+    $('open-share-template').disabled=$('designer-fields').disabled;
     if(!studioState)return;
     const fill=(id,entries,value)=>{const select=$(id);select.replaceChildren();for(const [key,label] of entries){const o=document.createElement('option');o.value=key;o.textContent=label;select.append(o);}select.value=value;};
     const {client}=ShopDeskStudio.active(studioState);
     fill('client-picker',studioState.clients.map(c=>[c.id,c.shop.name||'Unnamed client']),studioState.activeClientId);
     fill('project-picker',client.projects.map(p=>[p.id,p.title]),studioState.activeProjectId);
     const count=studioState.clients.reduce((n,c)=>n+c.projects.length,0);$('studio-count').textContent=studioState.clients.length+' / 20 clients · '+count+' / 100 projects';
-    $('new-client').disabled=studioState.clients.length>=20||count>=100;$('new-project').disabled=count>=100;$('duplicate-project').disabled=count>=100;
+    $('new-client').disabled=studioState.clients.length>=20||count>=100;$('new-project').disabled=count>=100;$('duplicate-project').disabled=count>=100;$('start-project').disabled=$('designer-fields').disabled||count>=100;
   }
   async function switchProject(clientId,projectId){
     if(!ready||loadingWorkspace||pendingPhotos||blocked){renderDesigner();return;}
@@ -80,6 +82,7 @@
     $(client?'new-client-name':'new-project-name').focus();
   }
   $('new-client').addEventListener('click',()=>openCreate('client'));$('new-project').addEventListener('click',()=>openCreate('project'));
+  $('start-project').addEventListener('click',()=>openCreate('project'));
   $('close-studio-dialog').addEventListener('click',()=>$('studio-dialog').close());
   $('studio-create-form').addEventListener('submit',async event=>{
     event.preventDefault();if(!ready||loadingWorkspace||pendingPhotos||blocked)return;
@@ -313,6 +316,12 @@
   function batchContext(){return studioState?studioState.activeClientId+':'+studioState.activeProjectId:'';}
   function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked)throw new Error('Wait for the project to finish loading or saving photos.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
   Object.assign(window.ShopDeskPromotion,{
+    templateSnapshot(){assertEditable(batchContext());return {...snapshot().draft,itemCount:activeCount()};},
+    async useTemplate(template){
+      assertEditable(batchContext());capture();const next=ShopDeskStudio.useTemplate(studioState,template);
+      studioState=next;dirty=true;change++;await showActive();changed();clearTimeout(saveTimer);save();
+      window.ShopDeskInterface?.showTab('content');$('project-name').focus();toast('Your own copy is ready. Review the wording, prices and dates before sharing.');
+    },
     itemState(){return {context:batchContext(),items:items.map(item=>ShopDeskItems.copy(item)),products:products.map(p=>({id:p.id,...ShopDeskItems.copy(p,false)})),count:activeCount(),limit:capacity(),available:ShopDeskItems.room(items,activeCount(),capacity()),ready:ready&&!loadingWorkspace&&!pendingPhotos&&!blocked&&!announcement(),unavailableReason:blocked?'Your saved project changed in another window. Use Reload saved version before adding products.':!ready||loadingWorkspace?'Your project is still loading. If loading failed, use Try again beside the save status.':pendingPhotos?'Wait for your photos to finish uploading, then try again.':announcement()?'Choose Offers, menu or price list to use product tools.':''};},
     async addBatch(rows,context){assertEditable(context);if(announcement())throw new Error('Choose an offers flyer first.');const next=ShopDeskItems.insert(items,activeCount(),rows,capacity());items=next.items;selectedCount=next.itemCount;renderItems();changed();preloadPhotos().then(draw);toast(rows.length+' '+(rows.length===1?'item added.':'items added.'));},
     photoPreview(index,context){if(context!==batchContext())return null;const item=activeItems()[index],card=lastLayout?.cards[index];if(!item?.photo||!card)return null;return {item:ShopDeskItems.copy(item),canvas:$('promo-canvas'),card,warnings:(lastLayout.photoWarnings||[]).filter(w=>w.photo===item.photo&&w.name===item.name)};},

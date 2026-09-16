@@ -2,9 +2,14 @@
 
 ShopDesk helps small businesses and freelance designers create promotional flyers, save client projects, and manage everyday pricing and cash calculations.
 
-Current application: version 11, updated 14 September 2026.
+The current source adds a shared template library while retaining the existing flyer studio, pricing tools, cash closing, and saved-data format.
 
 ## Features included
+
+- A reusable template library with six ShopDesk starters, search, business filters, and a shared Community collection.
+- Use a template to create a separate project with your current business details. Existing projects are never replaced.
+- Share design settings alone, or explicitly include the headline and visible product names, pack sizes, and prices. Contact details, photos, dates, event details, and hidden products are excluded by an allowlist on the server.
+- Unlist and relist your own shared templates. Existing copies belong to their recipients and remain unchanged.
 
 - A redesigned workspace with Style, Content, and Business editor tabs, visual design previews, colour swatches, collapsible product cards, and an expanded flyer preview.
 
@@ -31,9 +36,30 @@ npm test
 npm run build
 ```
 
+Browser interaction checks use isolated, in-memory storage and exercise the real
+workspace and photo API. They do not access live saved projects:
+
+```sh
+npx playwright install chromium
+npm run test:browser
+```
+
+Set `SHOPDESK_BROWSER_CHANNEL=chrome` to use an installed Google Chrome instead.
+The checks cover mobile touch at 320px and 390px and desktop at 1280px: pasted
+lists, saved-product selection and flyer-only prices, featured offers, photo
+upload/framing/reset, PNG/ZIP downloads, persistence after reload, full-project
+feedback (including retained items), and recovery after a loading failure. These are browser emulations;
+physical-device and signed-in production behavior still need separate verification.
+
+If product selections are disabled, check the capacity message at the top of the
+product dialog. Adding products fills empty cards or appends items; it does not
+replace existing offers. A project retains up to 25 items, including items hidden
+by reducing the visible count. Remove an unwanted item or start a new project to
+free space; changing the count alone preserves the hidden items.
+
 The build creates `dist/server/index.js` with embedded frontend assets, plus hosting metadata and database migrations under `dist/.openai/`.
 
-This snapshot has no `npm run dev` script. Opening `public/index.html` directly does not provide the backend needed for saved projects and photo uploads.
+`npm run dev` starts an isolated local preview at `http://127.0.0.1:4173` with an in-memory database and photo store. Preview data resets when stopped. Its test identity header is strictly a local testing facility, never production authentication. Opening `public/index.html` directly does not provide the backend needed for saving or uploads.
 
 ## Project structure
 
@@ -58,6 +84,10 @@ Account identity comes from the trusted Sites authentication layer through the `
 This repository contains the current application source, tests, migrations, and these setup notes. It does **not** contain saved clients, projects, product photos, logos, or other live database and bucket contents. Those remain in the running application's storage and require a separate data export for a full backup.
 
 The initial GitHub import was a source snapshot. Earlier Sites commits were not imported. Installed dependencies and generated build output are excluded.
+
+The shared library uses the additive `0001_reflective_junta.sql` migration and a separate `shared_templates` table. Existing workspaces, photo storage, and schemaVersion 2 records are unchanged. API access requires sign-in; owner checks protect listing changes. Templates use 12-item cursor pagination, bounded inputs, idempotent share requests, and a 100-template limit per account. Template availability follows the Site's access settings; adding a library does not make a private Site public.
+
+The library is a first release for the existing audience, not an unattended public marketplace. Before a broad public launch, decide on moderation/reporting, support, data backup and recovery, pricing, and how new users gain access. Never auto-publish private drafts or infer revenue from usage alone.
 
 The design library includes 16 templates, 13 palettes, four typography settings, and four price-label settings. Colour Block, The Edit, Neon Night, Warehouse Deals, Atelier and Street Kitchen each support 1–25 offers. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look.
 

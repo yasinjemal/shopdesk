@@ -4,11 +4,17 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>ShopDesk — Your everyday shop tools</title>
   <meta name="description" content="Price your products, make a promotion and balance your daily cash. Free practical tools for South African shop owners.">
+  <meta property="og:title" content="ShopDesk — Make it. Share it. Make it yours.">
+  <meta property="og:description" content="Make flyers for your business, share useful templates and turn someone’s good idea into your own.">
+  <meta property="og:type" content="website"><meta property="og:url" content="https://shopdesk-yasin.yasinyutbr.chatgpt.site/">
+  <meta property="og:image" content="https://shopdesk-yasin.yasinyutbr.chatgpt.site/og.png">
+  <meta property="og:image:alt" content="ShopDesk — Make it. Share it. Make it yours.">
+  <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="ShopDesk — Make it. Share it. Make it yours."><meta name="twitter:description" content="Make flyers, share useful templates and make every design your own."><meta name="twitter:image" content="https://shopdesk-yasin.yasinyutbr.chatgpt.site/og.png">
   <meta name="theme-color" content="#103e35">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Crect%20width='40'%20height='40'%20rx='11'%20fill='%23103e35'/%3E%3Cpath%20d='M12%2013h16v5H17v4h11v6H12v-5h11v-4H12z'%20fill='%23b8f088'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
   <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
-<script src="interface.js" defer></script><script src="batch.js" defer></script></head>
+<script src="interface.js" defer></script><script src="batch.js" defer></script><script src="templates.js" defer></script><script src="library.js" defer></script></head>
 <body>
 <a class="skip" href="#workspace">Skip to tools</a>
 <div class="app-shell">
@@ -50,6 +56,10 @@
       <section class="page active" id="page-promotion" aria-labelledby="promotion-title">
         <div class="page-heading"><div><p class="eyebrow">FLYER STUDIO</p><h1 id="promotion-title">Make it your own.</h1><p>A workspace for every client. A design for every business.</p></div><div class="save-indicator"><span id="save-status" role="status">Loading your saved workspace…</span><button class="text-button" id="retry-save" hidden>Try again</button><button class="text-button" id="reload-workspace" hidden>Reload saved version</button></div></div>
         <p id="workspace-error" class="validation" role="alert" hidden></p>
+        <section class="reuse-launchpad" aria-labelledby="reuse-title">
+          <div><p class="eyebrow">MAKE IT. SHARE IT. MAKE IT YOURS.</p><h2 id="reuse-title">A good idea is a starting point.</h2><p>Start with a template. Make it work for your business. Help someone else get started.</p></div>
+          <div class="reuse-actions"><button class="button primary" type="button" id="open-library">Explore templates <span aria-hidden="true">↗</span></button><button class="button secondary" type="button" id="start-project" disabled>New flyer</button><button class="text-button" type="button" id="open-share-template" disabled>Share this design</button></div>
+        </section>
         <details class="client-drawer" id="client-drawer" open><summary><span class="drawer-label">Clients &amp; projects</span><span id="workspace-summary">Your saved workspace</span><span class="drawer-toggle" aria-hidden="true">⌄</span></summary><fieldset class="designer-bar" id="designer-fields" disabled>
           <legend class="sr-only">Clients and projects</legend>
           <div class="panel-heading"><h2>Your workspace</h2><span class="subtle-pill" id="studio-count">Your saved workspace</span></div>
@@ -126,21 +136,41 @@
 </dialog>
 <dialog id="bulk-dialog" aria-labelledby="bulk-title">
   <div class="pack-dialog-heading"><h2 id="bulk-title">Paste your product list</h2><button type="button" class="button quiet" id="close-bulk">Cancel</button></div>
+  <p class="validation" id="bulk-capacity" role="status" tabindex="-1" hidden></p>
   <div id="bulk-entry"><p class="field-help">One item per line: name, pack or details, price. You can also paste columns from a spreadsheet.</p><label class="field full">Your list<textarea id="bulk-source" rows="8" maxlength="12000" placeholder="Bluebird maize, 12.5 kg, R120&#10;Chicken portions, 2 kg, R95&#10;Haircut, 30 min, R80"></textarea></label><button type="button" class="button primary" id="review-bulk">Review products</button></div>
   <div id="bulk-review" hidden><p class="field-help">Check each name, pack and price. Edit anything that needs correcting before adding it.</p><div id="bulk-rows"></div><p id="bulk-summary" class="field-help" role="status"></p><div class="action-row"><button type="button" class="button secondary" id="back-bulk">Back to pasted list</button><button type="button" class="button primary" id="apply-bulk">Add to flyer</button></div></div>
   <p class="validation" id="bulk-error" role="alert" hidden></p>
 </dialog>
 <dialog id="saved-grid-dialog" aria-labelledby="saved-grid-title">
   <div class="pack-dialog-heading"><h2 id="saved-grid-title">Choose saved products</h2><button type="button" class="button quiet" id="close-saved-grid">Cancel</button></div>
+  <p class="validation" id="saved-grid-error" role="alert" tabindex="-1" hidden></p>
   <p class="field-help">Select items from this client’s list. Price changes here apply to this flyer.</p><label class="field full">Search products or services<input type="search" id="saved-search" placeholder="Search a name or pack size" autocomplete="off"></label>
   <p class="field-help" id="saved-grid-empty" hidden>No saved products yet. Save items from your flyer to reuse their photos and prices.</p><div class="saved-product-grid" id="saved-product-grid"></div>
-  <div class="batch-dialog-footer"><p id="saved-selection-count" role="status"></p><div class="action-row"><button type="button" class="button secondary" id="clear-saved-selection">Clear selection</button><button type="button" class="button primary" id="apply-saved-selection" disabled>Add selected products</button></div><p class="validation" id="saved-grid-error" role="alert" hidden></p></div>
+  <div class="batch-dialog-footer"><p id="saved-selection-count" role="status"></p><div class="action-row"><button type="button" class="button secondary" id="clear-saved-selection">Clear selection</button><button type="button" class="button primary" id="apply-saved-selection" disabled>Add selected products</button></div></div>
 </dialog>
 <dialog id="photo-adjust-dialog" aria-labelledby="photo-adjust-title">
   <div class="pack-dialog-heading"><h2 id="photo-adjust-title">Frame your product photo</h2><button type="button" class="button quiet" id="close-photo-adjust">Done</button></div>
   <p class="field-help" id="photo-adjust-name"></p><div class="photo-adjust-stage"><canvas id="photo-adjust-canvas" aria-label="Live preview of this product on the flyer"></canvas></div>
   <div class="photo-sliders"><label>Photo size <output id="photo-scale-value">100%</output><input id="photo-scale" type="range" min="50" max="200" value="100" step="5"></label><label>Horizontal position <output id="photo-x-value">Centre</output><input id="photo-x" type="range" min="-100" max="100" value="0" step="5"></label><label>Vertical position <output id="photo-y-value">Centre</output><input id="photo-y" type="range" min="-100" max="100" value="0" step="5"></label></div>
   <p class="field-help">Moving or enlarging can crop the edges inside this card. Your original photo is kept.</p><p class="review-note" id="photo-adjust-warning" role="status" hidden></p><button type="button" class="button secondary full-width" id="reset-photo-adjust">Reset size and position</button>
+</dialog>
+<dialog id="library-dialog" aria-labelledby="library-title">
+  <div class="pack-dialog-heading"><div><p class="eyebrow">THE TEMPLATE LIBRARY</p><h2 id="library-title">Make a copy. Make it yours.</h2></div><button class="button quiet" type="button" id="close-library">Back to editor</button></div>
+  <p class="field-help">Every template becomes a new project with your business details. Your existing flyers stay safe.</p>
+  <div class="library-tabs" role="group" aria-label="Template source"><button type="button" data-library-source="starters" aria-pressed="true">Ready to use</button><button type="button" data-library-source="community" aria-pressed="false">Community</button><button type="button" data-library-source="mine" aria-pressed="false">My shared designs</button></div>
+  <form id="library-search-form" class="library-search"><label class="field">Find a template<input type="search" id="library-search" maxlength="80" placeholder="Try menu, specials or opening"></label><label class="field">Business type<select id="library-category"><option value="">All businesses</option><option value="grocery">Retail</option><option value="food">Food</option><option value="fashion">Fashion</option><option value="beauty">Beauty</option><option value="services">Services</option><option value="general">Other</option></select></label><button class="button secondary" type="submit">Search</button></form>
+  <p class="field-help" id="library-status" role="status"></p><p class="validation" id="library-error" role="alert" hidden></p><button type="button" class="text-button" id="retry-library" hidden>Try loading again</button>
+  <div class="library-grid" id="library-grid"></div><button class="button secondary full-width" type="button" id="library-more" hidden>More templates</button>
+  <p class="library-note">Shared designs are available to people who can access ShopDesk. Share only work you have permission to reuse. Prices in shared examples may need updating.</p>
+</dialog>
+<dialog id="share-template-dialog" aria-labelledby="share-template-title">
+  <div class="pack-dialog-heading"><h2 id="share-template-title">Give someone a starting point.</h2><button type="button" class="button quiet" id="close-share-template">Cancel</button></div>
+  <p class="field-help">Share a reusable design in the template library. Your own project stays as it is.</p>
+  <form id="share-template-form"><label class="field full">Template name<input id="share-template-name" maxlength="60" required placeholder="e.g. Weekend grocery offers"></label><label class="field full">What is it useful for?<textarea id="share-template-description" maxlength="160" rows="2" placeholder="Help someone choose the right starting point."></textarea></label>
+    <label class="check-line"><input id="share-template-content" type="checkbox"><span>Include my headline and visible products<small>Names, pack sizes and prices will be shared. Leave off to share only the design.</small></span></label>
+    <div class="share-template-preview"><canvas id="share-template-canvas" aria-label="Preview of the template others will see"></canvas><div><strong>Review what others will get</strong><p id="share-template-summary"></p><p>Business details, contact information, uploaded photos, hidden products and dates are excluded. Check any wording you choose to include.</p></div></div>
+    <p class="field-help">People with access to ShopDesk can make their own copies. You can unlist the template later; copies already made remain theirs.</p><p class="validation" id="share-template-error" role="alert" hidden></p><button type="submit" class="button primary full-width" id="publish-template">Share template</button>
+  </form>
 </dialog>
 <dialog id="preview-dialog" aria-labelledby="preview-title"><div class="pack-dialog-heading"><h2 id="preview-title">Your flyer</h2><button type="button" class="button quiet" id="close-preview">Back to editor</button></div><div class="expanded-preview-stage"><canvas id="expanded-canvas" aria-label="Full-screen preview of your flyer"></canvas></div></dialog></body>
 </html>
