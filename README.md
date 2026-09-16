@@ -2,11 +2,11 @@
 
 ShopDesk helps small businesses and freelance designers create promotional flyers, save client projects, and manage everyday pricing and cash calculations.
 
-The current source adds a shared template library while retaining the existing flyer studio, pricing tools, cash closing, and saved-data format.
+The current source expands the design collection and product editing tools while retaining the shared template library, pricing tools, cash closing, and saved-data format.
 
 ## Features included
 
-- A reusable template library with six ShopDesk starters, search, business filters, and a shared Community collection.
+- A reusable template library with 18 ShopDesk starters, search, business filters, and a shared Community collection.
 - Use a template to create a separate project with your current business details. Existing projects are never replaced.
 - Share design settings alone, or explicitly include the headline and visible product names, pack sizes, and prices. Contact details, photos, dates, event details, and hidden products are excluded by an allowlist on the server.
 - Unlist and relist your own shared templates. Existing copies belong to their recipients and remain unchanged.
@@ -17,7 +17,8 @@ The current source adds a shared template library while retaining the existing f
 - Choose 1–25 products or services; layouts adapt automatically. The simple poster remains limited to three visible offers.
 - Reduce the product count without losing the remaining items; increase it again to restore them.
 - Super Saver, Corner Ribbon, and Signature Collection designs with distinct headers, price labels, and footers.
-- Nine colour palettes, including Ocean teal, Midnight gold, and Berry pink.
+- 21 colour palettes, including sage, terracotta, lavender, peach, lemon, aqua, burgundy, and slate. Keep your chosen palette when changing designs with the optional colour lock.
+- Move products up or down while retaining photos, framing, and featured status. Undo the last product removal within the active project without replacing other edits.
 - Custom colours, logos, product photos, headlines, prices, contact details, and expiry dates.
 - Promotional offers, menus, price lists, single-offer spotlights, events, and grand-opening announcements.
 - Poster (4:5) and WhatsApp Status (9:16) PNG exports.
@@ -48,7 +49,7 @@ Set `SHOPDESK_BROWSER_CHANNEL=chrome` to use an installed Google Chrome instead.
 The checks cover mobile touch at 320px and 390px and desktop at 1280px: pasted
 lists, saved-product selection and flyer-only prices, featured offers, photo
 upload/framing/reset, PNG/ZIP downloads, persistence after reload, full-project
-feedback (including retained items), and recovery after a loading failure. These are browser emulations;
+feedback (including retained items), design and palette interactions, colour-lock persistence, ordering and undo with retained items, shared-template reuse, and recovery after a loading failure. These are browser emulations;
 physical-device and signed-in production behavior still need separate verification.
 
 If product selections are disabled, check the capacity message at the top of the
@@ -89,6 +90,6 @@ The shared library uses the additive `0001_reflective_junta.sql` migration and a
 
 The library is a first release for the existing audience, not an unattended public marketplace. Before a broad public launch, decide on moderation/reporting, support, data backup and recovery, pricing, and how new users gain access. Never auto-publish private drafts or infer revenue from usage alone.
 
-The design library includes 16 templates, 13 palettes, four typography settings, and four price-label settings. Colour Block, The Edit, Neon Night, Warehouse Deals, Atelier and Street Kitchen each support 1–25 offers. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look.
+The design library includes 22 designs, 21 palettes, four typography settings, and four price-label settings. Sunburst Sale, Botanical, Blueprint, Studio Notes, Sweet Spot and Type Foundry join the earlier collection; each supports 1–25 offers, a featured item, and both export formats. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look. The optional `keepColours` preference is stored within the existing draft JSON, so this release needs no database migration. Undo is temporary, clears when switching projects or reloading, and requires room for the restored item.
 
 Product workflow: paste comma-, tab-, semicolon- or pipe-separated lists for an editable review; select multiple saved products with search and flyer-only price edits; frame product photos with scale and position controls and resolution warnings; feature one offer in a larger layout. Framing and featured selections persist with the project and are retained in PNG and promotion-pack exports. Batch additions preserve existing offers and reserved products.

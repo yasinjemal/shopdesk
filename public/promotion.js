@@ -4,7 +4,7 @@
   const iso=(d=new Date())=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   let items=[{name:'Potatoes',size:'1 kg pack',price:'10.00',photo:''}],products=[],revision=0,ready=false,dirty=false,saving=false,blocked=false,change=0,saveTimer,toastTimer;
-  let selectedCount=1,lastLayout=null;
+  let selectedCount=1,lastLayout=null,lastRemoval=null;
   let lastSaveError=false,pendingPhotos=0,logo='',heroPhoto='',finishingChosen=false;
   let studioState=null,loadingWorkspace=false,createKind='client';
   let packRun=0,packBusy=false,packZip=null,packText='',packName='',packURLs=[];
@@ -23,7 +23,7 @@
   function capacity(){return $('flyer-purpose').value==='spotlight'?1:$('poster-template').value==='simple'?3:25;}
   function activeCount(){return Math.min(selectedCount,capacity());}
   function activeItems(){return items.slice(0,activeCount());}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
   function capture(){if(studioState)studioState=ShopDeskStudio.capture(studioState,snapshot(),$('project-name').value);}
   function changed(){if(!ready)return;capture();renderDesigner();dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
@@ -34,7 +34,7 @@
     finally{saving=false;renderDesigner();if(dirty&&!blocked&&!lastSaveError)saveTimer=setTimeout(save,150);}
   }
   function applyWorkspace(data,title){
-    const d=data.draft,p=ShopDeskBusiness.get(d.business);
+    lastRemoval=null;const d=data.draft,p=ShopDeskBusiness.get(d.business);$('keep-colours').checked=d.keepColours??false;
     $('poster-typeface').value=d.typeface||'design';$('price-style').value=d.priceStyle||'design';
     $('project-name').value=title;$('business-type').value=d.business||'grocery';$('promo-eyebrow').value=d.eyebrow??p.eyebrow;$('promo-cta').value=d.cta??p.cta;$('promo-terms').value=d.terms??p.terms;$('show-date').checked=d.showDate??true;
     $('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';
@@ -106,6 +106,43 @@
   }
   function button(text,cls,click){const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=text;b.addEventListener('click',click);return b;}
   function normalSize(s){return s.trim().replace(/(\d)\s*\.\s*(kg|g|l|ml)\b/gi,'$1 $2').replace(/(\d)\s*(kg|g|l|ml)\b/gi,'$1 $2');}
+  function focusItem(index,selector){
+    const card=$('promo-items').children[index];if(!card)return;
+    card.open=true;(card.querySelector(selector)||card.querySelector('summary')).focus();
+  }
+  function moveItem(item,step){
+    try{
+      assertEditable(batchContext());const index=items.indexOf(item),next=index+step;
+      if(index<0||next<0||next>=activeCount())return;
+      [items[index],items[next]]=[items[next],items[index]];
+      renderItems();changed();focusItem(next,'.move-item:not(:disabled)');
+      toast((item.name||'Item')+' moved to position '+(next+1)+'.');
+    }catch(e){toast(e.message);}
+  }
+  function removeItem(item){
+    try{
+      assertEditable(batchContext());const index=items.indexOf(item),count=activeCount();
+      if(index<0||index>=count||count<=1)return;
+      lastRemoval={item:ShopDeskItems.copy(item),index,context:batchContext()};
+      items.splice(index,1);selectedCount=count-1;renderItems();changed();$('undo-remove-item').focus();
+    }catch(e){toast(e.message);}
+  }
+  function updateUndo(){
+    $('item-undo').hidden=!lastRemoval;if(!lastRemoval)return;
+    const full=items.length>=25||activeCount()>=capacity();
+    $('item-undo-message').textContent=(lastRemoval.item.name||'Item')+' removed.'+(full?' Make room to restore it.':'');
+    $('undo-remove-item').disabled=full||!ready||loadingWorkspace||pendingPhotos>0||blocked;
+  }
+  $('undo-remove-item').addEventListener('click',()=>{
+    try{
+      if(!lastRemoval)return;assertEditable(lastRemoval.context);
+      if(items.length>=25||activeCount()>=capacity()){toast('Make room in this flyer before restoring the item.');return;}
+      const {item,index}=lastRemoval,count=activeCount(),position=Math.min(index,count);
+      if(items.some(other=>other.featured))delete item.featured;
+      items.splice(position,0,item);selectedCount=count+1;lastRemoval=null;
+      renderItems();changed();focusItem(position,'input[type="text"]');toast((item.name||'Item')+' restored.');
+    }catch(e){toast(e.message);}
+  });
   function renderItems(){
     const list=$('promo-items'),opened=new Set([...list.querySelectorAll('details[open]')].map(el=>Number(el.dataset.index)));const wasEmpty=!list.children.length;list.replaceChildren();
     activeItems().forEach((item,index)=>{
@@ -117,7 +154,13 @@
       const price=document.createElement('span');price.className='item-price';price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price';
       const chevron=document.createElement('span');chevron.className='item-chevron';chevron.textContent='⌄';chevron.setAttribute('aria-hidden','true');heading.append(number,title,price,chevron);
       const itemActions=document.createElement('div');itemActions.className='item-actions';
-      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>{items.splice(items.indexOf(item),1);selectedCount=Math.max(1,activeCount()-1);renderItems();changed();}));
+      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>removeItem(item)));
+      const order=document.createElement('div');order.className='item-order';
+      if(activeCount()>1)for(const [step,label] of [[-1,'Move up'],[1,'Move down']]){
+        const control=button((step<0?'↑ ':'↓ ')+label,'text-button move-item',()=>moveItem(item,step));
+        control.dataset.step=String(step);control.setAttribute('aria-label',label+' item '+(index+1));
+        control.disabled=index+step<0||index+step>=activeCount();order.append(control);
+      }
       if($('flyer-purpose').value==='offers'&&$('poster-template').value!=='simple'){
         const feature=button(item.featured?'★ Featured · remove':'☆ Feature this offer','text-button feature-offer',()=>{
           const selected=!!item.featured;for(const other of items)delete other.featured;if(!selected)item.featured=true;renderItems();changed();
@@ -141,7 +184,7 @@
       });
       name.querySelector('input').addEventListener('input',()=>title.textContent=item.name||'New '+profile().item.toLowerCase());
       row.querySelector('input[type="number"]').addEventListener('input',()=>price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price');
-      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,itemActions);box.append(heading,body);list.append(box);
+      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,itemActions,order);box.append(heading,body);list.append(box);
     });
     $('item-count').textContent=activeCount()+' of '+capacity();$('add-item').disabled=activeCount()>=capacity();
     $('product-count').value=String(selectedCount);
@@ -173,8 +216,8 @@
   $('poster-template').addEventListener('change',()=>{
     if($('poster-template').value==='simple')selectedCount=Math.min(selectedCount,3);
     const template=$('poster-template').value;
-    if(['bold','market','super','ribbon','signature'].includes(template)){$('promo-theme').value=({bold:'red',market:'green',super:'red',ribbon:'blue',signature:'gold'})[template];if(!finishingChosen){$('trim-photos').checked=true;$('clean-names').checked=true;finishingChosen=true;}}
-    if(ShopDeskPoster.collection[template]){$('promo-theme').value=ShopDeskPoster.collection[template].theme;}
+    if(['bold','market','super','ribbon','signature'].includes(template)){if(!$('keep-colours').checked)$('promo-theme').value=({bold:'red',market:'green',super:'red',ribbon:'blue',signature:'gold'})[template];if(!finishingChosen){$('trim-photos').checked=true;$('clean-names').checked=true;finishingChosen=true;}}
+    if(ShopDeskPoster.collection[template]&&!$('keep-colours').checked){$('promo-theme').value=ShopDeskPoster.collection[template].theme;}
     renderItems();changed();
   });
   for(const id of ['trim-photos','clean-names'])$(id).addEventListener('change',()=>finishingChosen=true);
@@ -246,6 +289,11 @@
     return d;
   }
   function draw(){
+    updateUndo();
+    for(const control of $('promo-items').querySelectorAll('.move-item,.remove-item')){
+      const index=Number(control.closest('.promo-item').dataset.index),step=Number(control.dataset.step||0);
+      control.disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||index+step<0||index+step>=activeCount();
+    }
     $('product-count').disabled=pendingPhotos>0;$('add-item').disabled=pendingPhotos>0||activeCount()>=capacity();
     renderDesigner();const d=dataForPoster(),statusFormat=d.format==='status';
     let valid=false;

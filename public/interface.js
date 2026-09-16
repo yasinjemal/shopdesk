@@ -42,9 +42,8 @@
     button.addEventListener('click',()=>{if(option.disabled)return;$('poster-template').value=option.value;$('poster-template').dispatchEvent(new Event('change',{bubbles:true}));});
     $('template-gallery').append(button);templateButtons.set(option.value,button);
   }
-  const colours={red:'#c91424',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'};
   for(const option of $('promo-theme').options){
-    const button=document.createElement('button');button.type='button';button.className='colour-swatch';button.dataset.colour=option.value;button.style.setProperty('--swatch',colours[option.value]);button.setAttribute('aria-label',option.textContent.replace(' · new',''));button.title=option.textContent.replace(' · new','');button.setAttribute('aria-pressed','false');
+    const button=document.createElement('button');button.type='button';button.className='colour-swatch';button.dataset.colour=option.value;button.style.setProperty('--swatch',ShopDeskPoster.themes[option.value][0]);button.setAttribute('aria-label',option.textContent.replace(' · new',''));button.title=option.textContent.replace(' · new','');button.setAttribute('aria-pressed','false');
     button.addEventListener('click',()=>{$('promo-theme').value=option.value;$('promo-theme').dispatchEvent(new Event('change',{bubbles:true}));});
     $('colour-swatches').append(button);colourButtons.set(option.value,button);
   }
@@ -85,7 +84,7 @@
     (target||$('flyer-purpose')).focus();
   });
   $('reset-design-finishes').addEventListener('click',()=>{
-    $('poster-typeface').value='design';$('price-style').value='design';$('promo-theme').value=seeds[$('poster-template').value]||'green';
+    $('keep-colours').checked=false;$('poster-typeface').value='design';$('price-style').value='design';$('promo-theme').value=seeds[$('poster-template').value]||'green';
     $('promo-theme').dispatchEvent(new Event('change',{bubbles:true}));
   });
   $('client-drawer').open=!window.matchMedia('(max-width: 900px)').matches;
