@@ -60,6 +60,7 @@
   function renderDesigner(){
     $('designer-fields').disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||exportBusy||packBusy;
     $('start-project').disabled=$('designer-fields').disabled;
+    $('open-projects').disabled=$('designer-fields').disabled;
     $('open-share-template').disabled=$('designer-fields').disabled;
     if(!studioState)return;
     const fill=(id,entries,value)=>{const select=$(id);select.replaceChildren();for(const [key,label] of entries){const o=document.createElement('option');o.value=key;o.textContent=label;select.append(o);}select.value=value;};
@@ -410,8 +411,14 @@
   const expiry=new Date();expiry.setDate(expiry.getDate()+7);$('promo-date').value=iso(expiry);
   window.ShopDeskPromotion={draw,addProduct(product){if(!ready){toast('Wait for your saved workspace to load.');return false;}if(announcement()){toast('Choose an offers flyer to add products.');return false;}if(!insertProduct({...product,photo:''})){toast('Increase your product count or clear an item to make room.');return false;}return true;}};
   function batchContext(){return studioState?studioState.activeClientId+':'+studioState.activeProjectId:'';}
-  function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked)throw new Error('Wait for the project to finish loading or saving photos.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
+  function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked||exportBusy||packBusy)throw new Error('Wait for the project to finish loading, saving photos or creating downloads.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
   Object.assign(window.ShopDeskPromotion,{
+    projectCatalog(){assertEditable(batchContext());capture();return structuredClone(studioState);},
+    async openProject(clientId,projectId){assertEditable(batchContext());ShopDeskStudio.select(studioState,clientId,projectId);await switchProject(clientId,projectId);},
+    async newEdition(clientId,projectId,values){
+      assertEditable(batchContext());capture();const next=ShopDeskProjects.renew(studioState,clientId,projectId,values);
+      studioState=next;dirty=true;change++;await showActive();changed();clearTimeout(saveTimer);save();toast('New edition created. Review your offers before sharing.');
+    },
     templateSnapshot(){assertEditable(batchContext());return {...snapshot().draft,itemCount:activeCount()};},
     async useTemplate(template){
       assertEditable(batchContext());capture();const next=ShopDeskStudio.useTemplate(studioState,template);

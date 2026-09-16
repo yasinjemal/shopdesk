@@ -13,8 +13,8 @@
   <meta name="theme-color" content="#103e35">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Crect%20width='40'%20height='40'%20rx='11'%20fill='%23103e35'/%3E%3Cpath%20d='M12%2013h16v5H17v4h11v6H12v-5h11v-4H12z'%20fill='%23b8f088'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
-  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="photos.js" defer></script><script src="output.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
-<script src="interface.js" defer></script><script src="batch.js" defer></script><script src="templates.js" defer></script><script src="library.js" defer></script></head>
+  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="photos.js" defer></script><script src="output.js" defer></script><script src="projects.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
+<script src="interface.js" defer></script><script src="batch.js" defer></script><script src="templates.js" defer></script><script src="library.js" defer></script><script src="project-gallery.js" defer></script></head>
 <body>
 <a class="skip" href="#workspace">Skip to tools</a>
 <div class="app-shell">
@@ -58,7 +58,7 @@
         <p id="workspace-error" class="validation" role="alert" hidden></p>
         <section class="reuse-launchpad" aria-labelledby="reuse-title">
           <div><p class="eyebrow">MAKE IT. SHARE IT. MAKE IT YOURS.</p><h2 id="reuse-title">A good idea is a starting point.</h2><p>Start with a template. Make it work for your business. Help someone else get started.</p></div>
-          <div class="reuse-actions"><button class="button primary" type="button" id="open-library">Explore templates <span aria-hidden="true">↗</span></button><button class="button secondary" type="button" id="start-project" disabled>New flyer</button><button class="text-button" type="button" id="open-share-template" disabled>Share this design</button></div>
+          <div class="reuse-actions"><button class="button primary" type="button" id="open-library">Explore templates <span aria-hidden="true">↗</span></button><button class="button secondary" type="button" id="open-projects" disabled>My flyers</button><button class="button secondary" type="button" id="start-project" disabled>New flyer</button><button class="text-button" type="button" id="open-share-template" disabled>Share this design</button></div>
         </section>
         <details class="client-drawer" id="client-drawer" open><summary><span class="drawer-label">Clients &amp; projects</span><span id="workspace-summary">Your saved workspace</span><span class="drawer-toggle" aria-hidden="true">⌄</span></summary><fieldset class="designer-bar" id="designer-fields" disabled>
           <legend class="sr-only">Clients and projects</legend>
@@ -171,6 +171,26 @@
     <div class="share-template-preview"><canvas id="share-template-canvas" aria-label="Preview of the template others will see"></canvas><div><strong>Review what others will get</strong><p id="share-template-summary"></p><p>Business details, contact information, uploaded photos, hidden products and dates are excluded. Check any wording you choose to include.</p></div></div>
     <p class="field-help">People with access to ShopDesk can make their own copies. You can unlist the template later; copies already made remain theirs.</p><p class="validation" id="share-template-error" role="alert" hidden></p><button type="submit" class="button primary full-width" id="publish-template">Share template</button>
   </form>
+</dialog>
+<dialog id="projects-dialog" aria-labelledby="projects-title">
+  <div class="pack-dialog-heading"><div><p class="eyebrow">YOUR SAVED WORK</p><h2 id="projects-title">My flyers</h2><p id="projects-count" class="field-help"></p></div><button type="button" class="button quiet" id="close-projects">Back to editor</button></div>
+  <p class="field-help">Find a flyer by its name, business or products. Open it to edit, or make a new edition for your next promotion.</p>
+  <form id="projects-search-form" class="project-search-form" role="search"><label class="field project-search">Search flyers<input type="search" id="projects-search" placeholder="e.g. weekend, rice, salon" maxlength="100" autocomplete="off"></label><label class="field">Business<select id="projects-client"><option value="">All businesses</option></select></label><label class="field">Promotion status<select id="projects-status-filter"><option value="all">All statuses</option><option value="current">Current / no end date</option><option value="draft">Drafts</option><option value="ending">Ending soon / today</option><option value="expired">Expired / past events</option><option value="scheduled">Upcoming</option></select></label></form>
+  <div class="projects-result-row"><p id="projects-results" role="status" tabindex="-1"></p><button type="button" class="text-button" id="projects-clear">Clear filters</button></div>
+  <p id="projects-capacity" class="field-help" hidden></p><p id="projects-error" class="validation" role="alert" hidden></p>
+  <div id="projects-grid" class="projects-grid"></div><p id="projects-empty" class="projects-empty" hidden>No flyers match these filters. Try another name or clear the filters.</p>
+  <nav id="projects-pages" class="projects-pages" aria-label="Flyer pages"><button type="button" class="button secondary" id="projects-previous">Previous</button><span id="projects-page"></span><button type="button" class="button secondary" id="projects-next">Next</button></nav>
+  <p class="field-help project-gallery-note">Small previews show the layout. Open a flyer for its photos and full preview.</p>
+</dialog>
+<dialog id="edition-dialog" aria-labelledby="edition-title">
+  <div class="pack-dialog-heading"><h2 id="edition-title">Make a new edition</h2><button type="button" class="button quiet" id="close-edition">Cancel</button></div>
+  <p id="edition-source" class="edition-source"></p><p id="edition-note" class="field-help"></p>
+  <form id="edition-form" novalidate><fieldset id="edition-fields"><legend class="sr-only">New edition details</legend>
+    <label class="field">New edition name<input id="edition-name" type="text" maxlength="60" required></label>
+    <div id="edition-dates" class="field-row"><label class="field">Starts<input id="edition-start" type="date" required></label><label class="field">Ends<input id="edition-end" type="date" required></label></div>
+    <label id="edition-event-field" class="field" hidden>Event date<input id="edition-event-date" type="date" required></label>
+    <button type="submit" class="button primary full-width" id="create-edition">Create new edition</button>
+  </fieldset><p id="edition-error" class="validation" role="alert" hidden></p></form>
 </dialog>
 <dialog id="preview-dialog" aria-labelledby="preview-title"><div class="pack-dialog-heading"><h2 id="preview-title">Your flyer</h2><button type="button" class="button quiet" id="close-preview">Back to editor</button></div><div class="expanded-preview-stage"><canvas id="expanded-canvas" aria-label="Full-screen preview of your flyer"></canvas></div></dialog></body>
 </html>

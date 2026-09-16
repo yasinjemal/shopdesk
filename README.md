@@ -33,6 +33,9 @@ The current source expands the design collection and product editing tools while
 - Poster (4:5) and WhatsApp Status (9:16) PNG exports.
 - Promotion packs containing a flyer, Status pages, a caption, and a ZIP download.
 - Designer Mode with client profiles, named projects, and project duplication.
+- My flyers: a searchable gallery of saved projects, with business and date-status filters, six layouts per page, and direct opening in the editor. Search includes visible product names and preserves hidden items.
+- New editions copy an existing flyer into a separate project under its original business. Offer dates default to today through the next six days and can be edited; event copies use a new event date; evergreen menus retain their date settings. Designs, high-resolution preferences, photos, framing, multi-buy prices, and reserved items are preserved. The original project and saved products stay intact.
+- Gallery date labels describe the entered dates, not a delivery schedule. They do not send messages or publish promotions.
 - Account-based saving of workspaces and uploaded images.
 - Pricing and margin calculator, plus daily cash closing summaries.
 
