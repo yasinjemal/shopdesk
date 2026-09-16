@@ -1,3 +1,4 @@
+import '../public/templates.js';
 const MAX_BODY = 100000;
 const MAX_PHOTO = 1500000;
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
@@ -74,6 +75,33 @@ function protectWrite(request) {
 async function handleAPI(request,env,url) {
   const owner=user(request); const database=db(env);
   if(request.method!=='GET')protectWrite(request);
+  if(url.pathname==='/api/templates'&&request.method==='GET'){
+    const mine=url.searchParams.get('mine')==='1',query=(url.searchParams.get('q')||'').slice(0,80).toLowerCase(),category=url.searchParams.get('category')||'';
+    const cursor=url.searchParams.get('cursor')||'';
+    if(cursor&&!/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\|[0-9a-f-]{36}$/.test(cursor))throw fail('Reload the template library.');
+    const [time='',id='']=cursor.split('|');
+    const rows=await database.prepare("SELECT id,owner,data,listed,created_at FROM shared_templates WHERE ((? = 1 AND owner = ?) OR (? = 0 AND listed = 1)) AND (? = '' OR business = ?) AND (? = '' OR instr(lower(title || ' ' || description), ?) > 0) AND (? = '' OR created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC,id DESC LIMIT 13").bind(mine?1:0,owner,mine?1:0,category,category,query,query,cursor,time,time,id).all();
+    const page=rows.results.slice(0,12),last=page.at(-1);
+    return json({templates:page.map(row=>({id:row.id,...JSON.parse(row.data),mine:row.owner===owner,listed:!!row.listed})),cursor:rows.results.length>12?last.created_at+'|'+last.id:null});
+  }
+  if(url.pathname==='/api/templates'&&request.method==='POST'){
+    let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,16000)));}catch(e){if(e.status)throw e;throw fail('Could not read this template.');}
+    if(!/^[0-9a-f-]{36}$/.test(body?.id))throw fail('Reopen the sharing window and try again.');
+    let template;try{template=globalThis.ShopDeskTemplates.validate(body.template);}catch(e){throw fail(e.message);}
+    const serialized=JSON.stringify(template),previous=await database.prepare('SELECT owner,data FROM shared_templates WHERE id = ?').bind(body.id).first();
+    if(previous){if(previous.owner!==owner||previous.data!==serialized)throw fail('This share request already exists. Reopen the sharing window.',409);return json({id:body.id});}
+    const inserted=await database.prepare('INSERT INTO shared_templates (id,owner,title,description,business,data,listed,created_at) SELECT ?,?,?,?,?,?,1,? WHERE (SELECT COUNT(*) FROM shared_templates WHERE owner = ?) < 100 ON CONFLICT(id) DO NOTHING RETURNING id').bind(body.id,owner,template.title,template.description,template.design.business,serialized,new Date().toISOString(),owner).first();
+    if(!inserted)throw fail('You can keep up to 100 shared templates. Please try an existing template.',409);
+    return json({id:body.id},201);
+  }
+  if(url.pathname.startsWith('/api/templates/')&&request.method==='PATCH'){
+    const id=url.pathname.slice('/api/templates/'.length);if(!/^[0-9a-f-]{36}$/.test(id))throw fail('Template not found.',404);
+    let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,1000)));}catch{throw fail('Choose whether to list this template.');}
+    if(typeof body?.listed!=='boolean')throw fail('Choose whether to list this template.');
+    const updated=await database.prepare('UPDATE shared_templates SET listed = ? WHERE id = ? AND owner = ? RETURNING id').bind(body.listed?1:0,id,owner).first();
+    if(!updated)throw fail('Template not found in your account.',404);
+    return json({id,listed:body.listed});
+  }
   const studio=url.pathname==='/api/studio',workspace=studio||url.pathname==='/api/workspace';
   if(workspace && request.method==='GET'){
     const record=await database.prepare('SELECT data, revision FROM poster_workspaces WHERE owner = ?').bind(owner).first();
@@ -121,7 +149,8 @@ export default {
       if(url.pathname.startsWith('/api/'))return await handleAPI(request,env,url);
       if(!['GET','HEAD'].includes(request.method))return json({error:'Method not allowed.'},405);
       const asset=ASSETS[url.pathname==='/index.html'?'/':url.pathname];if(!asset)return new Response('Not found',{status:404});
-      return new Response(request.method==='HEAD'?null:asset.body,{headers:{'Content-Type':asset.type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
+      const body=asset.encoding==='base64'?Uint8Array.from(atob(asset.body),char=>char.charCodeAt(0)):asset.body;
+      return new Response(request.method==='HEAD'?null:body,{headers:{'Content-Type':asset.type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
     } catch(error) {
       if(!error.status)console.error('ShopDesk request failed',{path:url.pathname,message:error.message});
       return json({error:error.status?error.message:'We could not reach your saved workspace. Your edits are still here; please try again.'},error.status??503);
