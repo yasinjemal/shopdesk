@@ -3,7 +3,12 @@
   const $=id=>document.getElementById(id),api=window.ShopDeskPromotion;
   let bulkRows=[],bulkContext='',bulkBusy=false,savedContext='',savedProducts=[],savedSelection=new Map(),savedBusy=false,photoIndex=-1,photoContext='';
   function message(id,text){$(id).textContent=text;$(id).hidden=!text;}
-  function state(){const value=api.itemState();if(!value.ready)throw new Error('Wait for your project to load, then choose an offers flyer.');return value;}
+  function launchError(error){message('editor-action-error',error.message||'This tool could not open. Please reopen ShopDesk and try again.');$('editor-action-error').focus();}
+  function state(){
+    message('editor-action-error','');
+    if(typeof api?.itemState!=='function')throw new Error('The editor has not finished loading. Reopen ShopDesk to load the latest controls. Your saved projects are kept.');
+    const value=api.itemState();if(!value.ready)throw new Error(value.unavailableReason||'Wait for your project to load, then try again.');return value;
+  }
   function showBulkSummary(){
     const available=api.itemState().available,invalid=bulkRows.filter(row=>ShopDeskItems.error(row)).length;
     $('bulk-summary').textContent=bulkRows.length+' items · '+available+' spaces available'+(invalid?' · '+invalid+' need attention':'');
@@ -27,7 +32,7 @@
     });showBulkSummary();
   }
   $('open-bulk').addEventListener('click',()=>{
-    try{bulkContext=state().context;bulkRows=[];$('bulk-source').value='';$('bulk-entry').hidden=false;$('bulk-review').hidden=true;message('bulk-error','');$('bulk-dialog').showModal();$('bulk-source').focus();}catch(e){message('bulk-error',e.message);}
+    try{bulkContext=state().context;bulkRows=[];$('bulk-source').value='';$('bulk-entry').hidden=false;$('bulk-review').hidden=true;message('bulk-error','');$('bulk-dialog').showModal();$('bulk-source').focus();}catch(e){launchError(e);}
   });
   $('close-bulk').addEventListener('click',()=>$('bulk-dialog').close());
   $('review-bulk').addEventListener('click',()=>{
@@ -43,7 +48,7 @@
     $('saved-selection-count').textContent=savedSelection.size+' selected · '+available+' spaces available';
     $('apply-saved-selection').disabled=savedBusy||!savedSelection.size||savedSelection.size>available||!!error;
     $('apply-saved-selection').textContent='Add '+savedSelection.size+' selected '+(savedSelection.size===1?'item':'items');
-    message('saved-grid-error',error||'');
+    message('saved-grid-error',error||(available===0?'This flyer has no empty spaces. Close this window and remove an existing item, or create a new project to choose a different product list.':''));
     for(const checkbox of $('saved-product-grid').querySelectorAll('input[type="checkbox"]'))checkbox.disabled=!checkbox.checked&&savedSelection.size>=available;
   }
   function renderSavedGrid(){
@@ -67,7 +72,7 @@
     }selectionStatus();
   }
   $('open-saved-grid').addEventListener('click',()=>{
-    try{const current=state();savedContext=current.context;savedProducts=current.products;savedSelection.clear();$('saved-search').value='';renderSavedGrid();$('saved-grid-dialog').showModal();$('saved-search').focus();}catch(e){message('saved-grid-error',e.message);}
+    try{const current=state();savedContext=current.context;savedProducts=current.products;savedSelection.clear();$('saved-search').value='';renderSavedGrid();$('saved-grid-dialog').showModal();$('saved-search').focus();}catch(e){launchError(e);}
   });
   $('close-saved-grid').addEventListener('click',()=>$('saved-grid-dialog').close());
   $('saved-search').addEventListener('input',renderSavedGrid);
@@ -89,7 +94,7 @@
   }
   function syncSliders(){const value=api.photoPreview(photoIndex,photoContext);if(!value)return;$('photo-scale').value=(value.item.photoScale??1)*100;$('photo-x').value=(value.item.photoX??0)*100;$('photo-y').value=(value.item.photoY??0)*100;}
   window.addEventListener('shopdesk:adjust-photo',event=>{
-    try{photoContext=state().context;photoIndex=event.detail.index;if(!api.photoPreview(photoIndex,photoContext))return;syncSliders();$('photo-adjust-dialog').showModal();updatePhotoPreview();}catch{/* The editor guards unavailable projects. */}
+    try{photoContext=state().context;photoIndex=event.detail.index;if(!api.photoPreview(photoIndex,photoContext))throw new Error('This photo is not available in the current flyer. Choose the item again or add its photo.');syncSliders();$('photo-adjust-dialog').showModal();updatePhotoPreview();}catch(e){launchError(e);}
   });
   for(const id of ['photo-scale','photo-x','photo-y'])$(id).addEventListener('input',()=>{
     try{api.setPhotoFrame(photoIndex,{photoScale:Number($('photo-scale').value)/100,photoX:Number($('photo-x').value)/100,photoY:Number($('photo-y').value)/100},photoContext);}catch(e){message('photo-adjust-warning',e.message);}
