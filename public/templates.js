@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh'],
     theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate'],
     format:['poster','status'],business:['grocery','fashion','food','beauty','services','general'],
     purpose:['offers','spotlight','event','opening'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
@@ -27,7 +27,8 @@
       result.items=['event','opening'].includes(result.purpose)?[blank()]:source.items.slice(0,result.itemCount).map(item=>{
         const price=string(item.price??'',20,'the price');
         if(price!==''&&(!Number.isFinite(Number(price))||Number(price)<0||Number(price)>1000000))throw new Error('Check the template prices.');
-        return {name:string(item.name??'',50,'the item name'),size:string(item.size??'',25,'the item details'),price,photo:''};
+        const deal={};if(item.dealQuantity!==undefined){if(!Number.isInteger(item.dealQuantity)||item.dealQuantity<2||item.dealQuantity>99)throw new Error('Check the multi-buy quantity.');deal.dealQuantity=item.dealQuantity;}
+        return {name:string(item.name??'',50,'the item name'),size:string(item.size??'',25,'the item details'),price,photo:'',...deal};
       });
     }
     return result;
@@ -63,7 +64,10 @@
     ['Clean and ready','Crisp aqua service panels for cleaning and home care.','services','blueprint','aqua','offers',6,{priceStyle:'outline'}],
     ['The style journal','Paper textures and quiet prices for curated outfits.','fashion','scrapbook','terracotta','offers',3,{typeface:'elegant'}],
     ['Freshly baked','A warm, playful selection of bakes and daily favourites.','food','candy','lemon','offers',4,{typeface:'elegant'}],
-    ['Everyday essentials','Strong type and clear prices for the practical things.','grocery','mono','slate','offers',9,{typeface:'geometric',priceStyle:'outline'}]
+    ['Everyday essentials','Strong type and clear prices for the practical things.','grocery','mono','slate','offers',9,{typeface:'geometric',priceStyle:'outline'}],
+    ['The weekly wholesale board','A compact product grid with clear pack sizes and price tickets.','grocery','wholesale','red','offers',12],
+    ['The market front page','A large lead offer surrounded by a varied selection of deals.','grocery','mosaic','teal','offers',9],
+    ['Fresh counter favourites','Rich dark panels and generous photos for fresh food.','food','fresh','charcoal','offers',4]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
   root.ShopDeskTemplates={design,validate,create,draft,starters};
 })(typeof window!=='undefined'?window:globalThis);

@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  const optional=['photoScale','photoX','photoY','featured'];
+  const optional=['photoScale','photoX','photoY','featured','dealQuantity'];
   function copy(item,includeFeature=true){
     const next={name:item.name||'',size:item.size||'',price:item.price??'',photo:item.photo||''};
     for(const key of optional)if(item[key]!==undefined&&(includeFeature||key!=='featured'))next[key]=item[key];

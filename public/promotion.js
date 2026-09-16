@@ -23,7 +23,7 @@
   function capacity(){return $('flyer-purpose').value==='spotlight'?1:$('poster-template').value==='simple'?3:25;}
   function activeCount(){return Math.min(selectedCount,capacity());}
   function activeItems(){return items.slice(0,activeCount());}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
   function capture(){if(studioState)studioState=ShopDeskStudio.capture(studioState,snapshot(),$('project-name').value);}
   function changed(){if(!ready)return;capture();renderDesigner();dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
@@ -38,7 +38,7 @@
     $('poster-typeface').value=d.typeface||'design';$('price-style').value=d.priceStyle||'design';
     $('project-name').value=title;$('business-type').value=d.business||'grocery';$('promo-eyebrow').value=d.eyebrow??p.eyebrow;$('promo-cta').value=d.cta??p.cta;$('promo-terms').value=d.terms??p.terms;$('show-date').checked=d.showDate??true;
     $('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';
-    $('promo-headline').value=d.headline;$('promo-date').value=d.date;$('promo-theme').value=d.theme;$('poster-template').value=d.template||'simple';$('trim-photos').checked=d.trimPhotos??false;$('clean-names').checked=d.cleanNames??false;
+    $('promo-headline').value=d.headline;$('promo-date').value=d.date;$('promo-start-date').value=d.startDate||'';$('promo-theme').value=d.theme;$('poster-template').value=d.template||'simple';$('trim-photos').checked=d.trimPhotos??false;$('clean-names').checked=d.cleanNames??false;
     $('flyer-purpose').value=d.purpose||'offers';$('promo-details').value=d.details||'';$('event-date').value=d.eventDate||'';$('event-time').value=d.eventTime||'';$('event-venue').value=d.venue||'';heroPhoto=d.heroPhoto||'';
     finishingChosen=d.trimPhotos!==undefined||d.cleanNames!==undefined;document.querySelector('[name="poster-format"][value="'+d.format+'"]').checked=true;
     items=structuredClone(d.items);selectedCount=d.itemCount??items.length;products=structuredClone(data.products);
@@ -151,7 +151,7 @@
       const heading=document.createElement('summary');heading.className='item-heading';
       const number=document.createElement('span');number.className='item-index';number.textContent=featured?'★':String(index+1);number.setAttribute('aria-label',featured?'Featured offer':String(index+1));
       const title=document.createElement('span');title.className='item-title';title.textContent=item.name||'New '+profile().item.toLowerCase();
-      const price=document.createElement('span');price.className='item-price';price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price';
+      const price=document.createElement('span');price.className='item-price';price.textContent=(item.dealQuantity?item.dealQuantity+' for ':'')+(item.price&&Number(item.price)>0?money(item.price):'Add price');
       const chevron=document.createElement('span');chevron.className='item-chevron';chevron.textContent='⌄';chevron.setAttribute('aria-hidden','true');heading.append(number,title,price,chevron);
       const itemActions=document.createElement('div');itemActions.className='item-actions';
       if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>removeItem(item)));
@@ -175,6 +175,14 @@
       photoRow.append(thumb,photoActions);const name=field(profile().item+' name',item.name,'text',v=>item.name=v,50);name.classList.add('full');const row=document.createElement('div');row.className='field-row';
       const sizeField=field(profile().size,item.size,'text',v=>item.size=v,25);sizeField.querySelector('input').placeholder=profile().example;sizeField.querySelector('input').addEventListener('blur',e=>{item.size=normalSize(item.size);e.target.value=item.size;changed();});
       row.append(sizeField,field('Price (R)',item.price,'number',v=>item.price=v));
+      const deal=document.createElement('details');deal.className='offer-options';deal.open=!!item.dealQuantity;
+      const dealSummary=document.createElement('summary');dealSummary.textContent='Multi-buy offer';
+      const dealLabel=document.createElement('label');dealLabel.className='field';dealLabel.append(document.createTextNode('Price covers'));
+      const quantity=document.createElement('select');quantity.className='deal-quantity';
+      for(let count=1;count<=Math.max(24,item.dealQuantity||1);count++){const option=document.createElement('option');option.value=String(count);option.textContent=count===1?'One item · normal price':count+' items for this price';quantity.append(option);}
+      quantity.value=String(item.dealQuantity||1);quantity.addEventListener('change',()=>{const value=Number(quantity.value);if(value===1)delete item.dealQuantity;else item.dealQuantity=value;price.textContent=(item.dealQuantity?item.dealQuantity+' for ':'')+(item.price&&Number(item.price)>0?money(item.price):'Add price');changed();});
+      const dealHelp=document.createElement('p');dealHelp.className='field-help';dealHelp.textContent='The price above is the total for this many items. Choose 2 to show “2 for” on the flyer and caption.';
+      dealLabel.append(quantity);deal.append(dealSummary,dealLabel,dealHelp);
       const saveProduct=button('Save to my items','text-button save-product',()=>{
         if(!item.name.trim()||item.price===''||Number(item.price)<=0||!Number.isFinite(Number(item.price))){toast('Enter a name and a price above zero first.');return;}
         const found=products.find(p=>p.name.trim().toLowerCase()===item.name.trim().toLowerCase()&&p.size.trim().toLowerCase()===item.size.trim().toLowerCase());
@@ -183,8 +191,8 @@
         renderSaved();changed();clearTimeout(saveTimer);save();toast(found?'Item updated. Waiting for the saved confirmation.':'Item added to your list. Waiting for the saved confirmation.');
       });
       name.querySelector('input').addEventListener('input',()=>title.textContent=item.name||'New '+profile().item.toLowerCase());
-      row.querySelector('input[type="number"]').addEventListener('input',()=>price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price');
-      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,itemActions,order);box.append(heading,body);list.append(box);
+      row.querySelector('input[type="number"]').addEventListener('input',()=>price.textContent=(item.dealQuantity?item.dealQuantity+' for ':'')+(item.price&&Number(item.price)>0?money(item.price):'Add price'));
+      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,deal,itemActions,order);box.append(heading,body);list.append(box);
     });
     $('item-count').textContent=activeCount()+' of '+capacity();$('add-item').disabled=activeCount()>=capacity();
     $('product-count').value=String(selectedCount);
@@ -198,7 +206,7 @@
     updatePicker();
   }
   function renderSaved(){const select=$('saved-product'),value=select.value;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent=products.length?'Choose an item or service…':'No saved items yet';select.append(first);
-    for(const product of products){const option=document.createElement('option');option.value=product.id;option.textContent=product.name+(product.size?' · '+product.size:'')+' · '+money(product.price);select.append(option);}select.value=value;updatePicker();
+    for(const product of products){const option=document.createElement('option');option.value=product.id;option.textContent=product.name+(product.size?' · '+product.size:'')+' · '+(product.dealQuantity?product.dealQuantity+' for ':'')+money(product.price);select.append(option);}select.value=value;updatePicker();
     $('saved-hint').textContent=products.length?products.length+' saved '+(products.length===1?'item':'items')+'. Select one to reuse its photo and price.':'Save an item below to reuse its details and photo.';
   }
   function emptySlot(){return activeItems().findIndex(i=>!i.name.trim()&&!i.price&&!i.size.trim()&&!i.photo);}
@@ -277,10 +285,11 @@
     try{return await promise;}catch(e){imageErrors.add(id);throw e;}finally{imageLoads.delete(id);}
   }
   async function preloadPhotos(){await Promise.allSettled([...new Set([logo,heroPhoto,...activeItems().map(i=>i.photo)].filter(Boolean))].map(loadImage));}
-  function dataForPoster(){const s=snapshot();return {...s.shop,shop:s.shop.name,...s.draft,eventDateText:dateText(s.draft.eventDate),dateText:dateText(s.draft.date),itemCount:activeCount(),items:activeItems().map(i=>({...i,size:normalSize(i.size)}))};}
+  function dataForPoster(){const s=snapshot();return {...s.shop,shop:s.shop.name,...s.draft,eventDateText:dateText(s.draft.eventDate),dateText:dateText(s.draft.date),startDateText:s.draft.startDate?dateText(s.draft.startDate):'',itemCount:activeCount(),items:activeItems().map(i=>({...i,size:normalSize(i.size)}))};}
   function validatePoster(){
     if(!ready||loadingWorkspace)throw new Error('Load your saved project before making a poster.');
     const d=dataForPoster();if(!d.shop.trim())throw new Error('Enter your business name.');if(!d.headline.trim())throw new Error('Enter a headline.');if(!announcement()&&d.showDate&&!/^\d{4}-\d{2}-\d{2}$/.test(d.date))throw new Error('Choose the offer end date.');if(!announcement()&&d.showDate&&d.date<iso())throw new Error('This offer has expired. Choose today or a future end date.');
+    if(!announcement()&&d.showDate&&d.startDate&&d.startDate>d.date)throw new Error('Choose an offer start date before or on the end date.');
     if(announcement()&&!/^\d{4}-\d{2}-\d{2}$/.test(d.eventDate))throw new Error('Choose the event or opening date.');
     if(!announcement())d.items.forEach((i,index)=>{if(!i.name.trim())throw new Error('Enter the name for item '+(index+1)+'.');ShopDeskLogic.number(i.price,'Price for item '+(index+1),.01,1000000);});
     if(pendingPhotos)throw new Error('Please wait for your photo to finish uploading.');

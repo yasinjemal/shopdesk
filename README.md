@@ -6,7 +6,7 @@ The current source expands the design collection and product editing tools while
 
 ## Features included
 
-- A reusable template library with 18 ShopDesk starters, search, business filters, and a shared Community collection.
+- A reusable template library with 21 ShopDesk starters, search, business filters, and a shared Community collection.
 - Use a template to create a separate project with your current business details. Existing projects are never replaced.
 - Share design settings alone, or explicitly include the headline and visible product names, pack sizes, and prices. Contact details, photos, dates, event details, and hidden products are excluded by an allowlist on the server.
 - Unlist and relist your own shared templates. Existing copies belong to their recipients and remain unchanged.
@@ -14,6 +14,9 @@ The current source expands the design collection and product editing tools while
 - A redesigned workspace with Style, Content, and Business editor tabs, visual design previews, colour swatches, collapsible product cards, and an expanded flyer preview.
 
 - Flyer designs for retail, food, fashion, beauty, and service businesses.
+- Wholesale Board, Market Mosaic, and Fresh Focus bring compact retail grids, a large lead offer, and dark photo-focused panels to the collection.
+- Multi-buy quantities display “2 for” (or another chosen quantity) against the total entered price. Quantities stay with saved products, shared content, project copies, captions, and exports.
+- Optional promotion start dates alongside end dates. Invalid date ranges are saved as editable drafts but cannot be exported until corrected.
 - Choose 1–25 products or services; layouts adapt automatically. The simple poster remains limited to three visible offers.
 - Reduce the product count without losing the remaining items; increase it again to restore them.
 - Super Saver, Corner Ribbon, and Signature Collection designs with distinct headers, price labels, and footers.
@@ -90,6 +93,6 @@ The shared library uses the additive `0001_reflective_junta.sql` migration and a
 
 The library is a first release for the existing audience, not an unattended public marketplace. Before a broad public launch, decide on moderation/reporting, support, data backup and recovery, pricing, and how new users gain access. Never auto-publish private drafts or infer revenue from usage alone.
 
-The design library includes 22 designs, 21 palettes, four typography settings, and four price-label settings. Sunburst Sale, Botanical, Blueprint, Studio Notes, Sweet Spot and Type Foundry join the earlier collection; each supports 1–25 offers, a featured item, and both export formats. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look. The optional `keepColours` preference is stored within the existing draft JSON, so this release needs no database migration. Undo is temporary, clears when switching projects or reloading, and requires room for the restored item.
+The design library includes 25 designs, 21 palettes, four typography settings, and four price-label settings. All three retail-inspired designs support 1–25 offers and both export formats. Market Mosaic gives the first product a larger space unless another offer is featured. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look. Optional `keepColours`, `startDate`, and item `dealQuantity` values use the existing JSON records without a database migration. Missing quantities mean normal single-item pricing. Shared templates exclude promotion dates. Undo is temporary, clears when switching projects or reloading, and requires room for the restored item.
 
 Product workflow: paste comma-, tab-, semicolon- or pipe-separated lists for an editable review; select multiple saved products with search and flyer-only price edits; frame product photos with scale and position controls and resolution warnings; feature one offer in a larger layout. Framing and featured selections persist with the project and are retained in PNG and promotion-pack exports. Batch additions preserve existing offers and reserved products.

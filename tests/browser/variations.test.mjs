@@ -12,7 +12,7 @@ for(const width of [320,390,1280])test(`new designs, colour lock, ordering and u
     await page.goto(app.url);await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     await page.evaluate(()=>document.fonts.ready);
     const click=selector=>width<700?page.locator(selector).tap():page.locator(selector).click();
-    assert.equal(await page.locator('[data-template]').count(),22);
+    assert.equal(await page.locator('[data-template]').count(),25);
     assert.equal(await page.locator('[data-colour]').count(),21);
     let previous=await page.locator('#promo-canvas').evaluate(el=>el.toDataURL());
     for(const template of ['sunburst','botanical','blueprint','scrapbook','candy','mono']){

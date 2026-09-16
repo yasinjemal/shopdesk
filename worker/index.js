@@ -13,6 +13,7 @@ function item(value) {
   const photo = value.photo == null ? '' : text(value.photo, 36, 'the product photo');
   if (photo && !/^[0-9a-f-]{36}$/.test(photo)) throw fail('Invalid photo.');
   const styling={};
+  if(value.dealQuantity!==undefined){if(!Number.isInteger(value.dealQuantity)||value.dealQuantity<2||value.dealQuantity>99)throw fail('Choose a multi-buy quantity from 2 to 99.');styling.dealQuantity=value.dealQuantity;}
   for(const [key,min,max] of [['photoScale',.5,2],['photoX',-1,1],['photoY',-1,1]])if(value[key]!==undefined){if(!Number.isFinite(value[key])||value[key]<min||value[key]>max)throw fail('Check the product photo framing.');styling[key]=value[key];}
   if(value.featured!==undefined){if(typeof value.featured!=='boolean')throw fail('Choose a valid featured offer.');styling.featured=value.featured;}
   return { name:text(value.name,50,'the product name'),size:text(value.size,25,'the pack size'),price,photo,...styling };
@@ -21,7 +22,7 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono'].includes(template)) throw fail('Choose a poster template.');
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh'].includes(template)) throw fail('Choose a poster template.');
   const maxItems = template === 'simple' ? 3 : 25;
   const finishing={};
   for(const [key,values] of [['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
@@ -43,6 +44,7 @@ export function validateWorkspace(data) {
   const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
   if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');
   const date = text(d.date,10,'the offer date');
+  if(d.startDate!==undefined){finishing.startDate=text(d.startDate,10,'the offer start date');if(finishing.startDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.startDate))throw fail('Check the offer start date.');}
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail('Check the offer date.');
   const seen = new Set();
   const products = data.products.map(p => { const id = text(p.id,36,'the saved product'); if (!/^[0-9a-f-]{36}$/.test(id) || seen.has(id)) throw fail('Invalid saved product.'); seen.add(id); const v = item(p); delete v.featured; if (!v.name) throw fail('Give your saved product a name.'); return {id,...v}; });

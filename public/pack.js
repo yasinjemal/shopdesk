@@ -22,7 +22,7 @@
     data={...data,items:root.ShopDeskBusiness.visibleItems(data)};
     const rows=['event','opening'].includes(data.purpose)?[]:data.items.map(item=>{
       const name=data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name;
-      return name+(item.size?' · '+item.size:'')+' — '+money(item.price);
+      return name+(item.size?' · '+item.size:'')+' — '+(item.dealQuantity?item.dealQuantity+' for ':'')+money(item.price);
     });
     const copy=root.ShopDeskBusiness.copy(data);
     return [data.shop,data.headline,'',...rows,...(data.purpose&&data.purpose!=='offers'&&data.details?[data.details]:[]),'',...[copy.date,copy.location,copy.contact,copy.terms].filter(Boolean)].join('\n');
