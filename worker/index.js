@@ -22,10 +22,10 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh'].includes(template)) throw fail('Choose a poster template.');
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper'].includes(template)) throw fail('Choose a poster template.');
   const maxItems = template === 'simple' ? 3 : 25;
   const finishing={};
-  for(const [key,values] of [['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
+  for(const [key,values] of [['exportQuality',['standard','4k']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
     if(!values.includes(d[key]))throw fail('Choose a valid design finish.');finishing[key]=d[key];
   }
   if(d.itemCount!==undefined){
@@ -39,7 +39,7 @@ export function validateWorkspace(data) {
   for(const key of ['trimPhotos','cleanNames','showDate','keepColours'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
   if(d.business!==undefined){if(!['grocery','fashion','food','beauty','services','general'].includes(d.business))throw fail('Choose a business type.');finishing.business=d.business;}
   for(const [key,max] of [['eyebrow',28],['cta',40],['terms',80]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the poster wording');
-  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate'].includes(d.theme) || !['poster','status'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
+  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate'].includes(d.theme) || !['poster','status','square','landscape','a4','a5'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
   if(d.items.filter(i=>i?.featured===true).length>1)throw fail('Choose only one featured offer per flyer.');
   const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
   if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');
@@ -125,14 +125,17 @@ async function handleAPI(request,env,url) {
   }
   if(url.pathname==='/api/photos' && request.method==='POST'){
     if(!env.BUCKET)throw fail('Photo storage is temporarily unavailable. Please try again.',503);
-    if(!request.headers.get('content-type')?.startsWith('image/jpeg'))throw fail('Choose a JPG, PNG or WebP photo.',415);
+    const mime=request.headers.get('content-type')?.split(';')[0].trim();
+    if(!['image/jpeg','image/png','image/webp'].includes(mime))throw fail('Choose a JPG, PNG or WebP photo.',415);
     const bytes=await readLimited(request,MAX_PHOTO);
-    if(bytes.length<4||bytes[0]!==255||bytes[1]!==216||bytes[2]!==255||bytes[bytes.length-2]!==255||bytes[bytes.length-1]!==217)throw fail('This photo could not be read. Try another JPG, PNG or WebP image.');
+    const signature=(offset,values)=>values.every((v,i)=>bytes[offset+i]===v);
+    const valid=mime==='image/jpeg'?bytes.length>=4&&signature(0,[255,216,255])&&signature(bytes.length-2,[255,217]):mime==='image/png'?bytes.length>=33&&signature(0,[137,80,78,71,13,10,26,10])&&signature(12,[73,72,68,82]):bytes.length>=20&&signature(0,[82,73,70,70])&&signature(8,[87,69,66,80])&&signature(12,[86,80,56]);
+    if(!valid)throw fail('This photo could not be read. Try another JPG, PNG or WebP image.');
     const count=await database.prepare('SELECT COUNT(*) AS count FROM product_photos WHERE owner = ?').bind(owner).first();
     if(count.count>=250)throw fail('Your photo storage is full. Reuse a saved product photo for now.',413);
     const id=crypto.randomUUID();const key='photos/'+id;
-    await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:'image/jpeg'}});
-    try{await database.prepare('INSERT INTO product_photos (id,owner,mime,bytes,created_at) VALUES (?,?,?,?,?)').bind(id,owner,'image/jpeg',bytes.length,new Date().toISOString()).run();}catch(e){await env.BUCKET.delete(key);throw e;}
+    await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:mime}});
+    try{await database.prepare('INSERT INTO product_photos (id,owner,mime,bytes,created_at) VALUES (?,?,?,?,?)').bind(id,owner,mime,bytes.length,new Date().toISOString()).run();}catch(e){await env.BUCKET.delete(key);throw e;}
     return json({id},201);
   }
   if(url.pathname.startsWith('/api/photos/')&&request.method==='GET'){
@@ -140,7 +143,7 @@ async function handleAPI(request,env,url) {
     const record=await database.prepare('SELECT mime FROM product_photos WHERE id = ? AND owner = ?').bind(id,owner).first();if(!record)throw fail('Photo not found.',404);
     if(!env.BUCKET)throw fail('Photos are temporarily unavailable.',503);
     const object=await env.BUCKET.get('photos/'+id);if(!object)throw fail('Photo not found.',404);
-    return new Response(object.body,{headers:{'Content-Type':'image/jpeg','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
+    return new Response(object.body,{headers:{'Content-Type':record.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
   }
   throw fail('This page could not be found.',404);
 }

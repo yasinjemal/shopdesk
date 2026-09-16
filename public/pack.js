@@ -4,16 +4,18 @@
   function plan(data){
     if(data?.items && !['event','opening'].includes(data.purpose) && (data.items.length>25 || (data.itemCount===undefined && data.purpose==='spotlight' && data.items.length!==1) || (data.itemCount===undefined && data.template==='simple' && data.items.length>3)))throw new Error('Choose a valid number of offers for this layout.');
     if(data?.items)data={...data,items:root.ShopDeskBusiness.visibleItems(data),itemCount:undefined};
-    if(data&&['event','opening'].includes(data.purpose))return [{name:'01-full-flyer.png',label:'Full flyer',detail:'Announcement · 4:5',data:{...data,format:'poster'}},{name:'02-status-1-of-1.png',label:'Status 1 of 1',detail:'Announcement · 9:16',data:{...data,format:'status',packPage:{index:1,total:1}}}];
+    const fullFormat=['square','landscape','a4','a5'].includes(data?.format)?data.format:'poster';
+    const fullLabel=({poster:'4:5',square:'1:1',landscape:'16:9',a4:'A4',a5:'A5'})[fullFormat];
+    if(data&&['event','opening'].includes(data.purpose))return [{name:'01-full-flyer.png',label:'Full flyer',detail:'Announcement · '+fullLabel,data:{...data,format:fullFormat}},{name:'02-status-1-of-1.png',label:'Status 1 of 1',detail:'Announcement · 9:16',data:{...data,format:'status',exportQuality:'standard',packPage:{index:1,total:1}}}];
     if(!data||!Array.isArray(data.items)||data.items.length<1||data.items.length>25)throw new Error('Choose 1 to 25 offers for your promotion pack.');
     if(data.purpose==='spotlight'&&data.items.length!==1)throw new Error('Choose one offer for a Spotlight flyer.');
     const base={...data,items:data.items.map(item=>({...item}))};
     if(base.template==='simple'&&base.items.length>3)throw new Error('Choose a flyer design for more than three offers.');
-    const pages=Math.ceil(base.items.length/4),outputs=[{name:'01-full-flyer.png',label:'Full flyer',detail:base.items.length+' '+(base.items.length===1?'offer':'offers')+' · 4:5',data:{...base,format:'poster'}}];
+    const pages=Math.ceil(base.items.length/4),outputs=[{name:'01-full-flyer.png',label:'Full flyer',detail:base.items.length+' '+(base.items.length===1?'offer':'offers')+' · '+fullLabel,data:{...base,format:fullFormat}}];
     let offset=0;
     for(let page=0;page<pages;page++){
       const count=Math.ceil((base.items.length-offset)/(pages-page));
-      outputs.push({name:String(page+2).padStart(2,'0')+'-status-'+(page+1)+'-of-'+pages+'.png',label:'Status '+(page+1)+' of '+pages,detail:count+' '+(count===1?'offer':'offers')+' · 9:16',data:{...base,format:'status',items:base.items.slice(offset,offset+count),packPage:{index:page+1,total:pages}}});
+      outputs.push({name:String(page+2).padStart(2,'0')+'-status-'+(page+1)+'-of-'+pages+'.png',label:'Status '+(page+1)+' of '+pages,detail:count+' '+(count===1?'offer':'offers')+' · 9:16',data:{...base,format:'status',exportQuality:'standard',items:base.items.slice(offset,offset+count),packPage:{index:page+1,total:pages}}});
       offset+=count;
     }
     return outputs;

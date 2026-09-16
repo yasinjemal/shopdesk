@@ -1,9 +1,9 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper'],
     theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate'],
-    format:['poster','status'],business:['grocery','fashion','food','beauty','services','general'],
+    format:['poster','status','square','landscape','a4','a5'],business:['grocery','fashion','food','beauty','services','general'],
     purpose:['offers','spotlight','event','opening'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
   };
   const defaults={template:'bold',theme:'green',format:'poster',business:'general',purpose:'offers',typeface:'design',priceStyle:'design'};
@@ -67,7 +67,10 @@
     ['Everyday essentials','Strong type and clear prices for the practical things.','grocery','mono','slate','offers',9,{typeface:'geometric',priceStyle:'outline'}],
     ['The weekly wholesale board','A compact product grid with clear pack sizes and price tickets.','grocery','wholesale','red','offers',12],
     ['The market front page','A large lead offer surrounded by a varied selection of deals.','grocery','mosaic','teal','offers',9],
-    ['Fresh counter favourites','Rich dark panels and generous photos for fresh food.','food','fresh','charcoal','offers',4]
+    ['Fresh counter favourites','Rich dark panels and generous photos for fresh food.','food','fresh','charcoal','offers',4],
+    ['The price parade','Bright tickets and a bold sale banner for your best offers.','grocery','parade','red','offers',6],
+    ['On the spotlight shelf','A generous lead offer beside the rest of your collection.','general','shelf','blue','offers',6],
+    ['The paper catalogue','A calm catalogue for beautiful products and thoughtful services.','general','paper','coffee','offers',6]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
   root.ShopDeskTemplates={design,validate,create,draft,starters};
 })(typeof window!=='undefined'?window:globalThis);

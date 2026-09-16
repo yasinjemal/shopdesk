@@ -2,6 +2,9 @@
   'use strict';
   const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0'],teal:['#075e64','#bceae1','#f2fbfa'],gold:['#20232c','#e7c574','#faf8f1'],berry:['#941c50','#ffe0ec','#fff8fb'],violet:['#5632a0','#e3d8ff','#faf8ff'],cobalt:['#134bb3','#d6e7ff','#f6f9ff'],coral:['#ab3543','#ffdad5','#fff8f6'],coffee:['#503529','#ebd2b4','#fcf8f3']};
   const collection={
+    parade:{name:'Price Parade',category:'retail',theme:'red',hint:'An oversized sale banner, bright borders and bold price tickets.'},
+    shelf:{name:'Spotlight Shelf',category:'retail',theme:'blue',hint:'A signature masthead and a larger lead offer. Feature any item to make it the star.'},
+    paper:{name:'Paper & Ink',category:'elegant',theme:'coffee',hint:'A quiet paper catalogue with fine borders, serif headings and generous space.'},
     wholesale:{name:'Wholesale Board',category:'retail',theme:'red',hint:'A compact shop masthead, generous product cut-outs and bold price tickets.'},
     mosaic:{name:'Market Mosaic',category:'retail',theme:'teal',hint:'A large lead offer with mixed-size product panels. Feature any item to put it first.'},
     fresh:{name:'Fresh Focus',category:'food',theme:'charcoal',hint:'A dark market-board background, large product photos and clear prices.'},
@@ -19,6 +22,29 @@
     mono:{name:'Type Foundry',category:'retail',theme:'burgundy',hint:'Oversized type, strong rules and high-contrast offer labels.'}
   };
   Object.assign(themes,{sage:['#355644','#dce8c8','#f5f7ed'],terracotta:['#8a3e2f','#f3c888','#fff6ea'],lavender:['#51406f','#e3d7fa','#faf6ff'],peach:['#773d39','#ffd7be','#fff7f0'],lemon:['#45531d','#eef28f','#fbfce9'],aqua:['#075569','#baf1e8','#effbfc'],burgundy:['#681e38','#f1ccd5','#fff6f8'],slate:['#30475b','#d6e6ed','#f3f7fa']});
+  const formats={
+    poster:{label:'Portrait · 4:5',width:1080,height:1350},status:{label:'WhatsApp Status · 9:16',width:1080,height:1920},
+    square:{label:'Square · 1:1',width:1080,height:1080},landscape:{label:'Landscape · 16:9',width:1920,height:1080},
+    a4:{label:'A4 print · 210 × 297 mm',width:1080,height:1080*297/210,mm:[210,297],pixels:[2480,3508]},
+    a5:{label:'A5 print · 148 × 210 mm',width:1080,height:1080*210/148,mm:[148,210],pixels:[1748,2480]}
+  };
+  function outputSize(format,quality='standard'){
+    const f=formats[format]||formats.poster,scale=quality==='4k'?3840/Math.max(f.width,f.height):1;
+    return {...f,width:f.pixels?.[0]||Math.round(f.width*scale),height:f.pixels?.[1]||Math.round(f.height*scale)};
+  }
+  const formatHeight=format=>(formats[format]||formats.poster).height;
+  let renderOptions={},warningScale=1;
+  function surface(canvas,height,width=1080){
+    canvas.width=renderOptions.width||width;canvas.height=renderOptions.height||Math.round(height);
+    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    const mm=renderOptions.printMargin&&formats[renderOptions.format]?.mm,margin=mm?canvas.width*5/mm[0]:0;
+    const scale=Math.min((canvas.width-2*margin)/width,(canvas.height-2*margin)/height);
+    const x=(canvas.width-width*scale)/2,y=(canvas.height-height*scale)/2;
+    ctx.translate(x,y);ctx.scale(scale,scale);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    warningScale=renderOptions.warningScale||scale;
+    return ctx;
+  }
   let fontFamily='"DM Sans", sans-serif',priceStyle='design',priceBrand='#103e35';
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const cropCache=new WeakMap();
@@ -75,25 +101,28 @@
     const zoom=item?.photoScale??1,px=item?.photoX??0,py=item?.photoY??0,custom=zoom!==1||px!==0||py!==0;
     const scale=Math.min(width/sw,height/sh)*zoom,w=sw*scale,h=sh*scale;
     const dx=x+(width-w)/2+px*width*.5,dy=y+(height-h)/2+py*height*.5;
-    if(item&&scale>1.5&&!photoWarnings.some(w=>w.photo===item.photo&&w.name===item.name))photoWarnings.push({photo:item.photo,name:item.name});
+    const sourceRatio=(image.sourceWidth||iw)/iw;
+    if(item&&scale*warningScale/sourceRatio>1.5&&!photoWarnings.some(w=>w.photo===item.photo&&w.name===item.name))photoWarnings.push({photo:item.photo,name:item.name});
     if(custom){ctx.save();ctx.beginPath();ctx.rect(x,y,width,height);ctx.clip();}
     ctx.fillStyle='#ffffff';ctx.fillRect(x,y,width,height);ctx.drawImage(image,sx,sy,sw,sh,dx,dy,w,h);
     if(custom)ctx.restore();
   }
   function geometry(format,count){
-    const status=format==='status',height=status?1920:1350,top=status?360:285,bottom=height-(status?300:220),gap=22;
+    const status=format==='status',height=formatHeight(format),top=status?360:285,bottom=height-(status?300:220),gap=22;
     const cardHeight=(bottom-top-gap*(count-1))/count;
     return {height,top,bottom,cardHeight,cards:Array.from({length:count},(_,i)=>({x:60,y:top+i*(cardHeight+gap),w:960,h:cardHeight})),footerY:bottom+64,status};
   }
-  function draw(canvas,data,images=new Map()){
-    photoWarnings=[];const layout=render(canvas,data,images);return {...layout,photoWarnings:[...photoWarnings]};
+  function draw(canvas,data,images=new Map(),options={}){
+    renderOptions={...options,format:data.format};photoWarnings=[];
+    try{const layout=render(canvas,data,images);return {...layout,photoWarnings:[...photoWarnings]};}finally{renderOptions={};warningScale=1;}
   }
   function render(canvas,data,images=new Map()){
     trimPhotos=!!data.trimPhotos;
-    fontFamily=({modern:'"DM Sans", sans-serif',elegant:'Georgia, "Times New Roman", serif',geometric:'Manrope, sans-serif'})[data.typeface]||(['editorial','atelier','botanical','scrapbook'].includes(data.template)?'Georgia, "Times New Roman", serif':'"DM Sans", sans-serif');
+    fontFamily=({modern:'"DM Sans", sans-serif',elegant:'Georgia, "Times New Roman", serif',geometric:'Manrope, sans-serif'})[data.typeface]||(['editorial','atelier','botanical','scrapbook','paper'].includes(data.template)?'Georgia, "Times New Roman", serif':'"DM Sans", sans-serif');
     priceStyle=data.priceStyle||'design';priceBrand=(themes[data.theme]||themes.green)[0];
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
+    if(['square','landscape'].includes(data.format)||(['parade','shelf','paper'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose)))return drawFlexible(canvas,data,images);
     if(['event','opening'].includes(data.purpose))return drawAnnouncement(canvas,data,images);
     if(data.purpose==='spotlight')return drawSpotlight(canvas,data,images);
     if(['wholesale','mosaic','fresh'].includes(data.template))return drawMerchant(canvas,data,images);
@@ -103,8 +132,7 @@
     if(['boutique','menu','studio'].includes(data.template))return drawBusiness(canvas,data,images);
     if(['bold','market'].includes(data.template))return drawDesigned(canvas,data,images);
     if(data.template==='retail')return drawRetail(canvas,data,images);
-    const layout=geometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;
-    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this poster.');
+    const layout=geometry(data.format,data.items.length);const ctx=surface(canvas,layout.height);
     const [bg,accent,paper]=themes[data.theme]||themes.green;
     ctx.fillStyle=bg;ctx.fillRect(0,0,1080,layout.height);
     ctx.fillStyle=accent;ctx.fillRect(60,layout.status?116:40,70,6);
@@ -142,7 +170,7 @@
   function retailGeometry(format,count){
     if(count>12)return catalogueGeometry(format,count);
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Retail flyers need 1 to 25 products.');
-    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns);
+    const status=format==='status',height=formatHeight(format),columns=gridColumns(count),rows=Math.ceil(count/columns);
     const top=status?410:310,bottom=height-(status?300:180),gap=20,w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,top,bottom,columns,rows,cards:Array.from({length:count},(_,i)=>({x:40+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h})),footerY:bottom+36};
   }
@@ -174,7 +202,7 @@
     drawPrice(ctx,item.price,x+labelW,y,width-labelW,height,background,ink);
   }
   function drawRetail(canvas,data,images){
-    const layout=retailGeometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const layout=retailGeometry(data.format,data.items.length);const ctx=surface(canvas,layout.height);
     const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#cc1726';const dark='#15231d';
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,layout.height);
     const top=layout.status?125:22,logo=data.logo?images.get(data.logo):null;
@@ -223,7 +251,7 @@
   function designedGeometry(template,format,count){
     if(count>12)return catalogueGeometry(format,count);
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Flyers need 1 to 25 products.');
-    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns),gap=18;
+    const status=format==='status',height=formatHeight(format),columns=gridColumns(count),rows=Math.ceil(count/columns),gap=18;
     const top=(template==='bold'?370:340)+(status?100:0),bottom=height-(status?290:190),w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,columns,rows,top,bottom,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:40+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
   }
@@ -236,7 +264,7 @@
   }
   function drawDesigned(canvas,data,images){
     const layout=designedGeometry(data.template,data.format,data.items.length),bold=data.template==='bold';
-    canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,layout.height);
     const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
     ctx.fillStyle=bold?'#f3f4f1':'#ffffff';ctx.fillRect(0,0,1080,layout.height);
     const offset=layout.status?100:0,logo=data.logo?images.get(data.logo):null;
@@ -289,7 +317,7 @@
   function businessGeometry(template,format,count){
     if(count>12)return catalogueGeometry(format,count);
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose 1 to 25 items.');
-    const status=format==='status',height=status?1920:1350,offset=status?100:0;
+    const status=format==='status',height=formatHeight(format),offset=status?100:0;
     const gallery=template==='boutique',columns=gallery?gridColumns(count):(count<=6?1:count<=12?2:count<=18?3:4),rows=Math.ceil(count/columns);
     const top=350+offset,bottom=height-(status?290:200),gap=gallery?18:12,w=(984-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,top,bottom,columns,rows,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:48+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
@@ -298,7 +326,7 @@
     const layout=businessGeometry(data.template,data.format,data.items.length),gallery=data.template==='boutique',menu=data.template==='menu';
     const brand={red:'#b91d30',green:'#1b5642',blue:'#203e63',orange:'#97441f',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#292822';
     const ink='#272823',paper=gallery?'#faf7f1':menu?'#fff8ec':'#f5f3f6',offset=layout.status?100:0;
-    canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this poster.');
+    const ctx=surface(canvas,layout.height);
     ctx.fillStyle=paper;ctx.fillRect(0,0,1080,layout.height);
     const logo=data.logo?images.get(data.logo):null;
     if(gallery){
@@ -356,8 +384,8 @@
     return layout;
   }
   function projectSurface(canvas,data){
-    const height=data.format==='status'?1920:1350,offset=data.format==='status'?100:0;
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const height=formatHeight(data.format),offset=data.format==='status'?100:0;
+    const ctx=surface(canvas,height);
     const brand={red:'#b91d30',green:'#174d3c',blue:'#1c365f',orange:'#943c1d',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#174d3c';
     return {ctx,height,offset,brand};
   }
@@ -408,7 +436,7 @@
   function gridColumns(count){return count<=3?1:count<=6?2:count<=12?3:count<=20?4:5;}
   function catalogueGeometry(format,count){
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose 1 to 25 items.');
-    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns),gap=count>12?14:18;
+    const status=format==='status',height=formatHeight(format),columns=gridColumns(count),rows=Math.ceil(count/columns),gap=count>12?14:18;
     const top=(count>12?266:340)+(status?100:0),bottom=height-(status?280:180),w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     const cards=Array.from({length:count},(_,i)=>{
       const row=Math.floor(i/columns),onRow=Math.min(columns,count-row*columns),inset=(columns-onRow)*(w+gap)/2;
@@ -472,7 +500,7 @@
     const layout=offerGeometry(data),{height,top,footerY:fy}=layout,offset=layout.status?100:0,dense=data.items.length>12;
     const mode=data.template,signature=['signature','boutique'].includes(mode),ribbon=mode==='ribbon',clean=['market','studio','menu'].includes(mode);
     const brand=(themes[data.theme]||themes.red)[0],accent=data.theme==='gold'?'#e7c574':signature?'#d9c28c':data.theme==='berry'?'#ffe0ec':'#ffe132',ink='#17232a';
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,height);
     ctx.fillStyle=signature?'#f7f5ef':clean?'#ffffff':'#f1f4f5';ctx.fillRect(0,0,1080,height);
     const logo=data.logo?images.get(data.logo):null,brandY=offset+18,brandBottom=offset+96;
     ctx.fillStyle=signature?brand:'#ffffff';ctx.fillRect(0,0,1080,brandBottom);
@@ -561,7 +589,7 @@
     const mode=data.template,dense=data.items.length>12,[brand,pale,paper]=themes[data.theme]||themes.red;
     const noir=mode==='noir',quiet=mode==='editorial'||mode==='atelier',accent=noir?pale:mode==='warehouse'?'#ffe232':pale,ink=noir?'#ffffff':'#182526';
     const hb=top-50,headline=data.headline||'Discover your next favourite.';
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,height);
     ctx.fillStyle=noir?'#121621':mode==='editorial'?'#ffffff':paper;ctx.fillRect(0,0,1080,height);
     const brandLine=(baseline,color,x=40,width=1000)=>{
       const logo=data.logo?images.get(data.logo):null;
@@ -668,7 +696,7 @@
   }
   function drawVariations(canvas,data,images){
     const layout=offerGeometry(data),{height,top,footerY:fy}=layout,mode=data.template,[brand,accent,paper]=themes[data.theme]||themes.green,dense=data.items.length>12,offset=layout.status?100:0,hb=top-42;
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,height);
     ctx.fillStyle=mode==='blueprint'?brand:paper;ctx.fillRect(0,0,1080,height);
     const brandLine=(y,color)=>{const logo=data.logo?images.get(data.logo):null;if(logo){contain(ctx,logo,40,y-42,80,50);fit(ctx,data.shop||'Your business',138,y,902,dense?30:36,color,800);}else fit(ctx,data.shop||'Your business',40,y,1000,dense?34:40,color,800);};
     const heading=(x,y,w,h,color,size=dense?46:68)=>nameLines(ctx,data.headline||'Make every day special.',x,y,w,size,h,2,color);
@@ -723,6 +751,16 @@
     if(mode==='mosaic'){ctx.shadowColor='#122d2930';ctx.shadowBlur=10;ctx.shadowOffsetY=5;}
     roundBox(ctx,c.x,c.y,c.w,c.h,radius,'#ffffff',mode==='wholesale'?'#d5dadd':null);ctx.restore();
     ctx.save();ctx.beginPath();ctx.rect(c.x+1,c.y+1,c.w-2,c.h-2);ctx.clip();
+    if(c.h<170){
+      const p=7,innerW=c.w-p*2,ticketH=Math.min(39,c.h*.29),ticketY=c.y+c.h-p-ticketH,contentH=ticketY-c.y-p-5;
+      const imageW=image?innerW*.43:0,tx=c.x+p+imageW+(image?5:0),tw=innerW-imageW-(image?5:0);
+      if(image)contain(ctx,image,c.x+p,c.y+p,Math.max(10,imageW-4),contentH,item);
+      const title=lines(ctx,item.name||'Your product',tw,18,2),font=Math.min(18,(contentH-17)/title.lines.length-2);
+      title.lines.forEach((line,i)=>fit(ctx,line,tx,c.y+p+font+(font+2)*i,tw,font,'#192822',700));
+      fit(ctx,item.size||unit,tx,ticketY-6,tw,13,brand,600);
+      if(mode==='wholesale'){ctx.fillStyle=accent;ctx.fillRect(c.x+p-2,ticketY-2,innerW+4,ticketH+4);}
+      offerPrice(ctx,item,c.x+p,ticketY,innerW,ticketH,dark?'#17251f':brand,'#ffffff');ctx.restore();return;
+    }
     const priceH=Math.min(104,Math.max(dense?39:54,h*.2)),priceY=y+h-priceH;
     const sizeH=dense?19:24,titleSize=dense?21:Math.min(34,w*.12),title=lines(ctx,item.name||'Your product',w,titleSize,2);
     const headlineH=title.lines.length*(title.font+3),detailsBottom=priceY-sizeH-7;
@@ -757,7 +795,7 @@
     const mode=data.template,layout=merchantGeometry(data.format,data.items.length,mode,data.items.findIndex(i=>i.featured));
     const {height,top,footerY:fy}=layout,offset=layout.status?100:0,dense=data.items.length>12;
     const [brand,pale,paper]=themes[data.theme]||themes.red,accent=mode==='wholesale'&&data.theme==='red'?'#ffe132':pale,dark=mode==='fresh';
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,height);
     ctx.fillStyle=dark?'#15221e':mode==='mosaic'?pale:'#ffffff';ctx.fillRect(0,0,1080,height);
     const logo=data.logo?images.get(data.logo):null;
     const shop=(baseline,color)=>{if(logo){contain(ctx,logo,40,baseline-54,106,62);fit(ctx,data.shop||'Your business',163,baseline,877,44,color,800);}else fit(ctx,data.shop||'Your business',40,baseline,1000,48,color,800);};
@@ -783,5 +821,87 @@
     const footerInk=dark?'#17221e':'#ffffff';fit(ctx,data.copy.location||data.shop||'',40,fy+42,1000,32,footerInk,800);fit(ctx,data.copy.contact,40,fy+84,1000,27,footerInk,700);
     fit(ctx,data.copy.terms,40,fy+143,726,18,dark?accent:'#46584e',400);projectCredit(ctx,data,fy+143,dark?accent:'#46584e');return layout;
   }
-  root.ShopDeskPoster={collection,themes,draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,featuredGeometry,merchantGeometry,contentBounds,displayName,packWarning};
+  function flexibleGeometry(format,count,mode,index=-1){
+    const f=formats[format]||formats.poster,width=f.width,height=f.height,wide=width>height,gap=16;
+    const top=wide||height<1200?280:330,bottom=height-160,left=40,available=width-80;
+    const columns=wide?(count<=3?count:count<=8?4:count<=15?5:6):count<=2?count:count<=6?2:count<=12?3:count<=20?4:5;
+    const grid=(n,x,y,w,h,cols)=>{
+      const rows=Math.ceil(n/cols),cw=(w-gap*(cols-1))/cols,ch=(h-gap*(rows-1))/rows;
+      return Array.from({length:n},(_,i)=>{const row=Math.floor(i/cols),onRow=Math.min(cols,n-row*cols);return {x:x+(cols-onRow)*(cw+gap)/2+(i%cols)*(cw+gap),y:y+row*(ch+gap),w:cw,h:ch};});
+    };
+    let cards=grid(count,left,top,available,bottom-top,columns);
+    if(count>1&&(index>=0||mode==='shelf')){
+      if(count>6){
+        const cols=Math.max(3,columns),rows=Math.ceil((count+3)/cols),w=(available-gap*(cols-1))/cols,h=(bottom-top-gap*(rows-1))/rows;
+        index=index<0?0:index;const rest=[];
+        for(let row=0;row<rows;row++)for(let col=0;col<cols;col++)if(!(row<2&&col<2)&&rest.length<count-1)rest.push({x:left+col*(w+gap),y:top+row*(h+gap),w,h});
+        const last=rest.filter(c=>c.y===top+(rows-1)*(h+gap));if(rows>2&&last.length<cols)last.forEach(c=>c.x+=(cols-last.length)*(w+gap)/2);
+        cards=Array.from({length:count},(_,i)=>i===index?{x:left,y:top,w:w*2+gap,h:h*2+gap,featured:true}:rest.shift());
+        return {width,height,top,bottom,cards,footerY:bottom+20,status:format==='status'};
+      }
+      index=index<0?0:index;const heroWidth=(available-gap)*(wide?.34:.42),heroHeight=(bottom-top-gap)*.43;
+      const beside=wide||count<=4;
+      const hero=beside?{x:left,y:top,w:heroWidth,h:bottom-top,featured:true}:{x:left,y:top,w:available,h:heroHeight,featured:true};
+      const rest=beside?grid(count-1,left+heroWidth+gap,top,available-heroWidth-gap,bottom-top,Math.min(columns,count-1)):grid(count-1,left,top+heroHeight+gap,available,bottom-top-heroHeight-gap,columns);
+      cards=Array.from({length:count},(_,i)=>i===index?hero:rest.shift());
+    }
+    return {width,height,top,bottom,cards,footerY:bottom+20,status:format==='status'};
+  }
+  function drawFlexible(canvas,data,images){
+    const announcement=['event','opening'].includes(data.purpose),count=announcement?1:data.items.length;
+    const mode=data.template,layout=flexibleGeometry(data.format,count,mode,data.items.findIndex(i=>i.featured));
+    const {width,height,top,bottom,footerY:fy}=layout,wide=width>height,[brand,accent,paper]=themes[data.theme]||themes.green;
+    const ctx=surface(canvas,height,width),dark=['fresh','noir','blueprint'].includes(mode),quiet=['paper','editorial','atelier','botanical','signature'].includes(mode);
+    ctx.fillStyle=dark?'#17251f':quiet?paper:accent;ctx.fillRect(0,0,width,height);
+    const headerInk=quiet?brand:'#ffffff';
+    ctx.fillStyle=quiet?paper:brand;ctx.fillRect(0,0,width,top-38);
+    if(mode==='parade'||['sunburst','warehouse','bold'].includes(mode)){
+      ctx.save();ctx.globalAlpha=.18;ctx.fillStyle=accent;
+      ctx.beginPath();ctx.moveTo(width*.7,0);ctx.lineTo(width,0);ctx.lineTo(width,top-38);ctx.lineTo(width*.57,top-38);ctx.closePath();ctx.fill();ctx.restore();
+      ctx.fillStyle=accent;ctx.fillRect(40,top-61,width-80,7);
+    }else if(mode==='shelf'){
+      ctx.fillStyle=accent;ctx.fillRect(width-22,0,22,top-38);
+      for(let i=0;i<3;i++){ctx.globalAlpha=.16;ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.strokeRect(width-310+i*24,22+i*14,210,top-100);}ctx.globalAlpha=1;
+    }else if(quiet){
+      ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.strokeRect(22,22,width-44,height-44);ctx.fillStyle=brand;ctx.fillRect(40,top-54,width-80,2);
+    }
+    const logo=data.logo?images.get(data.logo):null,shopX=logo?158:40;
+    if(logo)contain(ctx,logo,40,26,96,60);
+    fit(ctx,data.shop||'Your business',shopX,64,width-shopX-40,36,headerInk,800);
+    const lineY=104;
+    fit(ctx,data.copy.eyebrow,40,lineY,width-80,20,quiet?brand:accent,700);
+    nameLines(ctx,data.headline||'Your next great offer.',40,top-74,width-80,wide?70:height<1200?57:76,top-74-lineY-20,2,headerInk);
+    fit(ctx,data.copy.date,40,top-12,width-80,20,dark?accent:brand,700);
+    if(announcement){
+      const photo=data.heroPhoto?images.get(data.heroPhoto):null,h=bottom-top;
+      roundBox(ctx,40,top,width-80,h,18,'#ffffff');
+      const photoW=wide?(width-120)*.53:width-120;
+      if(photo)contain(ctx,photo,60,top+18,photoW,wide?h-36:h*.52);
+      const textX=wide&&photo?90+photoW:64,textW=width-textX-64,textTop=photo&&!wide?top+h*.56:top+40;
+      nameLines(ctx,data.details||'',textX,textTop+Math.min(130,h*.3),textW,wide?43:34,Math.min(140,h*.32),3,brand);
+      nameLines(ctx,data.copy.date,textX,bottom-65,textW,30,65,2,brand);
+      layout.cards=[];
+    }else{
+      const savedPriceStyle=priceStyle;
+      if(mode==='paper'&&priceStyle==='design')priceStyle='outline';
+      if(data.purpose==='spotlight'&&data.details)layout.cards[0].h-=104;
+      for(const [i,item] of data.items.entries()){
+        const cardMode=mode==='parade'?'wholesale':mode==='shelf'?'mosaic':dark?'fresh':quiet?'paper':mode;
+        merchantCard(ctx,item,layout.cards[i],item.photo?images.get(item.photo):null,{mode:cardMode,brand,accent,paper,unit:data.copy.unit});
+      }
+      priceStyle=savedPriceStyle;
+      if(data.purpose==='spotlight'&&data.details){
+        const c=layout.cards[0];roundBox(ctx,c.x,c.y+c.h+12,c.w,92,8,paper);
+        nameLines(ctx,data.details,c.x+16,bottom-16,c.w-32,26,68,3,brand);
+      }
+    }
+    ctx.fillStyle=quiet?paper:brand;ctx.fillRect(quiet?40:0,fy,quiet?width-80:width,88);
+    if(quiet){ctx.fillStyle=brand;ctx.fillRect(40,fy,width-80,2);}
+    fit(ctx,data.copy.location||data.shop||'',40,fy+34,width-80,27,headerInk,700);
+    fit(ctx,data.copy.contact,40,fy+70,width-80,24,headerInk,600);
+    fit(ctx,data.copy.terms,40,fy+116,width-290,17,dark?accent:brand,400);
+    fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',width-215,fy+116,175,17,dark?accent:brand,500);
+    return layout;
+  }
+  root.ShopDeskPoster={collection,themes,formats,outputSize,draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,featuredGeometry,merchantGeometry,flexibleGeometry,contentBounds,displayName,packWarning};
 })(typeof window!=='undefined'?window:globalThis);
