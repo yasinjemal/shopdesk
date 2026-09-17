@@ -9,7 +9,7 @@ import {validateWorkspace,validateStudio} from '../worker/index.js';
 
 const sample=()=>({shop:{name:'Corner shop',phone:'',location:''},products:[],draft:{headline:'Weekly offers',date:'2030-09-25',template:'parade',theme:'red',format:'poster',exportQuality:'4k',items:[{name:'Rice',size:'2 kg',price:'40',photo:''}]}});
 test('new sizes and quality survive save and duplication, while shared designs retain their shape',()=>{
-  for(const format of Object.keys(ShopDeskPoster.formats))for(const template of ['parade','shelf','paper']){
+  for(const format of Object.keys(ShopDeskPoster.formats))for(const template of ['parade','shelf','paper','arc','ticket','terrace']){
     const data=sample();Object.assign(data.draft,{format,template});assert.deepEqual(validateWorkspace(data),data);
     const copy=ShopDeskStudio.active(validateStudio(ShopDeskStudio.duplicate(ShopDeskStudio.upgrade(data)))).project.draft;
     assert.equal(copy.format,format);assert.equal(copy.exportQuality,'4k');
@@ -26,7 +26,7 @@ test('4K uses a 3840-pixel long edge and paper uses physical 300-dpi sizes',()=>
   assert.equal(ShopDeskPoster.outputSize('status').height,1920);
 });
 test('all new shapes keep 1–25 cards separate with first or last featured',()=>{
-  for(const format of Object.keys(ShopDeskPoster.formats))for(const style of ['parade','shelf','paper'])for(let n=1;n<=25;n++)for(const index of [-1,0,n-1]){
+  for(const format of Object.keys(ShopDeskPoster.formats))for(const style of ['parade','shelf','paper','arc','ticket','terrace'])for(let n=1;n<=25;n++)for(const index of [-1,0,n-1]){
     const l=ShopDeskPoster.flexibleGeometry(format,n,style,index);assert.equal(l.cards.length,n);
     for(const [i,c] of l.cards.entries()){
       assert.ok(c.w>0&&c.h>65&&c.x>=40&&c.y>=l.top&&c.x+c.w<=l.width-39.99&&c.y+c.h<=l.bottom+.01);

@@ -11,7 +11,7 @@ for(const width of [320,1280])test(`people can share and independently reuse a t
     const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);
     await page.goto(app.url);await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     const click=selector=>width<700?page.locator(selector).tap():page.locator(selector).click();
-    await click('#open-library');assert.equal(await page.locator('.library-card').count(),24);
+    await click('#open-library');assert.equal(await page.locator('.library-card').count(),27);
     await page.locator('#library-search').fill('The everyday menu');await click('#library-search-form button');
     assert.equal(await page.locator('.library-card').count(),1);
     await page.getByRole('button',{name:'Use The everyday menu',exact:true}).click();

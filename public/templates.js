@@ -1,12 +1,12 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper'],
-    theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace'],
+    theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'],
     format:['poster','status','square','landscape','a4','a5'],business:['grocery','fashion','food','beauty','services','general'],
-    purpose:['offers','spotlight','event','opening'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
+    purpose:['offers','spotlight','event','opening'],logoSize:['compact','prominent'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
   };
-  const defaults={template:'bold',theme:'green',format:'poster',business:'general',purpose:'offers',typeface:'design',priceStyle:'design'};
+  const defaults={template:'bold',theme:'green',format:'poster',business:'general',purpose:'offers',logoSize:'prominent',typeface:'design',priceStyle:'design'};
   const blank=()=>({name:'',size:'',price:'',photo:''});
   function string(value,max,label){if(typeof value!=='string'||value.length>max)throw new Error('Check '+label+'.');return value.trim();}
   // Explicit allowlist: never copy account IDs, photos, contact details, dates,
@@ -70,7 +70,10 @@
     ['Fresh counter favourites','Rich dark panels and generous photos for fresh food.','food','fresh','charcoal','offers',4],
     ['The price parade','Bright tickets and a bold sale banner for your best offers.','grocery','parade','red','offers',6],
     ['On the spotlight shelf','A generous lead offer beside the rest of your collection.','general','shelf','blue','offers',6],
-    ['The paper catalogue','A calm catalogue for beautiful products and thoughtful services.','general','paper','coffee','offers',6]
+    ['The paper catalogue','A calm catalogue for beautiful products and thoughtful services.','general','paper','coffee','offers',6],
+    ['The arc collection','Sweeping curves and framed panels for a considered collection.','fashion','arc','raspberry','offers',4],
+    ['The neighbourhood ticket wall','Punchy tickets and perforated edges for everyday shop offers.','grocery','ticket','tangerine','offers',9],
+    ['At the café terrace','Awning stripes and soft price labels for your menu.','food','terrace','olive','offers',4]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
   root.ShopDeskTemplates={design,validate,create,draft,starters};
 })(typeof window!=='undefined'?window:globalThis);

@@ -6,7 +6,7 @@ The current source expands the design collection and product editing tools while
 
 ## Features included
 
-- A reusable template library with 24 ShopDesk starters, search, business filters, and a shared Community collection.
+- A reusable template library with 27 ShopDesk starters, search, business filters, and a shared Community collection.
 - Use a template to create a separate project with your current business details. Existing projects are never replaced.
 - Share design settings alone, or explicitly include the headline and visible product names, pack sizes, and prices. Contact details, photos, dates, event details, and hidden products are excluded by an allowlist on the server.
 - Unlist and relist your own shared templates. Existing copies belong to their recipients and remain unchanged.
@@ -14,7 +14,10 @@ The current source expands the design collection and product editing tools while
 - A redesigned workspace with Style, Content, and Business editor tabs, visual design previews, colour swatches, collapsible product cards, and an expanded flyer preview.
 
 - Flyer designs for retail, food, fashion, beauty, and service businesses.
-- Price Parade, Spotlight Shelf, and Paper & Ink add sale tickets, a lead-product shelf, and a restrained paper catalogue (28 designs total).
+- Price Parade, Spotlight Shelf, and Paper & Ink add sale tickets, a lead-product shelf, and a restrained paper catalogue (31 designs total).
+- Arc Gallery, Ticket Wall and Café Terrace add curved gallery details, perforated offer tickets and café awning stripes. Tangerine, petrol, raspberry, olive, indigo and cocoa extend the palette collection.
+- Ready-made wording offers three curated tones for each business type, with event, opening and spotlight variations. Apply a headline, small heading, contact message or footer independently, or choose a complete set. The last wording change can be undone while the picker is open. Choices stay editable and changing context never replaces text automatically. Suggestions are local, curated copy; they do not invent prices, discounts, delivery or availability.
+- Business logos have 25% larger dimensions by default, with a Compact option for the original size. The renderer reserves space for the business name; the logo preference persists in projects, copies, shared styles and export pages.
 - Six shapes: 4:5 portrait, 9:16 Status, 1:1 square, 16:9 landscape, A4, and A5.
 - Standard or 4K PNG exports (3,840 px on the long edge), redrawn from the layout. A4/A5 always export at 300 dpi; PDF downloads carry the physical paper size and a 5 mm white margin. Print PDFs at Actual size / 100%. These are RGB raster PDFs for everyday printing, without commercial bleed or CMYK separations.
 - New uploads preserve up to a 3,840-pixel long edge within the existing 1.5 MB stored-photo limit. Transparent PNG/WebP inputs remain transparent. Small originals are never enlarged during upload; previously saved photos retain their existing quality and can be replaced with larger originals.
@@ -26,7 +29,7 @@ The current source expands the design collection and product editing tools while
 - Choose 1–25 products or services; layouts adapt automatically. The simple poster remains limited to three visible offers.
 - Reduce the product count without losing the remaining items; increase it again to restore them.
 - Super Saver, Corner Ribbon, and Signature Collection designs with distinct headers, price labels, and footers.
-- 21 colour palettes, including sage, terracotta, lavender, peach, lemon, aqua, burgundy, and slate. Keep your chosen palette when changing designs with the optional colour lock.
+- 27 colour palettes, including sage, terracotta, lavender, peach, lemon, aqua, burgundy, and slate. Keep your chosen palette when changing designs with the optional colour lock.
 - Move products up or down while retaining photos, framing, and featured status. Undo the last product removal within the active project without replacing other edits.
 - Custom colours, logos, product photos, headlines, prices, contact details, and expiry dates.
 - Promotional offers, menus, price lists, single-offer spotlights, events, and grand-opening announcements.
@@ -102,6 +105,6 @@ The shared library uses the additive `0001_reflective_junta.sql` migration and a
 
 The library is a first release for the existing audience, not an unattended public marketplace. Before a broad public launch, decide on moderation/reporting, support, data backup and recovery, pricing, and how new users gain access. Never auto-publish private drafts or infer revenue from usage alone.
 
-The design library includes 28 designs, 21 palettes, four typography settings, and four price-label settings. The retail designs support 1–25 offers, with adaptive square and landscape compositions and portrait print layouts. Market Mosaic gives the first product a larger space unless another offer is featured. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their original look. Optional `exportQuality`, `keepColours`, `startDate`, and item `dealQuantity` values use the existing JSON records without a database migration. Missing quantities mean normal single-item pricing. Shared templates exclude promotion dates. Undo is temporary, clears when switching projects or reloading, and requires room for the restored item.
+The design library includes 31 designs, 27 palettes, four typography settings, and four price-label settings. The retail designs support 1–25 offers, with adaptive square and landscape compositions and portrait print layouts. Market Mosaic gives the first product a larger space unless another offer is featured. Category filters help browse styles. Finishes save with each project and carry into promotion packs; older drafts retain their content and settings, with the requested larger logo default (choose Compact for the original logo size). Optional `logoSize`, `exportQuality`, `keepColours`, `startDate`, and item `dealQuantity` values use the existing JSON records without a database migration. Missing quantities mean normal single-item pricing. Shared templates exclude promotion dates. Undo is temporary, clears when switching projects or reloading, and requires room for the restored item.
 
 Product workflow: paste comma-, tab-, semicolon- or pipe-separated lists for an editable review; select multiple saved products with search and flyer-only price edits; frame product photos with scale and position controls and resolution warnings; feature one offer in a larger layout. Framing and featured selections persist with the project and are retained in PNG and promotion-pack exports. Batch additions preserve existing offers and reserved products.

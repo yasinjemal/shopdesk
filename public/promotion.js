@@ -23,7 +23,7 @@
   function capacity(){return $('flyer-purpose').value==='spotlight'?1:$('poster-template').value==='simple'?3:25;}
   function activeCount(){return Math.min(selectedCount,capacity());}
   function activeItems(){return items.slice(0,activeCount());}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{exportQuality:$('export-quality').value,keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{...($('logo-size').value==='compact'?{logoSize:'compact'}:{}),exportQuality:$('export-quality').value,keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
   function capture(){if(studioState)studioState=ShopDeskStudio.capture(studioState,snapshot(),$('project-name').value);}
   function changed(){if(!ready)return;capture();renderDesigner();dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
@@ -34,7 +34,7 @@
     finally{saving=false;renderDesigner();if(dirty&&!blocked&&!lastSaveError)saveTimer=setTimeout(save,150);}
   }
   function applyWorkspace(data,title){
-    lastRemoval=null;$('export-quality').value=data.draft.exportQuality||'standard';const d=data.draft,p=ShopDeskBusiness.get(d.business);$('keep-colours').checked=d.keepColours??false;
+    lastRemoval=null;$('logo-size').value=data.draft.logoSize||'prominent';$('export-quality').value=data.draft.exportQuality||'standard';const d=data.draft,p=ShopDeskBusiness.get(d.business);$('keep-colours').checked=d.keepColours??false;
     $('poster-typeface').value=d.typeface||'design';$('price-style').value=d.priceStyle||'design';
     $('project-name').value=title;$('business-type').value=d.business||'grocery';$('promo-eyebrow').value=d.eyebrow??p.eyebrow;$('promo-cta').value=d.cta??p.cta;$('promo-terms').value=d.terms??p.terms;$('show-date').checked=d.showDate??true;
     $('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';
@@ -298,7 +298,7 @@
     canvas.width=1;canvas.height=1;
     const scale=size.width/(layout.width||1080),needed=new Map(),decoded=new Map();
     const request=(id,edge)=>{if(id)needed.set(id,Math.min(3840,Math.max(needed.get(id)||0,Math.ceil(edge))));};
-    request(data.logo,180*scale);request(data.heroPhoto,Math.max(size.width,size.height));
+    request(data.logo,240*scale);request(data.heroPhoto,Math.max(size.width,size.height));
     data.items.forEach((item,i)=>{const c=layout.cards[i];if(c)request(item.photo,Math.max(c.w,c.h)*scale*(item.photoScale||1)*(data.trimPhotos?1.5:1));});
     try{
       for(const [id,edge] of needed){
@@ -413,6 +413,8 @@
   function batchContext(){return studioState?studioState.activeClientId+':'+studioState.activeProjectId:'';}
   function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked||exportBusy||packBusy)throw new Error('Wait for the project to finish loading, saving photos or creating downloads.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
   Object.assign(window.ShopDeskPromotion,{
+    wordingContext(){assertEditable(batchContext());const d=snapshot().draft;return {context:batchContext(),business:d.business,purpose:d.purpose,template:d.template,showDate:d.showDate,values:Object.fromEntries(Object.keys(ShopDeskWords.fields).map(key=>[key,d[key]]))};},
+    applyWording(values,context){assertEditable(context);const selected=ShopDeskWords.validate(values),before={};for(const [key,value] of Object.entries(selected)){const field=$('promo-'+(key==='headline'?'headline':key));before[key]=field.value;field.value=value;}changed();return before;},
     projectCatalog(){assertEditable(batchContext());capture();return structuredClone(studioState);},
     async openProject(clientId,projectId){assertEditable(batchContext());ShopDeskStudio.select(studioState,clientId,projectId);await switchProject(clientId,projectId);},
     async newEdition(clientId,projectId,values){

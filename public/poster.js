@@ -2,6 +2,9 @@
   'use strict';
   const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0'],teal:['#075e64','#bceae1','#f2fbfa'],gold:['#20232c','#e7c574','#faf8f1'],berry:['#941c50','#ffe0ec','#fff8fb'],violet:['#5632a0','#e3d8ff','#faf8ff'],cobalt:['#134bb3','#d6e7ff','#f6f9ff'],coral:['#ab3543','#ffdad5','#fff8f6'],coffee:['#503529','#ebd2b4','#fcf8f3']};
   const collection={
+    arc:{name:'Arc Gallery',category:'elegant',theme:'raspberry',hint:'Sweeping gallery arches, framed panels and refined price rules.'},
+    ticket:{name:'Ticket Wall',category:'retail',theme:'tangerine',hint:'Perforated offer tickets, a striped masthead and a bold closing strip.'},
+    terrace:{name:'Café Terrace',category:'food',theme:'olive',hint:'Café awning stripes, soft menu panels and rounded price labels.'},
     parade:{name:'Price Parade',category:'retail',theme:'red',hint:'An oversized sale banner, bright borders and bold price tickets.'},
     shelf:{name:'Spotlight Shelf',category:'retail',theme:'blue',hint:'A signature masthead and a larger lead offer. Feature any item to make it the star.'},
     paper:{name:'Paper & Ink',category:'elegant',theme:'coffee',hint:'A quiet paper catalogue with fine borders, serif headings and generous space.'},
@@ -22,6 +25,7 @@
     mono:{name:'Type Foundry',category:'retail',theme:'burgundy',hint:'Oversized type, strong rules and high-contrast offer labels.'}
   };
   Object.assign(themes,{sage:['#355644','#dce8c8','#f5f7ed'],terracotta:['#8a3e2f','#f3c888','#fff6ea'],lavender:['#51406f','#e3d7fa','#faf6ff'],peach:['#773d39','#ffd7be','#fff7f0'],lemon:['#45531d','#eef28f','#fbfce9'],aqua:['#075569','#baf1e8','#effbfc'],burgundy:['#681e38','#f1ccd5','#fff6f8'],slate:['#30475b','#d6e6ed','#f3f7fa']});
+  Object.assign(themes,{tangerine:['#a13f0a','#ffcd8a','#fff8ee'],petrol:['#134b5a','#bce6df','#f1f8f6'],raspberry:['#821e4e','#f4cadb','#fff6fa'],olive:['#4e5730','#e2dfb7','#faf8ef'],indigo:['#343275','#d7dcfa','#f6f6ff'],cocoa:['#553936','#efc7bc','#fcf5ef']});
   const formats={
     poster:{label:'Portrait · 4:5',width:1080,height:1350},status:{label:'WhatsApp Status · 9:16',width:1080,height:1920},
     square:{label:'Square · 1:1',width:1080,height:1080},landscape:{label:'Landscape · 16:9',width:1920,height:1080},
@@ -48,7 +52,7 @@
   let fontFamily='"DM Sans", sans-serif',priceStyle='design',priceBrand='#103e35';
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const cropCache=new WeakMap();
-  let trimPhotos=false;
+  let trimPhotos=false,logoScale=1.25;
   function contentBounds(pixels){
     const {data,width,height}=pixels;
     const white=(x,y)=>{const i=(y*width+x)*4;return data[i+3]<12||(data[i]>244&&data[i+1]>244&&data[i+2]>244);};
@@ -107,6 +111,10 @@
     ctx.fillStyle='#ffffff';ctx.fillRect(x,y,width,height);ctx.drawImage(image,sx,sy,sw,sh,dx,dy,w,h);
     if(custom)ctx.restore();
   }
+  function drawLogo(ctx,image,x,y,w,h){
+    contain(ctx,image,x,Math.max(6,y-h*(logoScale-1)/2),w*logoScale,h*logoScale);
+    return w*(logoScale-1);
+  }
   function geometry(format,count){
     const status=format==='status',height=formatHeight(format),top=status?360:285,bottom=height-(status?300:220),gap=22;
     const cardHeight=(bottom-top-gap*(count-1))/count;
@@ -117,12 +125,12 @@
     try{const layout=render(canvas,data,images);return {...layout,photoWarnings:[...photoWarnings]};}finally{renderOptions={};warningScale=1;}
   }
   function render(canvas,data,images=new Map()){
-    trimPhotos=!!data.trimPhotos;
-    fontFamily=({modern:'"DM Sans", sans-serif',elegant:'Georgia, "Times New Roman", serif',geometric:'Manrope, sans-serif'})[data.typeface]||(['editorial','atelier','botanical','scrapbook','paper'].includes(data.template)?'Georgia, "Times New Roman", serif':'"DM Sans", sans-serif');
+    trimPhotos=!!data.trimPhotos;logoScale=data.logoSize==='compact'?1:1.25;
+    fontFamily=({modern:'"DM Sans", sans-serif',elegant:'Georgia, "Times New Roman", serif',geometric:'Manrope, sans-serif'})[data.typeface]||(['editorial','atelier','botanical','scrapbook','paper','arc'].includes(data.template)?'Georgia, "Times New Roman", serif':'"DM Sans", sans-serif');
     priceStyle=data.priceStyle||'design';priceBrand=(themes[data.theme]||themes.green)[0];
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
-    if(['square','landscape'].includes(data.format)||(['parade','shelf','paper'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose)))return drawFlexible(canvas,data,images);
+    if(['square','landscape'].includes(data.format)||(['parade','shelf','paper','arc','ticket','terrace'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose)))return drawFlexible(canvas,data,images);
     if(['event','opening'].includes(data.purpose))return drawAnnouncement(canvas,data,images);
     if(data.purpose==='spotlight')return drawSpotlight(canvas,data,images);
     if(['wholesale','mosaic','fresh'].includes(data.template))return drawMerchant(canvas,data,images);
@@ -138,7 +146,7 @@
     ctx.fillStyle=accent;ctx.fillRect(60,layout.status?116:40,70,6);
     const header=layout.status?190:112;
     const logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,60,header-65,120,90);fit(ctx,data.shop||'Your business',205,header,815,44,accent,600);}
+    if(logo){const extra=drawLogo(ctx,logo,60,header-65,120,90);fit(ctx,data.shop||'Your business',(205)+extra,header,(815)-extra,44,accent,600);}
     else fit(ctx,data.shop||'Your business',60,header,960,44,accent,600);
     fit(ctx,data.copy.eyebrow,60,header+43,960,20,accent,600);
     fit(ctx,data.headline||'Your special offers',60,header+96,960,64,'#ffffff',800);
@@ -206,7 +214,7 @@
     const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#cc1726';const dark='#15231d';
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,layout.height);
     const top=layout.status?125:22,logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your business',183,top+46,853,43,dark,800);}
+    if(logo){const extra=drawLogo(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your business',(183)+extra,top+46,(853)-extra,43,dark,800);}
     else fit(ctx,data.shop||'Your business',40,top+49,1000,44,dark,800);
     const bannerY=top+89,bannerH=126;ctx.fillStyle=brand;ctx.fillRect(0,bannerY,1080,bannerH);ctx.fillStyle='#ffe132';ctx.fillRect(0,bannerY+bannerH-9,1080,9);
     fit(ctx,data.copy.eyebrow,40,bannerY+30,1000,19,'#ffffff',700);
@@ -269,7 +277,7 @@
     ctx.fillStyle=bold?'#f3f4f1':'#ffffff';ctx.fillRect(0,0,1080,layout.height);
     const offset=layout.status?100:0,logo=data.logo?images.get(data.logo):null;
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,bold?106+offset:layout.top-14);
-    if(logo){contain(ctx,logo,40,24+offset,122,70);fit(ctx,data.shop||'Your business',184,71+offset,856,43,ink,800);}
+    if(logo){const extra=drawLogo(ctx,logo,40,24+offset,122,70);fit(ctx,data.shop||'Your business',(184)+extra,71+offset,(856)-extra,43,ink,800);}
     else fit(ctx,data.shop||'Your business',40,71+offset,1000,46,ink,800);
     if(bold){
       const by=106+offset;ctx.fillStyle=brand;ctx.fillRect(0,by,1080,196);
@@ -331,14 +339,14 @@
     const logo=data.logo?images.get(data.logo):null;
     if(gallery){
       ctx.fillStyle=brand;ctx.fillRect(48,34+offset,56,5);
-      if(logo){contain(ctx,logo,48,57+offset,98,67);fit(ctx,data.shop||'Your business',168,102+offset,864,43,ink,700);}
+      if(logo){const extra=drawLogo(ctx,logo,48,57+offset,98,67);fit(ctx,data.shop||'Your business',(168)+extra,102+offset,(864)-extra,43,ink,700);}
       else fit(ctx,data.shop||'Your business',48,102+offset,984,46,ink,700);
       fit(ctx,data.copy.eyebrow,48,158+offset,984,20,brand,600);
       nameLines(ctx,data.headline||'Find your next favourite.',48,278+offset,984,66,105,2,brand);
       fit(ctx,data.copy.date,48,321+offset,984,24,ink,400);
     }else{
       ctx.fillStyle=brand;ctx.fillRect(0,0,1080,292+offset);
-      if(logo){contain(ctx,logo,48,32+offset,98,64);fit(ctx,data.shop||'Your business',168,77+offset,864,37,'#fff',700);}
+      if(logo){const extra=drawLogo(ctx,logo,48,32+offset,98,64);fit(ctx,data.shop||'Your business',(168)+extra,77+offset,(864)-extra,37,'#fff',700);}
       else fit(ctx,data.shop||'Your business',48,77+offset,984,40,'#fff',700);
       ctx.fillStyle='#ffffff40';ctx.fillRect(48,109+offset,984,1);
       fit(ctx,data.copy.eyebrow,48,148+offset,984,20,menu?'#ffe2b6':'#efdeed',600);
@@ -391,7 +399,7 @@
   }
   function projectBrand(ctx,data,images,y,ink){
     const logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,48,y+30,108,70);fit(ctx,data.shop||'Your business',176,y+79,856,43,ink,700);}
+    if(logo){const extra=drawLogo(ctx,logo,48,y+30,108,70);fit(ctx,data.shop||'Your business',(176)+extra,y+79,(856)-extra,43,ink,700);}
     else fit(ctx,data.shop||'Your business',48,y+79,984,45,ink,700);
   }
   function projectCredit(ctx,data,y,ink){fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',800,y,232,19,ink,500);}
@@ -504,7 +512,7 @@
     ctx.fillStyle=signature?'#f7f5ef':clean?'#ffffff':'#f1f4f5';ctx.fillRect(0,0,1080,height);
     const logo=data.logo?images.get(data.logo):null,brandY=offset+18,brandBottom=offset+96;
     ctx.fillStyle=signature?brand:'#ffffff';ctx.fillRect(0,0,1080,brandBottom);
-    if(logo){contain(ctx,logo,40,brandY,100,61);fit(ctx,data.shop||'Your business',162,brandY+43,878,38,signature?'#ffffff':ink,800);}
+    if(logo){const extra=drawLogo(ctx,logo,40,brandY,100,61);fit(ctx,data.shop||'Your business',(162)+extra,brandY+43,(878)-extra,38,signature?'#ffffff':ink,800);}
     else fit(ctx,data.shop||'Your business',40,brandY+44,1000,41,signature?'#ffffff':ink,800);
     const by=brandBottom,headingBottom=top-55,headingH=headingBottom-by;
     if(signature){
@@ -593,7 +601,7 @@
     ctx.fillStyle=noir?'#121621':mode==='editorial'?'#ffffff':paper;ctx.fillRect(0,0,1080,height);
     const brandLine=(baseline,color,x=40,width=1000)=>{
       const logo=data.logo?images.get(data.logo):null;
-      if(logo){contain(ctx,logo,x,baseline-44,88,53);fit(ctx,data.shop||'Your business',x+107,baseline,width-107,dense?32:38,color,800);}
+      if(logo){const extra=drawLogo(ctx,logo,x,baseline-44,88,53);fit(ctx,data.shop||'Your business',(x+107)+extra,baseline,(width-107)-extra,dense?32:38,color,800);}
       else fit(ctx,data.shop||'Your business',x,baseline,width,dense?34:40,color,800);
     };
     const centered=(text,y,width,size,color)=>{
@@ -698,7 +706,7 @@
     const layout=offerGeometry(data),{height,top,footerY:fy}=layout,mode=data.template,[brand,accent,paper]=themes[data.theme]||themes.green,dense=data.items.length>12,offset=layout.status?100:0,hb=top-42;
     const ctx=surface(canvas,height);
     ctx.fillStyle=mode==='blueprint'?brand:paper;ctx.fillRect(0,0,1080,height);
-    const brandLine=(y,color)=>{const logo=data.logo?images.get(data.logo):null;if(logo){contain(ctx,logo,40,y-42,80,50);fit(ctx,data.shop||'Your business',138,y,902,dense?30:36,color,800);}else fit(ctx,data.shop||'Your business',40,y,1000,dense?34:40,color,800);};
+    const brandLine=(y,color)=>{const logo=data.logo?images.get(data.logo):null;if(logo){const extra=drawLogo(ctx,logo,40,y-42,80,50);fit(ctx,data.shop||'Your business',(138)+extra,y,(902)-extra,dense?30:36,color,800);}else fit(ctx,data.shop||'Your business',40,y,1000,dense?34:40,color,800);};
     const heading=(x,y,w,h,color,size=dense?46:68)=>nameLines(ctx,data.headline||'Make every day special.',x,y,w,size,h,2,color);
     if(mode==='sunburst'){
       ctx.save();ctx.beginPath();ctx.rect(0,0,1080,hb);ctx.clip();
@@ -798,7 +806,7 @@
     const ctx=surface(canvas,height);
     ctx.fillStyle=dark?'#15221e':mode==='mosaic'?pale:'#ffffff';ctx.fillRect(0,0,1080,height);
     const logo=data.logo?images.get(data.logo):null;
-    const shop=(baseline,color)=>{if(logo){contain(ctx,logo,40,baseline-54,106,62);fit(ctx,data.shop||'Your business',163,baseline,877,44,color,800);}else fit(ctx,data.shop||'Your business',40,baseline,1000,48,color,800);};
+    const shop=(baseline,color)=>{if(logo){const extra=drawLogo(ctx,logo,40,baseline-54,106,62);fit(ctx,data.shop||'Your business',(163)+extra,baseline,(877)-extra,44,color,800);}else fit(ctx,data.shop||'Your business',40,baseline,1000,48,color,800);};
     if(mode==='wholesale'){
       ctx.fillStyle=brand;ctx.fillRect(0,0,1080,top-53);shop(offset+61,'#ffffff');
       ctx.fillStyle=accent;ctx.fillRect(40,offset+83,1000,4);fit(ctx,data.copy.eyebrow,40,offset+116,1000,22,accent,800);
@@ -851,11 +859,11 @@
     const announcement=['event','opening'].includes(data.purpose),count=announcement?1:data.items.length;
     const mode=data.template,layout=flexibleGeometry(data.format,count,mode,data.items.findIndex(i=>i.featured));
     const {width,height,top,bottom,footerY:fy}=layout,wide=width>height,[brand,accent,paper]=themes[data.theme]||themes.green;
-    const ctx=surface(canvas,height,width),dark=['fresh','noir','blueprint'].includes(mode),quiet=['paper','editorial','atelier','botanical','signature'].includes(mode);
+    const ctx=surface(canvas,height,width),dark=['fresh','noir','blueprint'].includes(mode),quiet=['paper','editorial','atelier','botanical','signature','arc','terrace'].includes(mode);
     ctx.fillStyle=dark?'#17251f':quiet?paper:accent;ctx.fillRect(0,0,width,height);
     const headerInk=quiet?brand:'#ffffff';
     ctx.fillStyle=quiet?paper:brand;ctx.fillRect(0,0,width,top-38);
-    if(mode==='parade'||['sunburst','warehouse','bold'].includes(mode)){
+    if(mode==='parade'||mode==='ticket'||['sunburst','warehouse','bold'].includes(mode)){
       ctx.save();ctx.globalAlpha=.18;ctx.fillStyle=accent;
       ctx.beginPath();ctx.moveTo(width*.7,0);ctx.lineTo(width,0);ctx.lineTo(width,top-38);ctx.lineTo(width*.57,top-38);ctx.closePath();ctx.fill();ctx.restore();
       ctx.fillStyle=accent;ctx.fillRect(40,top-61,width-80,7);
@@ -865,10 +873,20 @@
     }else if(quiet){
       ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.strokeRect(22,22,width-44,height-44);ctx.fillStyle=brand;ctx.fillRect(40,top-54,width-80,2);
     }
-    const logo=data.logo?images.get(data.logo):null,shopX=logo?158:40;
-    if(logo)contain(ctx,logo,40,26,96,60);
+    if(mode==='arc'){
+      ctx.save();ctx.globalAlpha=.2;ctx.strokeStyle=brand;ctx.lineWidth=18;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(width-90,top-55,85+i*31,Math.PI,Math.PI*2);ctx.stroke();}ctx.restore();
+    }
+    if(mode==='terrace'){
+      for(let x=0;x<width;x+=52){ctx.fillStyle=(x/52)%2?paper:brand;ctx.fillRect(x,top-65,52,27);}
+    }
+    if(mode==='ticket'){
+      ctx.save();ctx.globalAlpha=.24;ctx.fillStyle=accent;for(let x=0;x<width;x+=30)ctx.fillRect(x,top-49,15,11);ctx.restore();
+    }
+    const logo=data.logo?images.get(data.logo):null,shopX=logo?158+96*(logoScale-1):40;
+    if(logo)drawLogo(ctx,logo,40,26,96,60);
     fit(ctx,data.shop||'Your business',shopX,64,width-shopX-40,36,headerInk,800);
-    const lineY=104;
+    const lineY=logo?116:104;
     fit(ctx,data.copy.eyebrow,40,lineY,width-80,20,quiet?brand:accent,700);
     nameLines(ctx,data.headline||'Your next great offer.',40,top-74,width-80,wide?70:height<1200?57:76,top-74-lineY-20,2,headerInk);
     fit(ctx,data.copy.date,40,top-12,width-80,20,dark?accent:brand,700);
@@ -883,11 +901,15 @@
       layout.cards=[];
     }else{
       const savedPriceStyle=priceStyle;
-      if(mode==='paper'&&priceStyle==='design')priceStyle='outline';
+      if(['paper','arc'].includes(mode)&&priceStyle==='design')priceStyle='outline';
+      if(mode==='terrace'&&priceStyle==='design')priceStyle='pill';
       if(data.purpose==='spotlight'&&data.details)layout.cards[0].h-=104;
       for(const [i,item] of data.items.entries()){
-        const cardMode=mode==='parade'?'wholesale':mode==='shelf'?'mosaic':dark?'fresh':quiet?'paper':mode;
-        merchantCard(ctx,item,layout.cards[i],item.photo?images.get(item.photo):null,{mode:cardMode,brand,accent,paper,unit:data.copy.unit});
+        const cardMode=['parade','ticket'].includes(mode)?'wholesale':mode==='shelf'?'mosaic':dark?'fresh':quiet?'paper':mode;
+        const c=layout.cards[i];merchantCard(ctx,item,c,item.photo?images.get(item.photo):null,{mode:cardMode,brand,accent,paper,unit:data.copy.unit});
+        if(mode==='ticket'){ctx.fillStyle=accent;for(let y=c.y+12;y<c.y+c.h;y+=22){for(const x of [c.x,c.x+c.w]){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();}}}
+        if(mode==='arc'){ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.strokeRect(c.x+3,c.y+3,c.w-6,c.h-6);}
+        if(mode==='terrace'){ctx.fillStyle=brand;ctx.fillRect(c.x+14,c.y+3,c.w-28,3);}
       }
       priceStyle=savedPriceStyle;
       if(data.purpose==='spotlight'&&data.details){
