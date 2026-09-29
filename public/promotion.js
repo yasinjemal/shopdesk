@@ -12,7 +12,12 @@
   const localMode=!location.hostname.endsWith('.chatgpt.site');
   const localWorkspaceKey='shopdesk-local-workspace-v1';
   function localStored(){try{const raw=localStorage.getItem(localWorkspaceKey);return raw?JSON.parse(raw):null;}catch{return null;}}
-  function localApi(path,options={}){
+  async function localApi(path,options={}){
+    if(path==='/api/photos'&&options.method==='POST'){
+      const blob=options.body;if(!blob?.arrayBuffer)throw new Error('Choose a valid image.');
+      const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('Could not read this image.'));reader.readAsDataURL(blob);});
+      const id='local-photo:'+crypto.randomUUID(),photos=JSON.parse(localStorage.getItem(localWorkspaceKey+'-photos')||'{}');photos[id]=data;localStorage.setItem(localWorkspaceKey+'-photos',JSON.stringify(photos));return {id};
+    }
     if(path!=='/api/studio')return null;
     if(options.method==='PUT'){
       const body=JSON.parse(options.body),revision=Number(body.revision||0)+1;
@@ -24,7 +29,7 @@
   function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
   function status(message,error=false){$('save-status').textContent=message;$('save-status').dataset.state=message==='All changes saved'?'saved':error?'error':'pending';$('save-status').classList.toggle('save-error',error);}
   async function api(path,options={}) {
-    if(localMode){const fallback=localApi(path,options);if(fallback)return fallback;}
+    if(localMode){const fallback=await localApi(path,options);if(fallback)return fallback;}
     const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
     try {const response=await fetch(path,{...options,credentials:'same-origin',signal:controller.signal});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'Please try again.'),{status:response.status});return data;}
     catch(e){if(e.name==='AbortError')throw new Error('The connection took too long. Your edits are still here; try again.');throw e;}
@@ -297,6 +302,7 @@
   async function loadImage(id){
     if(images.has(id))return images.get(id);if(imageLoads.has(id))return imageLoads.get(id);
     const promise=(async()=>{
+      if(localMode&&id.startsWith('local-photo:')){const photos=JSON.parse(localStorage.getItem(localWorkspaceKey+'-photos')||'{}'),src=photos[id];if(!src)throw new Error('A saved photo could not be loaded.');const blob=await (await fetch(src)).blob(),image=await ShopDeskPhotos.decode(blob,1000);photoBlobs.set(id,blob);images.set(id,image);cachePhotoThumb(id,image);return image;}
       const response=await fetch('/api/photos/'+id,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('A saved photo could not be loaded.');
       const blob=await response.blob(),image=await ShopDeskPhotos.decode(blob,1000);photoBlobs.set(id,blob);images.set(id,image);cachePhotoThumb(id,image);imageErrors.delete(id);return image;
     })();imageLoads.set(id,promise);
