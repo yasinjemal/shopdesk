@@ -36,7 +36,7 @@ async function readBody(req) {
 export async function nodeHandler(req, res, env = process.env, deps = {}) {
   let response;
   try {
-    const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0].trim(), host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
+    const proto = String(req.headers['x-forwarded-proto'] || (req.socket?.encrypted ? 'https' : 'http')).split(',')[0].trim(), host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost';
     const headers = new Headers();
     for (const [key, value] of Object.entries(req.headers)) if (value !== undefined) headers.set(key, Array.isArray(value) ? value.join(', ') : value);
     let body;

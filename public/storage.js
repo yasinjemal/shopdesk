@@ -77,6 +77,10 @@
   };
 
   let adapter=remote;
+  async function activateDemo(reason){
+    adapter=demo;root.dispatchEvent(new CustomEvent('shopdesk:storage-mode',{detail:{mode:'demo',reason}}));
+    return {...await demo.loadStudio(),mode:'demo'};
+  }
   const api={
     REMOTE_MISSING,
     get mode(){return adapter===demo?'demo':'remote';},
@@ -84,11 +88,13 @@
     /** Loads the saved workspace, falling back to Browser demo mode only when the server says it has no storage. */
     async loadStudio(){
       if(adapter===demo)return {...await demo.loadStudio(),mode:'demo'};
+      // Ask the cheap health endpoint first so a server without storage does not log a failed /api/studio request.
+      let health=null;try{health=await remote.request('/api/health');}catch{/* older or static hosting: /api/studio below decides */}
+      if(health?.mode==='demo')return activateDemo('Cloud storage is not configured on this server.');
       try{return {...await remote.loadStudio(),mode:'remote'};}
       catch(e){
         if(!REMOTE_MISSING.includes(e.code))throw e;
-        adapter=demo;root.dispatchEvent(new CustomEvent('shopdesk:storage-mode',{detail:{mode:'demo',reason:e.message}}));
-        return {...await demo.loadStudio(),mode:'demo'};
+        return activateDemo(e.message);
       }
     },
     saveStudio:(revision,data)=>adapter.saveStudio(revision,data),

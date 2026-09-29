@@ -7,6 +7,7 @@ function user(request) { const id = request.headers.get('oai-authenticated-user-
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/api/health') return json({ ok: true, mode: 'cloudflare' });
     if (url.pathname.startsWith('/api/')) return safeApi(request, { identify: user, storage: () => new CloudflareStorageAdapter(env) });
     try {
       if (!['GET', 'HEAD'].includes(request.method)) return json({ error: 'Method not allowed.' }, 405);

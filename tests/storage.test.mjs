@@ -46,7 +46,7 @@ test('remote mode passes the workspace through unchanged and uses /api/photos UR
   const result = await api.loadStudio();
   assert.equal(result.mode, 'remote'); assert.equal(result.revision, 4);
   assert.equal(api.photoURL('abc'), '/api/photos/abc');
-  await api.saveStudio(4, { schemaVersion: 2 }); assert.deepEqual(seen[1], ['/api/studio', 'PUT']);
+  await api.saveStudio(4, { schemaVersion: 2 }); assert.deepEqual(seen.at(-1), ['/api/studio', 'PUT']);
 });
 
 test('demo mode saves and reloads the workspace, with revision checks', async () => {
@@ -88,4 +88,10 @@ test('demo mode keeps uploaded photos available by id and enforces the size limi
   assert.equal(api.photoURL('missing'), '');
   await assert.rejects(api.uploadPhoto(new Blob([new Uint8Array(1500001)])), /smaller/);
   assert.match(api.notice, /disappear when you close the tab/, 'no IndexedDB here, so the user is told photos are temporary');
+});
+
+test('a healthy demo-mode server is detected without a failing /api/studio request', async () => {
+  const seen = [];
+  const { api } = browser({ fetchImpl: async path => { seen.push(path); return jsonReply({ ok: true, mode: 'demo' })(); } });
+  assert.equal((await api.loadStudio()).mode, 'demo'); assert.deepEqual(seen, ['/api/health']);
 });
