@@ -11,7 +11,7 @@
   }
   function showBulkSummary(){
     const available=api.itemState().available,invalid=bulkRows.filter(row=>ShopDeskItems.error(row)).length;
-    $('bulk-summary').textContent=bulkRows.length+' items · '+available+' spaces available'+(invalid?' · '+invalid+' need attention':'');
+    $('bulk-summary').textContent=bulkRows.length+' item'+(bulkRows.length===1?'':'s')+' · '+available+' space'+(available===1?'':'s')+' available'+(invalid?' · '+invalid+' need attention':'');
     $('apply-bulk').disabled=bulkBusy||!bulkRows.length||!!invalid||bulkRows.length>available;
     $('apply-bulk').textContent='Add '+bulkRows.length+' '+(bulkRows.length===1?'item':'items')+' to flyer';
     message('bulk-error',bulkRows.length>available?'This list has more items than the available spaces. Remove rows from this review or make room in the flyer.':'');
@@ -45,10 +45,10 @@
   });
   function selectionStatus(){
     const available=api.itemState().available,error=[...savedSelection.values()].map(ShopDeskItems.error).find(Boolean);
-    $('saved-selection-count').textContent=savedSelection.size+' selected · '+available+' spaces available';
+    $('saved-selection-count').textContent=savedSelection.size+' selected · '+available+' space'+(available===1?'':'s')+' available';
     $('apply-saved-selection').disabled=savedBusy||!savedSelection.size||savedSelection.size>available||!!error;
     $('apply-saved-selection').textContent='Add '+savedSelection.size+' selected '+(savedSelection.size===1?'item':'items');
-    message('saved-grid-error',error||(available===0?'This flyer has no empty spaces. Close this window and remove an existing item, or create a new project to choose a different product list.':''));
+    message('saved-grid-error',error||(available===0?'This flyer has no empty spaces. Close this window and remove an existing item, or create a new project to choose a different product list.':savedSelection.size&&savedSelection.size>=available?'All '+available+' free space'+(available===1?' is':'s are')+' selected. Untick a product to choose a different one, or remove an item from the flyer to make room.':''));
     for(const checkbox of $('saved-product-grid').querySelectorAll('input[type="checkbox"]'))checkbox.disabled=!checkbox.checked&&savedSelection.size>=available;
   }
   function renderSavedGrid(){
