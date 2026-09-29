@@ -10,6 +10,11 @@
   let packRun=0,packBusy=false,packZip=null,packText='',packName='',packURLs=[];
   const images=new Map(),imageErrors=new Set(),imageLoads=new Map();
   function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
+  function toastUndo(message,undo){
+    clearTimeout(toastTimer);const el=$('toast');el.replaceChildren(document.createTextNode(message+' '));
+    const button=document.createElement('button');button.type='button';button.className='text-button';button.textContent='Undo';
+    button.addEventListener('click',()=>{clearTimeout(toastTimer);el.hidden=true;undo();});el.append(button);el.hidden=false;toastTimer=setTimeout(()=>el.hidden=true,9000);
+  }
   function status(message,error=false){$('save-status').textContent=message;$('save-status').dataset.state=message==='All changes saved'?'saved':error?'error':'pending';$('save-status').classList.toggle('save-error',error);}
   function dateText(value){if(!value)return 'your selected date';const d=new Date(value+'T12:00:00');return Number.isNaN(d.getTime())?'your selected date':d.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});}
   function profile(){return ShopDeskBusiness.get($('business-type').value);}
@@ -91,6 +96,60 @@
     if(!ready||loadingWorkspace||pendingPhotos||blocked)return;
     try{capture();studioState=ShopDeskStudio.duplicate(studioState);dirty=true;change++;await showActive();changed();clearTimeout(saveTimer);save();toast('Separate copy created. Give it a name and update the offers.');}catch(e){toast(e.message);}
   });
+  // Backup and restore: one JSON file holds every client, project, saved product and photo.
+  function saveFile(blob,filename){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+  const readAsDataURL=blob=>new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(reader.error||new Error('Could not read a photo.'));reader.readAsDataURL(blob);});
+  let pendingRestore=null;
+  $('download-backup').addEventListener('click',async()=>{
+    if(!ready||loadingWorkspace||!studioState)return;const button=$('download-backup');button.disabled=true;
+    try{
+      capture();const photos={};let missing=0;
+      for(const id of ShopDeskBackup.photoIds(studioState)){
+        try{const response=await fetch(ShopDeskStorage.photoURL(id));if(!response.ok)throw new Error('photo '+response.status);photos[id]=await readAsDataURL(await response.blob());}
+        catch(e){console.warn('ShopDesk backup could not include a photo.',id,e);missing++;}
+      }
+      saveFile(new Blob([JSON.stringify(ShopDeskBackup.build(studioState,photos))],{type:'application/json'}),'shopdesk-backup-'+iso()+'.json');
+      toast('Backup downloaded'+(missing?' — '+missing+' photo'+(missing===1?' was':'s were')+' unavailable and not included.':'.'));
+    }catch(e){toast('Could not create the backup: '+e.message);}finally{button.disabled=false;}
+  });
+  $('download-products-csv').addEventListener('click',()=>{
+    if(!ready||!studioState)return;capture();
+    if(!studioState.clients.some(c=>c.products.length)){toast('No saved products yet. Use “Save to my items” on a product first.');return;}
+    saveFile(new Blob(['\ufeff'+ShopDeskBackup.productsCSV(studioState.clients)],{type:'text/csv;charset=utf-8'}),'shopdesk-products-'+iso()+'.csv');toast('Products downloaded. Paste rows into “Paste a list” to reuse them.');
+  });
+  $('restore-file').addEventListener('change',async()=>{
+    const input=$('restore-file'),file=input.files[0];if(!file)return;
+    try{
+      if(!ready||loadingWorkspace||pendingPhotos||blocked)throw new Error('Wait for your workspace to finish loading, then try again.');
+      if(file.size>30000000)throw new Error('This backup is too large to restore.');
+      pendingRestore=ShopDeskBackup.parse(await file.text());const s=ShopDeskBackup.summary(pendingRestore.studio);
+      $('restore-summary').textContent=(pendingRestore.exportedAt?'Backup made '+new Date(pendingRestore.exportedAt).toLocaleString('en-ZA')+': ':'Backup: ')+s.clients+' client'+(s.clients===1?'':'s')+', '+s.projects+' project'+(s.projects===1?'':'s')+', '+s.products+' saved product'+(s.products===1?'':'s')+' and '+s.photos+' photo'+(s.photos===1?'':'s')+'.';
+      $('restore-error').hidden=true;$('confirm-restore').disabled=false;$('restore-dialog').showModal();
+    }catch(e){toast(e.message||'This backup could not be read.');}finally{input.value='';}
+  });
+  $('cancel-restore').addEventListener('click',()=>{pendingRestore=null;$('restore-dialog').close();});
+  $('confirm-restore').addEventListener('click',async()=>{
+    if(!pendingRestore||!ready||loadingWorkspace||pendingPhotos||blocked)return;
+    const {studio,photos}=pendingRestore,button=$('confirm-restore'),previous=studioState,map=new Map();let failed=0;
+    button.disabled=true;$('restore-error').hidden=true;pendingPhotos++;renderDesigner();
+    try{
+      const ids=ShopDeskBackup.photoIds(studio);
+      for(const [index,id] of ids.entries()){
+        button.textContent='Restoring photo '+(index+1)+' of '+ids.length+'…';
+        try{if(!photos[id])throw new Error('not in backup');const result=await ShopDeskStorage.uploadPhoto(await (await fetch(photos[id])).blob());map.set(id,result.id);}
+        catch(e){console.warn('ShopDesk restore could not add a photo.',id,e);failed++;}
+      }
+    }finally{pendingPhotos--;}
+    studioState=ShopDeskBackup.remap(studio,map);dirty=true;change++;clearTimeout(saveTimer);
+    button.textContent='Saving…';await save();
+    if(lastSaveError){
+      const reason=$('workspace-error').textContent;studioState=previous;dirty=false;lastSaveError=false;$('retry-save').hidden=true;
+      $('restore-error').textContent='The backup could not be restored: '+reason+' Your current workspace was kept.';$('restore-error').hidden=false;$('workspace-error').hidden=true;status('All changes saved');
+      button.textContent='Restore and replace';button.disabled=false;renderDesigner();return;
+    }
+    pendingRestore=null;$('restore-dialog').close();button.textContent='Restore and replace';
+    await showActive();toast('Backup restored'+(failed?' — '+failed+' photo'+(failed===1?' could':'s could')+' not be restored.':'.'));
+  });
   $('retry-save').addEventListener('click',()=>ready?save():loadWorkspace());
   $('reload-workspace').addEventListener('click',()=>{if(!dirty||confirm('Reload the saved version? Changes in this tab that have not saved will be discarded.')){clearTimeout(saveTimer);loadWorkspace();}});
   window.addEventListener('beforeunload',event=>{if(dirty||saving||pendingPhotos){event.preventDefault();event.returnValue='';}});
@@ -113,7 +172,7 @@
       const price=document.createElement('span');price.className='item-price';price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price';
       const chevron=document.createElement('span');chevron.className='item-chevron';chevron.textContent='⌄';chevron.setAttribute('aria-hidden','true');heading.append(number,title,price,chevron);
       const itemActions=document.createElement('div');itemActions.className='item-actions';
-      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>{items.splice(items.indexOf(item),1);selectedCount=Math.max(1,activeCount()-1);renderItems();changed();}));
+      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>{const at=items.indexOf(item),count=activeCount();items.splice(at,1);selectedCount=Math.max(1,count-1);renderItems();changed();toastUndo('Removed “'+(item.name||'item')+'”.',()=>{if(items.includes(item))return;items.splice(Math.min(at,items.length),0,item);selectedCount=Math.min(count,items.length);renderItems();changed();});}));
       if($('flyer-purpose').value==='offers'&&$('poster-template').value!=='simple'){
         const feature=button(item.featured?'★ Featured · remove':'☆ Feature this offer','text-button feature-offer',()=>{
           const selected=!!item.featured;for(const other of items)delete other.featured;if(!selected)item.featured=true;renderItems();changed();

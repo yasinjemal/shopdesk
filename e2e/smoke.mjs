@@ -82,6 +82,26 @@ async function run(name, base, { demo, viewport }) {
   await page.waitForFunction(() => { const i = document.querySelector('#promo-items img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 15000 });
   await shot('3-reloaded');
 
+  // Backup, change, restore
+  if (!await page.locator('#download-backup').isVisible()) await page.click('#client-drawer > summary');
+  const backup = await Promise.all([page.waitForEvent('download'), page.click('#download-backup')]).then(async ([d]) => { assert.match(d.suggestedFilename(), /^shopdesk-backup-\d{4}-\d{2}-\d{2}\.json$/); return readFile(await d.path()); });
+  const parsed = JSON.parse(backup.toString());
+  assert.equal(parsed.format, 'shopdesk-backup'); assert.ok(Object.keys(parsed.photos).length >= 1, label + ': backup includes photos');
+  await page.click('#tab-content'); await page.fill('#promo-headline', 'CHANGED AFTER BACKUP'); await saved();
+  await page.setInputFiles('#restore-file', { name: 'backup.json', mimeType: 'application/json', buffer: backup });
+  await page.waitForSelector('#restore-dialog[open]');
+  await page.click('#confirm-restore');
+  await page.waitForFunction(() => !document.getElementById('restore-dialog').open, null, { timeout: 30000 });
+  await page.waitForFunction(() => !document.getElementById('promo-fields').disabled);
+  assert.equal(await page.inputValue('#promo-headline'), 'Weekend Braai Specials', label + ': backup restored');
+  await page.waitForFunction(() => { const i = document.querySelector('#promo-items img'); return i && i.complete && i.naturalWidth > 0; }, null, { timeout: 15000 });
+  await saved();
+  await page.reload();
+  await page.waitForFunction(() => !document.getElementById('promo-fields').disabled, null, { timeout: 15000 });
+  assert.equal(await page.inputValue('#promo-headline'), 'Weekend Braai Specials', label + ': restored backup persisted');
+  await page.setInputFiles('#restore-file', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"nope":1}') });
+  await page.waitForFunction(() => /not a ShopDesk backup/.test(document.getElementById('toast').textContent), null, { timeout: 5000 });
+
   // Duplicate project
   if (!await page.locator('#duplicate-project').isVisible()) await page.click('#client-drawer > summary');
   const projects = await page.locator('#project-picker option').count();

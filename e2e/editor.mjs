@@ -62,8 +62,14 @@ try {
   await page.locator('#promo-items > *').nth(1).locator('.feature-offer').click();
   assert.equal(await page.locator('.feature-offer[aria-pressed="true"]').count(), 1); await valid('featured');
   await page.locator('#promo-items > *').nth(2).evaluate(el => { el.open = true; });
+  const removedName = await page.locator('#promo-items > *').nth(2).locator('input[type="text"]').first().inputValue();
   await page.locator('#promo-items > *').nth(2).locator('.remove-item').click();
   assert.equal(await page.locator('#promo-items > *').count(), 5);
+  await page.locator('#toast button', { hasText: 'Undo' }).click();
+  assert.equal(await page.locator('#promo-items > *').count(), 6, 'undo restores the removed product');
+  assert.equal(await page.locator('#promo-items > *').nth(2).locator('input[type="text"]').first().inputValue(), removedName, 'in its original position');
+  await page.locator('#promo-items > *').nth(2).evaluate(el => { el.open = true; });
+  await page.locator('#promo-items > *').nth(2).locator('.remove-item').click();
 
   // Save products for reuse and select several
   for (let i = 0; i < 3; i++) { const c = page.locator('#promo-items > *').nth(i); await c.evaluate(el => { el.open = true; }); await c.locator('.save-product').click(); }

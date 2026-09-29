@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#103e35">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Crect%20width='40'%20height='40'%20rx='11'%20fill='%23103e35'/%3E%3Cpath%20d='M12%2013h16v5H17v4h11v6H12v-5h11v-4H12z'%20fill='%23b8f088'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
-  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="storage.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
+  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="storage.js" defer></script><script src="backup.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
 <script src="interface.js" defer></script><script src="batch.js" defer></script></head>
 <body>
 <a class="skip" href="#workspace">Skip to tools</a>
@@ -57,6 +57,8 @@
           <div class="designer-selects"><label class="field">Client<select id="client-picker" aria-label="Switch client"></select></label><label class="field">Saved project<select id="project-picker" aria-label="Switch project"></select></label></div>
           <div class="designer-actions"><button class="button secondary" type="button" id="new-client">+ New client</button><button class="button secondary" type="button" id="new-project">+ New project</button><button class="button quiet" type="button" id="duplicate-project">Duplicate project</button></div>
           <p class="field-help">Client details stay with the client. Designs stay with the project.</p>
+          <div class="designer-actions backup-actions"><button class="button quiet" type="button" id="download-backup">Download backup</button><label class="button quiet backup-restore" for="restore-file">Restore backup<input type="file" id="restore-file" accept="application/json,.json" class="sr-only"></label><button class="button quiet" type="button" id="download-products-csv">Products (CSV)</button></div>
+          <p class="field-help">A backup holds every client, project, saved product and photo in one file. Keep a copy, especially in Browser demo mode.</p>
         </fieldset>
         </details><div class="workspace-grid promo-workspace"><div class="panel input-panel"><button type="button" class="mobile-preview-jump button secondary" id="jump-preview">Preview &amp; download <span aria-hidden="true">↗</span></button><form id="promo-form" novalidate><fieldset id="promo-fields" disabled>
           <label class="field full project-title-field">Project name<input id="project-name" maxlength="60" value="My first flyer" placeholder="e.g. September specials"></label>
@@ -105,6 +107,13 @@
   </div>
 </div>
 <div id="toast" role="status" hidden></div>
+<dialog id="restore-dialog" aria-labelledby="restore-title">
+  <div class="panel-heading"><h2 id="restore-title">Restore this backup?</h2></div>
+  <p id="restore-summary"></p>
+  <p><strong>This replaces everything currently saved in ShopDesk</strong> (clients, projects, saved products and photos). Download a backup of the current workspace first if you may need it.</p>
+  <p class="validation" id="restore-error" role="alert" hidden></p>
+  <div class="designer-actions"><button class="button quiet" type="button" id="cancel-restore">Cancel</button><button class="button primary" type="button" id="confirm-restore">Restore and replace</button></div>
+</dialog>
 <dialog id="studio-dialog" aria-labelledby="studio-dialog-title">
   <form id="studio-create-form">
     <div class="panel-heading"><h2 id="studio-dialog-title">New client</h2><button class="button quiet" type="button" id="close-studio-dialog">Cancel</button></div>
