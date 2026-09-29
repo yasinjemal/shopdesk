@@ -11,12 +11,6 @@
   const images=new Map(),imageErrors=new Set(),imageLoads=new Map();
   function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
   function status(message,error=false){$('save-status').textContent=message;$('save-status').dataset.state=message==='All changes saved'?'saved':error?'error':'pending';$('save-status').classList.toggle('save-error',error);}
-  async function api(path,options={}) {
-    const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
-    try {const response=await fetch(path,{...options,credentials:'same-origin',signal:controller.signal});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'Please try again.'),{status:response.status});return data;}
-    catch(e){if(e.name==='AbortError')throw new Error('The connection took too long. Your edits are still here; try again.');throw e;}
-    finally{clearTimeout(timeout);}
-  }
   function dateText(value){if(!value)return 'your selected date';const d=new Date(value+'T12:00:00');return Number.isNaN(d.getTime())?'your selected date':d.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'});}
   function profile(){return ShopDeskBusiness.get($('business-type').value);}
   function announcement(){return ['event','opening'].includes($('flyer-purpose').value);}
@@ -29,7 +23,7 @@
   async function save(){
     if(!ready||!dirty||saving||blocked||pendingPhotos)return;
     saving=true;lastSaveError=false;status('Saving…');const version=change;
-    try{const result=await api('/api/studio',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision,data:studioState})});revision=result.revision;dirty=version!==change;$('workspace-error').hidden=true;$('retry-save').hidden=true;status(dirty?'Saving your latest changes…':'All changes saved');}
+    try{const result=await ShopDeskStorage.saveStudio(revision,studioState);revision=result.revision;dirty=version!==change;$('workspace-error').hidden=true;$('retry-save').hidden=true;status(dirty?'Saving your latest changes…':'All changes saved');}
     catch(e){lastSaveError=true;status('Changes not saved',true);$('workspace-error').textContent=e.message;$('workspace-error').hidden=false;if(e.status===409){blocked=true;$('reload-workspace').hidden=false;$('retry-save').hidden=true;}else $('retry-save').hidden=false;}
     finally{saving=false;renderDesigner();if(dirty&&!blocked&&!lastSaveError)saveTimer=setTimeout(save,150);}
   }
@@ -49,10 +43,15 @@
     images.clear();imageErrors.clear();const {client,project}=ShopDeskStudio.active(studioState);applyWorkspace({shop:client.shop,products:client.products,draft:project.draft},project.title);draw();
     await preloadPhotos();loadingWorkspace=false;$('promo-fields').disabled=false;renderDesigner();draw();
   }
+  function showStorageMode(){
+    const banner=$('storage-banner'),demo=ShopDeskStorage.mode==='demo';banner.hidden=!demo;
+    if(demo)$('storage-notice').textContent=ShopDeskStorage.notice;
+    document.body.classList.toggle('demo-mode',demo);
+  }
   async function loadWorkspace(){
     if(saving)return;loadingWorkspace=true;status('Loading your clients and projects…');$('promo-fields').disabled=true;$('designer-fields').disabled=true;$('retry-save').hidden=true;$('reload-workspace').hidden=true;
-    try{const result=await api('/api/studio');revision=result.revision;
-      studioState=ShopDeskStudio.upgrade(result.data,snapshot());ready=true;dirty=false;blocked=false;lastSaveError=false;$('workspace-error').hidden=true;
+    try{const result=await ShopDeskStorage.loadStudio();revision=result.revision;
+      studioState=ShopDeskStudio.upgrade(result.data,snapshot());ready=true;dirty=false;blocked=false;lastSaveError=false;$('workspace-error').hidden=true;showStorageMode();
       await showActive();status(result.data?'All changes saved':'Your changes will save automatically');
       if(result.data?.schemaVersion!==2)changed();
     }catch(e){ready=false;loadingWorkspace=false;status('Could not load your projects',true);$('workspace-error').textContent=e.message;$('workspace-error').hidden=false;$('retry-save').hidden=false;renderDesigner();draw();}
@@ -121,7 +120,7 @@
         });feature.setAttribute('aria-pressed',String(!!item.featured));itemActions.append(feature);
       }
       const photoRow=document.createElement('div');photoRow.className='photo-row';const thumb=document.createElement('div');thumb.className='photo-thumb';
-      if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';img.src='/api/photos/'+item.photo;img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
+      if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';img.src=ShopDeskStorage.photoURL(item).photo;img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
       const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add photo'));
       const file=document.createElement('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.setAttribute('aria-label','Choose photo for item '+(index+1));file.addEventListener('change',()=>{if(file.files[0])uploadPhoto(item,file.files[0],uploadLabel,file);});uploadLabel.append(file);photoActions.append(uploadLabel);
       const hint=document.createElement('span');hint.className='field-help';hint.textContent='JPG, PNG or WebP · full image kept';photoActions.append(hint);
@@ -191,20 +190,20 @@
   $('show-date').addEventListener('change',renderBusiness);
   $('flyer-purpose').addEventListener('change',async()=>{renderBusiness();renderItems();changed();await preloadPhotos();draw();});
   function renderHero(){
-    const thumb=$('hero-thumb');thumb.replaceChildren();if(heroPhoto){const img=document.createElement('img');img.src='/api/photos/'+heroPhoto;img.alt='Main project photo';thumb.append(img);}else thumb.textContent='Main photo';$('hero-label').textContent=heroPhoto?'Change main photo':'Add main photo';$('remove-hero').hidden=!heroPhoto;
+    const thumb=$('hero-thumb');thumb.replaceChildren();if(heroPhoto){const img=document.createElement('img');img.src=ShopDeskStorage.photoURL(heroPhoto);img.alt='Main project photo';thumb.append(img);}else thumb.textContent='Main photo';$('hero-label').textContent=heroPhoto?'Change main photo':'Add main photo';$('remove-hero').hidden=!heroPhoto;
   }
   $('remove-hero').addEventListener('click',()=>{heroPhoto='';renderHero();changed();});
   $('hero-file').addEventListener('change',async()=>{
     const input=$('hero-file'),file=input.files[0];if(!file)return;input.disabled=true;$('remove-hero').disabled=true;pendingPhotos++;draw();
-    try{const blob=await imageBlob(file),result=await api('/api/photos',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});heroPhoto=result.id;changed();await loadImage(heroPhoto);toast('Main photo added.');}
+    try{const blob=await imageBlob(file),result=await ShopDeskStorage.uploadPhoto(blob);heroPhoto=result.id;changed();await loadImage(heroPhoto);toast('Main photo added.');}
     catch(e){toast(e.message||'Could not add this photo.');}
     finally{pendingPhotos--;input.disabled=false;input.value='';$('remove-hero').disabled=false;renderHero();draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   });
-  function renderLogo(){const thumb=$('logo-thumb');thumb.replaceChildren();if(logo){const img=document.createElement('img');img.src='/api/photos/'+logo;img.alt='Your business logo';img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Logo unavailable';});thumb.append(img);}else thumb.textContent='Business logo';$('logo-label').textContent=logo?'Change your logo':'Add your logo';$('remove-logo').hidden=!logo;}
+  function renderLogo(){const thumb=$('logo-thumb');thumb.replaceChildren();if(logo){const img=document.createElement('img');img.src=ShopDeskStorage.photoURL(logo);img.alt='Your business logo';img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Logo unavailable';});thumb.append(img);}else thumb.textContent='Business logo';$('logo-label').textContent=logo?'Change your logo':'Add your logo';$('remove-logo').hidden=!logo;}
   $('remove-logo').addEventListener('click',()=>{logo='';renderLogo();changed();});
   $('logo-file').addEventListener('change',async()=>{
     const input=$('logo-file'),file=input.files[0];if(!file)return;input.disabled=true;$('remove-logo').disabled=true;pendingPhotos++;$('logo-label').textContent='Adding logo…';draw();
-    try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});logo=result.id;changed();await loadImage(logo);toast('Your logo is ready.');}
+    try{const blob=await imageBlob(file);const result=await ShopDeskStorage.uploadPhoto(blob);logo=result.id;changed();await loadImage(logo);toast('Your logo is ready.');}
     catch(e){toast(e.message||'Could not add this logo. Please try another image.');}
     finally{pendingPhotos--;input.disabled=false;input.value='';$('remove-logo').disabled=false;renderLogo();draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   });
@@ -220,14 +219,14 @@
   }
   async function uploadPhoto(item,file,label,input){
     const old=label.firstChild.textContent;input.disabled=true;label.firstChild.textContent='Adding photo…';pendingPhotos++;draw();
-    try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});
+    try{const blob=await imageBlob(file);const result=await ShopDeskStorage.uploadPhoto(blob);
       if(!items.includes(item))return;item.photo=result.id;for(const key of ['photoScale','photoX','photoY'])delete item[key];renderItems();changed();await loadImage(result.id);toast('Photo added. It will be kept with your saved product.');
     }catch(e){toast(e.message||'Could not add this photo. Please try another image.');}
     finally{pendingPhotos--;input.disabled=false;label.firstChild.textContent=old;draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   }
   async function loadImage(id){
     if(images.has(id))return images.get(id);if(imageLoads.has(id))return imageLoads.get(id);
-    const promise=(async()=>{const image=new Image();image.src='/api/photos/'+id;await image.decode();images.set(id,image);imageErrors.delete(id);return image;})();imageLoads.set(id,promise);
+    const promise=(async()=>{const image=new Image();image.src=ShopDeskStorage.photoURL(id);await image.decode();images.set(id,image);imageErrors.delete(id);return image;})();imageLoads.set(id,promise);
     try{return await promise;}catch(e){imageErrors.add(id);throw e;}finally{imageLoads.delete(id);}
   }
   async function preloadPhotos(){await Promise.allSettled([...new Set([logo,heroPhoto,...activeItems().map(i=>i.photo)].filter(Boolean))].map(loadImage));}

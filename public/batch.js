@@ -60,7 +60,7 @@
       const choice=document.createElement('label');choice.className='saved-product-choice';
       const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!selected;checkbox.setAttribute('aria-label','Select '+product.name);choice.append(checkbox);
       const imageBox=document.createElement('div');imageBox.className='saved-product-image';
-      if(product.photo){const img=document.createElement('img');img.src='/api/photos/'+product.photo;img.alt='';img.loading='lazy';img.addEventListener('error',()=>{img.remove();imageBox.textContent='Photo unavailable';});imageBox.append(img);}else imageBox.textContent='No photo';
+      if(product.photo){const img=document.createElement('img');img.src=ShopDeskStorage.photoURL(product.photo);img.alt='';img.loading='lazy';img.addEventListener('error',()=>{img.remove();imageBox.textContent='Photo unavailable';});imageBox.append(img);}else imageBox.textContent='No photo';
       const name=document.createElement('strong');name.textContent=product.name;const detail=document.createElement('span');detail.textContent=product.size||'Each';choice.append(imageBox,name,detail);card.append(choice);
       const priceLabel=document.createElement('label');priceLabel.className='field saved-grid-price';priceLabel.append(document.createTextNode('Flyer price (R)'));const price=document.createElement('input');price.type='text';price.inputMode='decimal';price.maxLength=20;price.value=(selected||product).price;price.disabled=!selected;price.setAttribute('aria-label','Flyer price for '+product.name);
       price.addEventListener('input',()=>{const row=savedSelection.get(product.id);if(row)row.price=price.value;selectionStatus();});priceLabel.append(price);card.append(priceLabel);

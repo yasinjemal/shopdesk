@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#103e35">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Crect%20width='40'%20height='40'%20rx='11'%20fill='%23103e35'/%3E%3Cpath%20d='M12%2013h16v5H17v4h11v6H12v-5h11v-4H12z'%20fill='%23b8f088'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
-  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
+  <script src="logic.js" defer></script><script src="business.js" defer></script><script src="poster.js" defer></script><script src="pack.js" defer></script><script src="storage.js" defer></script><script src="studio.js" defer></script><script src="items.js" defer></script><script src="promotion.js" defer></script><script src="app.js" defer></script>
 <script src="interface.js" defer></script><script src="batch.js" defer></script></head>
 <body>
 <a class="skip" href="#workspace">Skip to tools</a>
@@ -49,6 +49,7 @@
       </section>
       <section class="page active" id="page-promotion" aria-labelledby="promotion-title">
         <div class="page-heading"><div><p class="eyebrow">FLYER STUDIO</p><h1 id="promotion-title">Make it your own.</h1><p>A workspace for every client. A design for every business.</p></div><div class="save-indicator"><span id="save-status" role="status">Loading your saved workspace…</span><button class="text-button" id="retry-save" hidden>Try again</button><button class="text-button" id="reload-workspace" hidden>Reload saved version</button></div></div>
+        <div id="storage-banner" class="storage-banner" role="status" hidden><strong>Browser demo mode</strong><p>Cloud saving is not set up on this site, so your clients, flyers and photos are saved only in this browser on this device. They are <strong>not shared across devices</strong> and are lost if you clear site data. You can still create and export flyers.</p><p id="storage-notice"></p></div>
         <p id="workspace-error" class="validation" role="alert" hidden></p>
         <details class="client-drawer" id="client-drawer" open><summary><span class="drawer-label">Clients &amp; projects</span><span id="workspace-summary">Your saved workspace</span><span class="drawer-toggle" aria-hidden="true">⌄</span></summary><fieldset class="designer-bar" id="designer-fields" disabled>
           <legend class="sr-only">Clients and projects</legend>
