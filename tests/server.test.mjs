@@ -53,7 +53,7 @@ test('stores photo bytes and restricts photo reads and references to their owner
 test('preserves partially edited drafts but validates reusable product names and layout choices',()=>{
   const state=sample();state.draft.items[0]={name:'',size:'',price:'',photo:''};assert.deepEqual(validateWorkspace(state),state);
   state.products=[{id:crypto.randomUUID(),name:'',size:'',price:'',photo:''}];assert.throws(()=>validateWorkspace(state));
-  const bad=sample();bad.draft.format='square';assert.throws(()=>validateWorkspace(bad));
+  const bad=sample();bad.draft.format='panorama';assert.throws(()=>validateWorkspace(bad));
 });
 test('supports twenty-five retail offers and preserves the three-offer limit for older posters',async()=>{
   const state=sample();state.draft.items=Array.from({length:25},(_,i)=>({...state.draft.items[0],name:'Offer '+(i+1)}));

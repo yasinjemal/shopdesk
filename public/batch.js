@@ -9,6 +9,12 @@
     if(typeof api?.itemState!=='function')throw new Error('The editor has not finished loading. Reopen ShopDesk to load the latest controls. Your saved projects are kept.');
     const value=api.itemState();if(!value.ready)throw new Error(value.unavailableReason||'Wait for your project to load, then try again.');return value;
   }
+  function capacityMessage(current){
+    if(current.available>0)return '';
+    return current.limit<25
+      ? 'This layout has no space for more items. Remove an item from the flyer or choose a layout with more space. Items kept for later also use project space.'
+      : 'This project has no space for more items. Close this window and remove an item from the flyer, or start a new project. Reducing the product count keeps items for later and does not free project space.';
+  }
   function showBulkSummary(){
     const available=api.itemState().available,invalid=bulkRows.filter(row=>ShopDeskItems.error(row)).length;
     $('bulk-summary').textContent=bulkRows.length+' items · '+available+' spaces available'+(invalid?' · '+invalid+' need attention':'');
@@ -32,7 +38,7 @@
     });showBulkSummary();
   }
   $('open-bulk').addEventListener('click',()=>{
-    try{bulkContext=state().context;bulkRows=[];$('bulk-source').value='';$('bulk-entry').hidden=false;$('bulk-review').hidden=true;message('bulk-error','');$('bulk-dialog').showModal();$('bulk-source').focus();}catch(e){launchError(e);}
+    try{const current=state();bulkContext=current.context;bulkRows=[];$('bulk-source').value='';$('bulk-entry').hidden=false;$('bulk-review').hidden=true;message('bulk-capacity',capacityMessage(current));message('bulk-error','');$('bulk-dialog').showModal();$(current.available?'bulk-source':'bulk-capacity').focus();}catch(e){launchError(e);}
   });
   $('close-bulk').addEventListener('click',()=>$('bulk-dialog').close());
   $('review-bulk').addEventListener('click',()=>{
@@ -48,7 +54,7 @@
     $('saved-selection-count').textContent=savedSelection.size+' selected · '+available+' spaces available';
     $('apply-saved-selection').disabled=savedBusy||!savedSelection.size||savedSelection.size>available||!!error;
     $('apply-saved-selection').textContent='Add '+savedSelection.size+' selected '+(savedSelection.size===1?'item':'items');
-    message('saved-grid-error',error||(available===0?'This flyer has no empty spaces. Close this window and remove an existing item, or create a new project to choose a different product list.':''));
+    message('saved-grid-error',error||capacityMessage(api.itemState())||(savedSelection.size===available?'All available spaces are selected. Deselect a product to choose another.':''));
     for(const checkbox of $('saved-product-grid').querySelectorAll('input[type="checkbox"]'))checkbox.disabled=!checkbox.checked&&savedSelection.size>=available;
   }
   function renderSavedGrid(){
@@ -61,7 +67,7 @@
       const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=!!selected;checkbox.setAttribute('aria-label','Select '+product.name);choice.append(checkbox);
       const imageBox=document.createElement('div');imageBox.className='saved-product-image';
       if(product.photo){const img=document.createElement('img');img.src='/api/photos/'+product.photo;img.alt='';img.loading='lazy';img.addEventListener('error',()=>{img.remove();imageBox.textContent='Photo unavailable';});imageBox.append(img);}else imageBox.textContent='No photo';
-      const name=document.createElement('strong');name.textContent=product.name;const detail=document.createElement('span');detail.textContent=product.size||'Each';choice.append(imageBox,name,detail);card.append(choice);
+      const name=document.createElement('strong');name.textContent=product.name;const detail=document.createElement('span');detail.textContent=(product.size||'Each')+(product.dealQuantity?' · '+product.dealQuantity+' for the shown price':'');choice.append(imageBox,name,detail);card.append(choice);
       const priceLabel=document.createElement('label');priceLabel.className='field saved-grid-price';priceLabel.append(document.createTextNode('Flyer price (R)'));const price=document.createElement('input');price.type='text';price.inputMode='decimal';price.maxLength=20;price.value=(selected||product).price;price.disabled=!selected;price.setAttribute('aria-label','Flyer price for '+product.name);
       price.addEventListener('input',()=>{const row=savedSelection.get(product.id);if(row)row.price=price.value;selectionStatus();});priceLabel.append(price);card.append(priceLabel);
       checkbox.addEventListener('change',()=>{
@@ -72,7 +78,7 @@
     }selectionStatus();
   }
   $('open-saved-grid').addEventListener('click',()=>{
-    try{const current=state();savedContext=current.context;savedProducts=current.products;savedSelection.clear();$('saved-search').value='';renderSavedGrid();$('saved-grid-dialog').showModal();$('saved-search').focus();}catch(e){launchError(e);}
+    try{const current=state();savedContext=current.context;savedProducts=current.products;savedSelection.clear();$('saved-search').value='';renderSavedGrid();$('saved-grid-dialog').showModal();$(current.available?'saved-search':'saved-grid-error').focus();}catch(e){launchError(e);}
   });
   $('close-saved-grid').addEventListener('click',()=>$('saved-grid-dialog').close());
   $('saved-search').addEventListener('input',renderSavedGrid);

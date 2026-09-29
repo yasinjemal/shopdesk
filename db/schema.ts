@@ -14,3 +14,14 @@ export const photos = sqliteTable('product_photos', {
   bytes: integer('bytes').notNull(),
   createdAt: text('created_at').notNull(),
 }, table => [index('idx_product_photos_owner').on(table.owner)]);
+
+export const templates = sqliteTable('shared_templates', {
+  id: text('id').primaryKey(),
+  owner: text('owner').notNull(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  business: text('business').notNull(),
+  data: text('data').notNull(),
+  listed: integer('listed').notNull().default(1),
+  createdAt: text('created_at').notNull(),
+}, table => [index('idx_shared_templates_owner').on(table.owner),index('idx_shared_templates_listing').on(table.listed,table.createdAt,table.id)]);

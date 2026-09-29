@@ -4,11 +4,11 @@
   const iso=(d=new Date())=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   let items=[{name:'Potatoes',size:'1 kg pack',price:'10.00',photo:''}],products=[],revision=0,ready=false,dirty=false,saving=false,blocked=false,change=0,saveTimer,toastTimer;
-  let selectedCount=1,lastLayout=null;
+  let selectedCount=1,lastLayout=null,lastRemoval=null,exportBusy=false;
   let lastSaveError=false,pendingPhotos=0,logo='',heroPhoto='',finishingChosen=false;
   let studioState=null,loadingWorkspace=false,createKind='client';
   let packRun=0,packBusy=false,packZip=null,packText='',packName='',packURLs=[];
-  const images=new Map(),imageErrors=new Set(),imageLoads=new Map();
+  const images=new Map(),imageErrors=new Set(),imageLoads=new Map(),photoBlobs=new Map(),photoThumbs=new Map();
   const localMode=!location.hostname.endsWith('.chatgpt.site');
   const localWorkspaceKey='shopdesk-local-workspace-v1';
   function localStored(){try{const raw=localStorage.getItem(localWorkspaceKey);return raw?JSON.parse(raw):null;}catch{return null;}}
@@ -36,7 +36,7 @@
   function capacity(){return $('flyer-purpose').value==='spotlight'?1:$('poster-template').value==='simple'?3:25;}
   function activeCount(){return Math.min(selectedCount,capacity());}
   function activeItems(){return items.slice(0,activeCount());}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{...($('logo-size').value==='compact'?{logoSize:'compact'}:{}),exportQuality:$('export-quality').value,keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
   function capture(){if(studioState)studioState=ShopDeskStudio.capture(studioState,snapshot(),$('project-name').value);}
   function changed(){if(!ready)return;capture();renderDesigner();dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
@@ -47,11 +47,11 @@
     finally{saving=false;renderDesigner();if(dirty&&!blocked&&!lastSaveError)saveTimer=setTimeout(save,150);}
   }
   function applyWorkspace(data,title){
-    const d=data.draft,p=ShopDeskBusiness.get(d.business);
+    lastRemoval=null;$('logo-size').value=data.draft.logoSize||'prominent';$('export-quality').value=data.draft.exportQuality||'standard';const d=data.draft,p=ShopDeskBusiness.get(d.business);$('keep-colours').checked=d.keepColours??false;
     $('poster-typeface').value=d.typeface||'design';$('price-style').value=d.priceStyle||'design';
     $('project-name').value=title;$('business-type').value=d.business||'grocery';$('promo-eyebrow').value=d.eyebrow??p.eyebrow;$('promo-cta').value=d.cta??p.cta;$('promo-terms').value=d.terms??p.terms;$('show-date').checked=d.showDate??true;
     $('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';
-    $('promo-headline').value=d.headline;$('promo-date').value=d.date;$('promo-theme').value=d.theme;$('poster-template').value=d.template||'simple';$('trim-photos').checked=d.trimPhotos??false;$('clean-names').checked=d.cleanNames??false;
+    $('promo-headline').value=d.headline;$('promo-date').value=d.date;$('promo-start-date').value=d.startDate||'';$('promo-theme').value=d.theme;$('poster-template').value=d.template||'simple';$('trim-photos').checked=d.trimPhotos??false;$('clean-names').checked=d.cleanNames??false;
     $('flyer-purpose').value=d.purpose||'offers';$('promo-details').value=d.details||'';$('event-date').value=d.eventDate||'';$('event-time').value=d.eventTime||'';$('event-venue').value=d.venue||'';heroPhoto=d.heroPhoto||'';
     finishingChosen=d.trimPhotos!==undefined||d.cleanNames!==undefined;document.querySelector('[name="poster-format"][value="'+d.format+'"]').checked=true;
     items=structuredClone(d.items);selectedCount=d.itemCount??items.length;products=structuredClone(data.products);
@@ -59,7 +59,7 @@
   }
   async function showActive(){
     loadingWorkspace=true;$('promo-fields').disabled=true;renderDesigner();
-    images.clear();imageErrors.clear();const {client,project}=ShopDeskStudio.active(studioState);applyWorkspace({shop:client.shop,products:client.products,draft:project.draft},project.title);draw();
+    images.clear();photoBlobs.clear();photoThumbs.clear();imageErrors.clear();const {client,project}=ShopDeskStudio.active(studioState);applyWorkspace({shop:client.shop,products:client.products,draft:project.draft},project.title);draw();
     await preloadPhotos();loadingWorkspace=false;$('promo-fields').disabled=false;renderDesigner();draw();
   }
   async function loadWorkspace(){
@@ -71,14 +71,17 @@
     }catch(e){ready=false;loadingWorkspace=false;status('Could not load your projects',true);$('workspace-error').textContent=e.message;$('workspace-error').hidden=false;$('retry-save').hidden=false;renderDesigner();draw();}
   }
   function renderDesigner(){
-    $('designer-fields').disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked;
+    $('designer-fields').disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||exportBusy||packBusy;
+    $('start-project').disabled=$('designer-fields').disabled;
+    $('open-projects').disabled=$('designer-fields').disabled;
+    $('open-share-template').disabled=$('designer-fields').disabled;
     if(!studioState)return;
     const fill=(id,entries,value)=>{const select=$(id);select.replaceChildren();for(const [key,label] of entries){const o=document.createElement('option');o.value=key;o.textContent=label;select.append(o);}select.value=value;};
     const {client}=ShopDeskStudio.active(studioState);
     fill('client-picker',studioState.clients.map(c=>[c.id,c.shop.name||'Unnamed client']),studioState.activeClientId);
     fill('project-picker',client.projects.map(p=>[p.id,p.title]),studioState.activeProjectId);
     const count=studioState.clients.reduce((n,c)=>n+c.projects.length,0);$('studio-count').textContent=studioState.clients.length+' / 20 clients · '+count+' / 100 projects';
-    $('new-client').disabled=studioState.clients.length>=20||count>=100;$('new-project').disabled=count>=100;$('duplicate-project').disabled=count>=100;
+    $('new-client').disabled=studioState.clients.length>=20||count>=100;$('new-project').disabled=count>=100;$('duplicate-project').disabled=count>=100;$('start-project').disabled=$('designer-fields').disabled||count>=100;
   }
   async function switchProject(clientId,projectId){
     if(!ready||loadingWorkspace||pendingPhotos||blocked){renderDesigner();return;}
@@ -93,6 +96,7 @@
     $(client?'new-client-name':'new-project-name').focus();
   }
   $('new-client').addEventListener('click',()=>openCreate('client'));$('new-project').addEventListener('click',()=>openCreate('project'));
+  $('start-project').addEventListener('click',()=>openCreate('project'));
   $('close-studio-dialog').addEventListener('click',()=>$('studio-dialog').close());
   $('studio-create-form').addEventListener('submit',async event=>{
     event.preventDefault();if(!ready||loadingWorkspace||pendingPhotos||blocked)return;
@@ -116,6 +120,43 @@
   }
   function button(text,cls,click){const b=document.createElement('button');b.type='button';b.className=cls;b.textContent=text;b.addEventListener('click',click);return b;}
   function normalSize(s){return s.trim().replace(/(\d)\s*\.\s*(kg|g|l|ml)\b/gi,'$1 $2').replace(/(\d)\s*(kg|g|l|ml)\b/gi,'$1 $2');}
+  function focusItem(index,selector){
+    const card=$('promo-items').children[index];if(!card)return;
+    card.open=true;(card.querySelector(selector)||card.querySelector('summary')).focus();
+  }
+  function moveItem(item,step){
+    try{
+      assertEditable(batchContext());const index=items.indexOf(item),next=index+step;
+      if(index<0||next<0||next>=activeCount())return;
+      [items[index],items[next]]=[items[next],items[index]];
+      renderItems();changed();focusItem(next,'.move-item:not(:disabled)');
+      toast((item.name||'Item')+' moved to position '+(next+1)+'.');
+    }catch(e){toast(e.message);}
+  }
+  function removeItem(item){
+    try{
+      assertEditable(batchContext());const index=items.indexOf(item),count=activeCount();
+      if(index<0||index>=count||count<=1)return;
+      lastRemoval={item:ShopDeskItems.copy(item),index,context:batchContext()};
+      items.splice(index,1);selectedCount=count-1;renderItems();changed();$('undo-remove-item').focus();
+    }catch(e){toast(e.message);}
+  }
+  function updateUndo(){
+    $('item-undo').hidden=!lastRemoval;if(!lastRemoval)return;
+    const full=items.length>=25||activeCount()>=capacity();
+    $('item-undo-message').textContent=(lastRemoval.item.name||'Item')+' removed.'+(full?' Make room to restore it.':'');
+    $('undo-remove-item').disabled=full||!ready||loadingWorkspace||pendingPhotos>0||blocked||exportBusy||packBusy;
+  }
+  $('undo-remove-item').addEventListener('click',()=>{
+    try{
+      if(!lastRemoval)return;assertEditable(lastRemoval.context);
+      if(items.length>=25||activeCount()>=capacity()){toast('Make room in this flyer before restoring the item.');return;}
+      const {item,index}=lastRemoval,count=activeCount(),position=Math.min(index,count);
+      if(items.some(other=>other.featured))delete item.featured;
+      items.splice(position,0,item);selectedCount=count+1;lastRemoval=null;
+      renderItems();changed();focusItem(position,'input[type="text"]');toast((item.name||'Item')+' restored.');
+    }catch(e){toast(e.message);}
+  });
   function renderItems(){
     const list=$('promo-items'),opened=new Set([...list.querySelectorAll('details[open]')].map(el=>Number(el.dataset.index)));const wasEmpty=!list.children.length;list.replaceChildren();
     activeItems().forEach((item,index)=>{
@@ -124,17 +165,23 @@
       const heading=document.createElement('summary');heading.className='item-heading';
       const number=document.createElement('span');number.className='item-index';number.textContent=featured?'★':String(index+1);number.setAttribute('aria-label',featured?'Featured offer':String(index+1));
       const title=document.createElement('span');title.className='item-title';title.textContent=item.name||'New '+profile().item.toLowerCase();
-      const price=document.createElement('span');price.className='item-price';price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price';
+      const price=document.createElement('span');price.className='item-price';price.textContent=(item.dealQuantity?item.dealQuantity+' for ':'')+(item.price&&Number(item.price)>0?money(item.price):'Add price');
       const chevron=document.createElement('span');chevron.className='item-chevron';chevron.textContent='⌄';chevron.setAttribute('aria-hidden','true');heading.append(number,title,price,chevron);
       const itemActions=document.createElement('div');itemActions.className='item-actions';
-      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>{items.splice(items.indexOf(item),1);selectedCount=Math.max(1,activeCount()-1);renderItems();changed();}));
+      if(activeCount()>1)itemActions.append(button('Remove','remove-item',()=>removeItem(item)));
+      const order=document.createElement('div');order.className='item-order';
+      if(activeCount()>1)for(const [step,label] of [[-1,'Move up'],[1,'Move down']]){
+        const control=button((step<0?'↑ ':'↓ ')+label,'text-button move-item',()=>moveItem(item,step));
+        control.dataset.step=String(step);control.setAttribute('aria-label',label+' item '+(index+1));
+        control.disabled=index+step<0||index+step>=activeCount();order.append(control);
+      }
       if($('flyer-purpose').value==='offers'&&$('poster-template').value!=='simple'){
         const feature=button(item.featured?'★ Featured · remove':'☆ Feature this offer','text-button feature-offer',()=>{
           const selected=!!item.featured;for(const other of items)delete other.featured;if(!selected)item.featured=true;renderItems();changed();
         });feature.setAttribute('aria-pressed',String(!!item.featured));itemActions.append(feature);
       }
       const photoRow=document.createElement('div');photoRow.className='photo-row';const thumb=document.createElement('div');thumb.className='photo-thumb';
-      if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';img.src='/api/photos/'+item.photo;img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
+      if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';setPhotoThumb(img,item.photo);img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}else{thumb.textContent='Your photo';}
       const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add photo'));
       const file=document.createElement('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.setAttribute('aria-label','Choose photo for item '+(index+1));file.addEventListener('change',()=>{if(file.files[0])uploadPhoto(item,file.files[0],uploadLabel,file);});uploadLabel.append(file);photoActions.append(uploadLabel);
       const hint=document.createElement('span');hint.className='field-help';hint.textContent='JPG, PNG or WebP · full image kept';photoActions.append(hint);
@@ -142,6 +189,14 @@
       photoRow.append(thumb,photoActions);const name=field(profile().item+' name',item.name,'text',v=>item.name=v,50);name.classList.add('full');const row=document.createElement('div');row.className='field-row';
       const sizeField=field(profile().size,item.size,'text',v=>item.size=v,25);sizeField.querySelector('input').placeholder=profile().example;sizeField.querySelector('input').addEventListener('blur',e=>{item.size=normalSize(item.size);e.target.value=item.size;changed();});
       row.append(sizeField,field('Price (R)',item.price,'number',v=>item.price=v));
+      const deal=document.createElement('details');deal.className='offer-options';deal.open=!!item.dealQuantity;
+      const dealSummary=document.createElement('summary');dealSummary.textContent='Multi-buy offer';
+      const dealLabel=document.createElement('label');dealLabel.className='field';dealLabel.append(document.createTextNode('Price covers'));
+      const quantity=document.createElement('select');quantity.className='deal-quantity';
+      for(let count=1;count<=Math.max(24,item.dealQuantity||1);count++){const option=document.createElement('option');option.value=String(count);option.textContent=count===1?'One item · normal price':count+' items for this price';quantity.append(option);}
+      quantity.value=String(item.dealQuantity||1);quantity.addEventListener('change',()=>{const value=Number(quantity.value);if(value===1)delete item.dealQuantity;else item.dealQuantity=value;price.textContent=(item.dealQuantity?item.dealQuantity+' for ':'')+(item.price&&Number(item.price)>0?money(item.price):'Add price');changed();});
+      const dealHelp=document.createElement('p');dealHelp.className='field-help';dealHelp.textContent='The price above is the total for this many items. Choose 2 to show “2 for” on the flyer and caption.';
+      dealLabel.append(quantity);deal.append(dealSummary,dealLabel,dealHelp);
       const saveProduct=button('Save to my items','text-button save-product',()=>{
         if(!item.name.trim()||item.price===''||Number(item.price)<=0||!Number.isFinite(Number(item.price))){toast('Enter a name and a price above zero first.');return;}
         const found=products.find(p=>p.name.trim().toLowerCase()===item.name.trim().toLowerCase()&&p.size.trim().toLowerCase()===item.size.trim().toLowerCase());
@@ -150,8 +205,8 @@
         renderSaved();changed();clearTimeout(saveTimer);save();toast(found?'Item updated. Waiting for the saved confirmation.':'Item added to your list. Waiting for the saved confirmation.');
       });
       name.querySelector('input').addEventListener('input',()=>title.textContent=item.name||'New '+profile().item.toLowerCase());
-      row.querySelector('input[type="number"]').addEventListener('input',()=>price.textContent=item.price&&Number(item.price)>0?money(item.price):'Add price');
-      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,itemActions);box.append(heading,body);list.append(box);
+      row.querySelector('input[type="number"]').addEventListener('input',()=>price.textContent=(item.dealQuantity?item.dealQuantity+' for ':'')+(item.price&&Number(item.price)>0?money(item.price):'Add price'));
+      itemActions.prepend(saveProduct);const body=document.createElement('div');body.className='item-body';body.append(photoRow,name,row,deal,itemActions,order);box.append(heading,body);list.append(box);
     });
     $('item-count').textContent=activeCount()+' of '+capacity();$('add-item').disabled=activeCount()>=capacity();
     $('product-count').value=String(selectedCount);
@@ -165,7 +220,7 @@
     updatePicker();
   }
   function renderSaved(){const select=$('saved-product'),value=select.value;select.replaceChildren();const first=document.createElement('option');first.value='';first.textContent=products.length?'Choose an item or service…':'No saved items yet';select.append(first);
-    for(const product of products){const option=document.createElement('option');option.value=product.id;option.textContent=product.name+(product.size?' · '+product.size:'')+' · '+money(product.price);select.append(option);}select.value=value;updatePicker();
+    for(const product of products){const option=document.createElement('option');option.value=product.id;option.textContent=product.name+(product.size?' · '+product.size:'')+' · '+(product.dealQuantity?product.dealQuantity+' for ':'')+money(product.price);select.append(option);}select.value=value;updatePicker();
     $('saved-hint').textContent=products.length?products.length+' saved '+(products.length===1?'item':'items')+'. Select one to reuse its photo and price.':'Save an item below to reuse its details and photo.';
   }
   function emptySlot(){return activeItems().findIndex(i=>!i.name.trim()&&!i.price&&!i.size.trim()&&!i.photo);}
@@ -183,8 +238,8 @@
   $('poster-template').addEventListener('change',()=>{
     if($('poster-template').value==='simple')selectedCount=Math.min(selectedCount,3);
     const template=$('poster-template').value;
-    if(['bold','market','super','ribbon','signature'].includes(template)){$('promo-theme').value=({bold:'red',market:'green',super:'red',ribbon:'blue',signature:'gold'})[template];if(!finishingChosen){$('trim-photos').checked=true;$('clean-names').checked=true;finishingChosen=true;}}
-    if(ShopDeskPoster.collection[template]){$('promo-theme').value=ShopDeskPoster.collection[template].theme;}
+    if(['bold','market','super','ribbon','signature'].includes(template)){if(!$('keep-colours').checked)$('promo-theme').value=({bold:'red',market:'green',super:'red',ribbon:'blue',signature:'gold'})[template];if(!finishingChosen){$('trim-photos').checked=true;$('clean-names').checked=true;finishingChosen=true;}}
+    if(ShopDeskPoster.collection[template]&&!$('keep-colours').checked){$('promo-theme').value=ShopDeskPoster.collection[template].theme;}
     renderItems();changed();
   });
   for(const id of ['trim-photos','clean-names'])$(id).addEventListener('change',()=>finishingChosen=true);
@@ -204,50 +259,73 @@
   $('show-date').addEventListener('change',renderBusiness);
   $('flyer-purpose').addEventListener('change',async()=>{renderBusiness();renderItems();changed();await preloadPhotos();draw();});
   function renderHero(){
-    const thumb=$('hero-thumb');thumb.replaceChildren();if(heroPhoto){const img=document.createElement('img');img.src='/api/photos/'+heroPhoto;img.alt='Main project photo';thumb.append(img);}else thumb.textContent='Main photo';$('hero-label').textContent=heroPhoto?'Change main photo':'Add main photo';$('remove-hero').hidden=!heroPhoto;
+    const thumb=$('hero-thumb');thumb.replaceChildren();if(heroPhoto){const img=document.createElement('img');setPhotoThumb(img,heroPhoto);img.alt='Main project photo';thumb.append(img);}else thumb.textContent='Main photo';$('hero-label').textContent=heroPhoto?'Change main photo':'Add main photo';$('remove-hero').hidden=!heroPhoto;
   }
   $('remove-hero').addEventListener('click',()=>{heroPhoto='';renderHero();changed();});
   $('hero-file').addEventListener('change',async()=>{
     const input=$('hero-file'),file=input.files[0];if(!file)return;input.disabled=true;$('remove-hero').disabled=true;pendingPhotos++;draw();
-    try{const blob=await imageBlob(file),result=await api('/api/photos',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});heroPhoto=result.id;changed();await loadImage(heroPhoto);toast('Main photo added.');}
+    try{const blob=await imageBlob(file),result=await api('/api/photos',{method:'POST',headers:{'Content-Type':blob.type},body:blob});heroPhoto=result.id;changed();await loadImage(heroPhoto);toast('Main photo added.');}
     catch(e){toast(e.message||'Could not add this photo.');}
     finally{pendingPhotos--;input.disabled=false;input.value='';$('remove-hero').disabled=false;renderHero();draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   });
-  function renderLogo(){const thumb=$('logo-thumb');thumb.replaceChildren();if(logo){const img=document.createElement('img');img.src='/api/photos/'+logo;img.alt='Your business logo';img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Logo unavailable';});thumb.append(img);}else thumb.textContent='Business logo';$('logo-label').textContent=logo?'Change your logo':'Add your logo';$('remove-logo').hidden=!logo;}
+  function renderLogo(){const thumb=$('logo-thumb');thumb.replaceChildren();if(logo){const img=document.createElement('img');setPhotoThumb(img,logo);img.alt='Your business logo';img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Logo unavailable';});thumb.append(img);}else thumb.textContent='Business logo';$('logo-label').textContent=logo?'Change your logo':'Add your logo';$('remove-logo').hidden=!logo;}
   $('remove-logo').addEventListener('click',()=>{logo='';renderLogo();changed();});
   $('logo-file').addEventListener('change',async()=>{
     const input=$('logo-file'),file=input.files[0];if(!file)return;input.disabled=true;$('remove-logo').disabled=true;pendingPhotos++;$('logo-label').textContent='Adding logo…';draw();
-    try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});logo=result.id;changed();await loadImage(logo);toast('Your logo is ready.');}
+    try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':blob.type},body:blob});logo=result.id;changed();await loadImage(logo);toast('Your logo is ready.');}
     catch(e){toast(e.message||'Could not add this logo. Please try another image.');}
     finally{pendingPhotos--;input.disabled=false;input.value='';$('remove-logo').disabled=false;renderLogo();draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   });
-  async function imageBlob(file){
-    if(!['image/jpeg','image/png','image/webp'].includes(file.type))throw new Error('Choose a JPG, PNG or WebP photo.');
-    if(file.size>15000000)throw new Error('Choose a photo smaller than 15 MB.');
-    const url=URL.createObjectURL(file);
-    try{const image=new Image();image.src=url;await image.decode();if(image.naturalWidth*image.naturalHeight>60000000)throw new Error('This photo is too large. Choose a smaller image.');
-      const ratio=Math.min(1,1000/Math.max(image.naturalWidth,image.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*ratio));canvas.height=Math.max(1,Math.round(image.naturalHeight*ratio));
-      const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser could not process this photo.');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(image,0,0,canvas.width,canvas.height);
-      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.88));if(!blob||blob.size>1500000)throw new Error('Choose a smaller photo.');return blob;
-    }finally{URL.revokeObjectURL(url);}
-  }
+  const imageBlob=file=>ShopDeskPhotos.prepare(file);
   async function uploadPhoto(item,file,label,input){
     const old=label.firstChild.textContent;input.disabled=true;label.firstChild.textContent='Adding photo…';pendingPhotos++;draw();
-    try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':'image/jpeg'},body:blob});
+    try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
       if(!items.includes(item))return;item.photo=result.id;for(const key of ['photoScale','photoX','photoY'])delete item[key];renderItems();changed();await loadImage(result.id);toast('Photo added. It will be kept with your saved product.');
     }catch(e){toast(e.message||'Could not add this photo. Please try another image.');}
     finally{pendingPhotos--;input.disabled=false;label.firstChild.textContent=old;draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   }
+  function setPhotoThumb(img,id){
+    img.dataset.photo=id;if(photoThumbs.has(id))img.src=photoThumbs.get(id);
+  }
+  function cachePhotoThumb(id,image){
+    const canvas=document.createElement('canvas'),scale=Math.min(1,180/Math.max(image.width,image.height));
+    canvas.width=Math.max(1,Math.round(image.width*scale));canvas.height=Math.max(1,Math.round(image.height*scale));
+    canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);
+    const url=canvas.toDataURL('image/webp',.84);photoThumbs.set(id,url);canvas.width=1;canvas.height=1;
+    for(const img of document.querySelectorAll('img[data-photo]'))if(img.dataset.photo===id)img.src=url;
+  }
   async function loadImage(id){
     if(images.has(id))return images.get(id);if(imageLoads.has(id))return imageLoads.get(id);
-    const promise=(async()=>{const image=new Image();image.src='/api/photos/'+id;await image.decode();images.set(id,image);imageErrors.delete(id);return image;})();imageLoads.set(id,promise);
+    const promise=(async()=>{
+      const response=await fetch('/api/photos/'+id,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw new Error('A saved photo could not be loaded.');
+      const blob=await response.blob(),image=await ShopDeskPhotos.decode(blob,1000);photoBlobs.set(id,blob);images.set(id,image);cachePhotoThumb(id,image);imageErrors.delete(id);return image;
+    })();imageLoads.set(id,promise);
     try{return await promise;}catch(e){imageErrors.add(id);throw e;}finally{imageLoads.delete(id);}
   }
-  async function preloadPhotos(){await Promise.allSettled([...new Set([logo,heroPhoto,...activeItems().map(i=>i.photo)].filter(Boolean))].map(loadImage));}
-  function dataForPoster(){const s=snapshot();return {...s.shop,shop:s.shop.name,...s.draft,eventDateText:dateText(s.draft.eventDate),dateText:dateText(s.draft.date),itemCount:activeCount(),items:activeItems().map(i=>({...i,size:normalSize(i.size)}))};}
+  async function preloadPhotos(){
+    // Serial decoding bounds peak memory on phones when opening a large catalogue.
+    for(const id of new Set([logo,heroPhoto,...activeItems().map(i=>i.photo)].filter(Boolean)))try{await loadImage(id);}catch{}
+  }
+  async function exportImage(data,type='png'){
+    const canvas=document.createElement('canvas'),layout=ShopDeskPoster.draw(canvas,data,images),size=ShopDeskPoster.outputSize(data.format,data.exportQuality);
+    canvas.width=1;canvas.height=1;
+    const scale=size.width/(layout.width||1080),needed=new Map(),decoded=new Map();
+    const request=(id,edge)=>{if(id)needed.set(id,Math.min(3840,Math.max(needed.get(id)||0,Math.ceil(edge))));};
+    request(data.logo,240*scale);request(data.heroPhoto,Math.max(size.width,size.height));
+    data.items.forEach((item,i)=>{const c=layout.cards[i];if(c)request(item.photo,Math.max(c.w,c.h)*scale*(item.photoScale||1)*(data.trimPhotos?1.5:1));});
+    try{
+      for(const [id,edge] of needed){
+        if(!photoBlobs.has(id))await loadImage(id);
+        decoded.set(id,await ShopDeskPhotos.decode(photoBlobs.get(id),edge));
+      }
+      return await ShopDeskOutput.image(data,decoded,type);
+    }finally{for(const image of decoded.values()){image.width=1;image.height=1;}decoded.clear();}
+  }
+  function dataForPoster(){const s=snapshot();return {...s.shop,shop:s.shop.name,...s.draft,eventDateText:dateText(s.draft.eventDate),dateText:dateText(s.draft.date),startDateText:s.draft.startDate?dateText(s.draft.startDate):'',itemCount:activeCount(),items:activeItems().map(i=>({...i,size:normalSize(i.size)}))};}
   function validatePoster(){
     if(!ready||loadingWorkspace)throw new Error('Load your saved project before making a poster.');
     const d=dataForPoster();if(!d.shop.trim())throw new Error('Enter your business name.');if(!d.headline.trim())throw new Error('Enter a headline.');if(!announcement()&&d.showDate&&!/^\d{4}-\d{2}-\d{2}$/.test(d.date))throw new Error('Choose the offer end date.');if(!announcement()&&d.showDate&&d.date<iso())throw new Error('This offer has expired. Choose today or a future end date.');
+    if(!announcement()&&d.showDate&&d.startDate&&d.startDate>d.date)throw new Error('Choose an offer start date before or on the end date.');
     if(announcement()&&!/^\d{4}-\d{2}-\d{2}$/.test(d.eventDate))throw new Error('Choose the event or opening date.');
     if(!announcement())d.items.forEach((i,index)=>{if(!i.name.trim())throw new Error('Enter the name for item '+(index+1)+'.');ShopDeskLogic.number(i.price,'Price for item '+(index+1),.01,1000000);});
     if(pendingPhotos)throw new Error('Please wait for your photo to finish uploading.');
@@ -256,26 +334,49 @@
     return d;
   }
   function draw(){
+    updateUndo();
+    for(const control of $('promo-items').querySelectorAll('.move-item,.remove-item')){
+      const index=Number(control.closest('.promo-item').dataset.index),step=Number(control.dataset.step||0);
+      control.disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||index+step<0||index+step>=activeCount();
+    }
     $('product-count').disabled=pendingPhotos>0;$('add-item').disabled=pendingPhotos>0||activeCount()>=capacity();
-    renderDesigner();const d=dataForPoster(),statusFormat=d.format==='status';
+    renderDesigner();const d=dataForPoster(),statusFormat=d.format==='status',outputSize=ShopDeskPoster.outputSize(d.format,d.exportQuality),print=!!outputSize.mm;
     let valid=false;
-    try{validatePoster();valid=true;$('promo-error').hidden=true;$('download-promo').disabled=false;$('copy-promo').disabled=false;}catch(e){$('promo-error').textContent=e.message;$('promo-error').hidden=!ready;$('download-promo').disabled=true;$('copy-promo').disabled=true;}
-    for(const id of ['create-pack','create-pack-bottom'])$(id).disabled=!valid||packBusy;
+    try{validatePoster();valid=true;$('promo-error').hidden=true;$('download-promo').disabled=exportBusy||packBusy;$('copy-promo').disabled=false;}catch(e){$('promo-error').textContent=e.message;$('promo-error').hidden=!ready;$('download-promo').disabled=true;$('copy-promo').disabled=true;}
+    for(const id of ['create-pack','create-pack-bottom'])$(id).disabled=!valid||packBusy||exportBusy;
+    $('download-print').disabled=!valid||exportBusy||packBusy;$('download-print').hidden=!print;
+    $('export-quality').closest('.field').hidden=print;
+    $('export-quality').disabled=print||exportBusy||packBusy;$('promo-fields').disabled=!ready||loadingWorkspace||exportBusy||packBusy;
+    $('download-promo').closest('.export-panel').setAttribute('aria-busy',String(exportBusy));
     const pages=announcement()?1:Math.ceil(d.items.length/4);$('pack-summary').textContent='1 full flyer + '+pages+' WhatsApp Status '+(pages===1?'page':'pages')+' + a matching caption.';
-    lastLayout=ShopDeskPoster.draw($('promo-canvas'),d,images);
+    lastLayout=ShopDeskPoster.draw($('promo-canvas'),d,images,{warningScale:outputSize.width/(ShopDeskPoster.formats[d.format]?.width||1080)});
     const warnings=(announcement()?[]:d.items).map((i,index)=>{const message=ShopDeskPoster.packWarning(i.name,i.size);return message?'Item '+(index+1)+': '+message:'';}).filter(Boolean);
-    for(const warning of lastLayout.photoWarnings||[])warnings.push((warning.name||'A product')+': this photo may look blurry at its current size. Try a larger image or reduce its size.');
+    for(const warning of lastLayout.photoWarnings||[])warnings.push((warning.name||'A product')+': this photo may look soft in the chosen export size. Upload a larger original for more detail.');
     $('promo-review').hidden=!warnings.length;$('promo-review').textContent=warnings.join(' ');
     const spaces=ShopDeskItems.room(items,activeCount(),capacity());
     $('batch-room').textContent=spaces+' '+(spaces===1?'space':'spaces')+' available for added items. Empty cards are filled first.';
-    for(const id of ['open-bulk','open-saved-grid'])$(id).disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked;
+    for(const id of ['open-bulk','open-saved-grid'])$(id).disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||exportBusy||packBusy;
     $('feature-explainer').hidden=d.purpose!=='offers'||d.template==='simple';
-    $('format-caption').textContent=statusFormat?'9:16 WhatsApp Status':'4:5 portrait';$('download-hint').textContent=statusFormat?'1080 × 1920 PNG · Ready for WhatsApp Status.':'1080 × 1350 PNG · Ready to share.';
+    $('format-caption').textContent=ShopDeskPoster.formats[d.format].label;
+    $('download-hint').textContent=outputSize.width+' × '+outputSize.height+' PNG'+(print?' · '+d.format.toUpperCase()+' PDF at 300 dpi. Print at Actual size (100%).':' · '+(d.exportQuality==='4k'?'4K long edge.':'Ready to share.'));
+    $('quality-help').textContent=print?'Print quality · 300 dpi, with a 5 mm white margin.':'Text and layout are redrawn sharply. Small source photos still limit detail.';
+    $('format-help').textContent=print?'The PDF keeps the correct paper size and a 5 mm white margin.':'Your content rearranges to fit the selected shape.';
     window.dispatchEvent(new CustomEvent('shopdesk:preview'));
-    $('download-promo').textContent=statusFormat?'Download Status ↓':d.template!=='simple'?'Download flyer ↓':'Download poster ↓';$('poster-note').textContent=d.items.length>12?'This is a compact catalogue. Use the promotion pack for larger product photos and prices across WhatsApp Status pages.':d.trimPhotos?'Check your photo framing before sharing. Turn off Fit photos to restore the complete images.':(d.items.length>6?'Fewer offers give each item more space on a phone.':'Your complete photos are shown.');
+    $('download-promo').textContent=exportBusy?'Preparing download…':print?'Download print PNG ↓':statusFormat?'Download Status ↓':d.template!=='simple'?'Download flyer ↓':'Download poster ↓';$('poster-note').textContent=d.items.length>12?'This is a compact catalogue. Use the promotion pack for larger product photos and prices across WhatsApp Status pages.':d.trimPhotos?'Check your photo framing before sharing. Turn off Fit photos to restore the complete images.':(d.items.length>6?'Fewer offers give each item more space on a phone.':'Your complete photos are shown.');
   }
   function download(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
-  $('download-promo').addEventListener('click',async()=>{try{const d=validatePoster();$('download-promo').disabled=true;await document.fonts?.ready;await preloadPhotos();validatePoster();draw();$('promo-canvas').toBlob(blob=>{if(!blob){toast('Could not create your poster. Please try again.');return;}download(blob,'shopdesk-'+d.format+'-'+iso()+'.png');toast('Your '+(d.format==='status'?'Status image':'poster')+' is ready to share.');},'image/png');}catch(e){toast(e.message);}finally{draw();}});
+  async function downloadFlyer(type){
+    if(exportBusy||packBusy)return;
+    try{
+      const d=validatePoster();exportBusy=true;draw();await document.fonts?.ready;
+      const blob=await exportImage(d,type);download(blob,'shopdesk-'+d.format+'-'+iso()+'.'+type);
+      toast(type==='pdf'?'Your print PDF is ready. Choose Actual size (100%) when printing.':'Your image is ready to share.');
+    }catch(e){toast(e.message||'Could not create this download. Try Standard quality.');}
+    finally{exportBusy=false;draw();}
+  }
+  $('download-promo').addEventListener('click',()=>downloadFlyer('png'));
+  $('download-print').addEventListener('click',()=>downloadFlyer('pdf'));
+  $('export-quality').addEventListener('change',changed);
   $('copy-promo').addEventListener('click',async()=>{try{const content=ShopDeskPack.caption(validatePoster());try{await navigator.clipboard.writeText(content);toast('Offer text copied. Paste it into your customer message.');}catch{download(new Blob([content],{type:'text/plain;charset=utf-8'}),'shopdesk-offer.txt');toast('Offer text downloaded.');}}catch(e){toast(e.message);}});
   function clearPack(){
     $('pack-previews').replaceChildren();$('download-pack-caption').removeAttribute('href');$('pack-caption-text').value='';$('pack-download-detail').textContent='All images and your caption in one ZIP.';
@@ -291,7 +392,7 @@
     body.append(title,detail,save);card.append(wrap,body);$('pack-previews').append(card);
   }
   async function createPack(){
-    if(packBusy)return;
+    if(packBusy||exportBusy)return;
     let data;try{data=validatePoster();}catch(e){toast(e.message);return;}
     const run=++packRun;packBusy=true;clearPack();$('pack-output').hidden=true;$('pack-error').hidden=true;$('pack-progress').textContent='Preparing your promotion pack…';
     if(!$('pack-dialog').open)$('pack-dialog').showModal();draw();
@@ -300,8 +401,7 @@
       const outputs=ShopDeskPack.plan(data),files=[];
       for(const [index,output] of outputs.entries()){
         if(run!==packRun)return;$('pack-progress').textContent='Creating '+output.label.toLowerCase()+' ('+(index+1)+' of '+outputs.length+')…';
-        const canvas=document.createElement('canvas');ShopDeskPoster.draw(canvas,output.data,images);
-        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));canvas.width=1;canvas.height=1;
+        const blob=await exportImage(output.data);
         if(run!==packRun)return;if(!blob)throw new Error('An image could not be created. Close this window and try the pack again.');
         files.push({name:output.name,blob});previewPackImage(output,blob);
       }
@@ -324,8 +424,22 @@
   const expiry=new Date();expiry.setDate(expiry.getDate()+7);$('promo-date').value=iso(expiry);
   window.ShopDeskPromotion={draw,addProduct(product){if(!ready){toast('Wait for your saved workspace to load.');return false;}if(announcement()){toast('Choose an offers flyer to add products.');return false;}if(!insertProduct({...product,photo:''})){toast('Increase your product count or clear an item to make room.');return false;}return true;}};
   function batchContext(){return studioState?studioState.activeClientId+':'+studioState.activeProjectId:'';}
-  function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked)throw new Error('Wait for the project to finish loading or saving photos.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
+  function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked||exportBusy||packBusy)throw new Error('Wait for the project to finish loading, saving photos or creating downloads.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
   Object.assign(window.ShopDeskPromotion,{
+    wordingContext(){assertEditable(batchContext());const d=snapshot().draft;return {context:batchContext(),business:d.business,purpose:d.purpose,template:d.template,showDate:d.showDate,values:Object.fromEntries(Object.keys(ShopDeskWords.fields).map(key=>[key,d[key]]))};},
+    applyWording(values,context){assertEditable(context);const selected=ShopDeskWords.validate(values),before={};for(const [key,value] of Object.entries(selected)){const field=$('promo-'+(key==='headline'?'headline':key));before[key]=field.value;field.value=value;}changed();return before;},
+    projectCatalog(){assertEditable(batchContext());capture();return structuredClone(studioState);},
+    async openProject(clientId,projectId){assertEditable(batchContext());ShopDeskStudio.select(studioState,clientId,projectId);await switchProject(clientId,projectId);},
+    async newEdition(clientId,projectId,values){
+      assertEditable(batchContext());capture();const next=ShopDeskProjects.renew(studioState,clientId,projectId,values);
+      studioState=next;dirty=true;change++;await showActive();changed();clearTimeout(saveTimer);save();toast('New edition created. Review your offers before sharing.');
+    },
+    templateSnapshot(){assertEditable(batchContext());return {...snapshot().draft,itemCount:activeCount()};},
+    async useTemplate(template){
+      assertEditable(batchContext());capture();const next=ShopDeskStudio.useTemplate(studioState,template);
+      studioState=next;dirty=true;change++;await showActive();changed();clearTimeout(saveTimer);save();
+      window.ShopDeskInterface?.showTab('content');$('project-name').focus();toast('Your own copy is ready. Review the wording, prices and dates before sharing.');
+    },
     itemState(){return {context:batchContext(),items:items.map(item=>ShopDeskItems.copy(item)),products:products.map(p=>({id:p.id,...ShopDeskItems.copy(p,false)})),count:activeCount(),limit:capacity(),available:ShopDeskItems.room(items,activeCount(),capacity()),ready:ready&&!loadingWorkspace&&!pendingPhotos&&!blocked&&!announcement(),unavailableReason:blocked?'Your saved project changed in another window. Use Reload saved version before adding products.':!ready||loadingWorkspace?'Your project is still loading. If loading failed, use Try again beside the save status.':pendingPhotos?'Wait for your photos to finish uploading, then try again.':announcement()?'Choose Offers, menu or price list to use product tools.':''};},
     async addBatch(rows,context){assertEditable(context);if(announcement())throw new Error('Choose an offers flyer first.');const next=ShopDeskItems.insert(items,activeCount(),rows,capacity());items=next.items;selectedCount=next.itemCount;renderItems();changed();preloadPhotos().then(draw);toast(rows.length+' '+(rows.length===1?'item added.':'items added.'));},
     photoPreview(index,context){if(context!==batchContext())return null;const item=activeItems()[index],card=lastLayout?.cards[index];if(!item?.photo||!card)return null;return {item:ShopDeskItems.copy(item),canvas:$('promo-canvas'),card,warnings:(lastLayout.photoWarnings||[]).filter(w=>w.photo===item.photo&&w.name===item.name)};},

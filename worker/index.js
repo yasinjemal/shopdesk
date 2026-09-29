@@ -1,3 +1,4 @@
+import '../public/templates.js';
 const MAX_BODY = 100000;
 const MAX_PHOTO = 1500000;
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
@@ -12,6 +13,7 @@ function item(value) {
   const photo = value.photo == null ? '' : text(value.photo, 36, 'the product photo');
   if (photo && !/^[0-9a-f-]{36}$/.test(photo)) throw fail('Invalid photo.');
   const styling={};
+  if(value.dealQuantity!==undefined){if(!Number.isInteger(value.dealQuantity)||value.dealQuantity<2||value.dealQuantity>99)throw fail('Choose a multi-buy quantity from 2 to 99.');styling.dealQuantity=value.dealQuantity;}
   for(const [key,min,max] of [['photoScale',.5,2],['photoX',-1,1],['photoY',-1,1]])if(value[key]!==undefined){if(!Number.isFinite(value[key])||value[key]<min||value[key]>max)throw fail('Check the product photo framing.');styling[key]=value[key];}
   if(value.featured!==undefined){if(typeof value.featured!=='boolean')throw fail('Choose a valid featured offer.');styling.featured=value.featured;}
   return { name:text(value.name,50,'the product name'),size:text(value.size,25,'the pack size'),price,photo,...styling };
@@ -20,10 +22,10 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street'].includes(template)) throw fail('Choose a poster template.');
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace'].includes(template)) throw fail('Choose a poster template.');
   const maxItems = template === 'simple' ? 3 : 25;
   const finishing={};
-  for(const [key,values] of [['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
+  for(const [key,values] of [['logoSize',['compact','prominent']],['exportQuality',['standard','4k']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
     if(!values.includes(d[key]))throw fail('Choose a valid design finish.');finishing[key]=d[key];
   }
   if(d.itemCount!==undefined){
@@ -34,14 +36,15 @@ export function validateWorkspace(data) {
   for(const [key,max] of [['details',180],['eventDate',10],['eventTime',40],['venue',80],['heroPhoto',36]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the project details');
   if(finishing.eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.eventDate))throw fail('Check the event date.');
   if(finishing.heroPhoto&&!/^[0-9a-f-]{36}$/.test(finishing.heroPhoto))throw fail('Invalid main photo.');
-  for(const key of ['trimPhotos','cleanNames','showDate'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
+  for(const key of ['trimPhotos','cleanNames','showDate','keepColours'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
   if(d.business!==undefined){if(!['grocery','fashion','food','beauty','services','general'].includes(d.business))throw fail('Choose a business type.');finishing.business=d.business;}
   for(const [key,max] of [['eyebrow',28],['cta',40],['terms',80]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the poster wording');
-  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee'].includes(d.theme) || !['poster','status'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
+  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'].includes(d.theme) || !['poster','status','square','landscape','a4','a5'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
   if(d.items.filter(i=>i?.featured===true).length>1)throw fail('Choose only one featured offer per flyer.');
   const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
   if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');
   const date = text(d.date,10,'the offer date');
+  if(d.startDate!==undefined){finishing.startDate=text(d.startDate,10,'the offer start date');if(finishing.startDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.startDate))throw fail('Check the offer start date.');}
   if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw fail('Check the offer date.');
   const seen = new Set();
   const products = data.products.map(p => { const id = text(p.id,36,'the saved product'); if (!/^[0-9a-f-]{36}$/.test(id) || seen.has(id)) throw fail('Invalid saved product.'); seen.add(id); const v = item(p); delete v.featured; if (!v.name) throw fail('Give your saved product a name.'); return {id,...v}; });
@@ -74,6 +77,33 @@ function protectWrite(request) {
 async function handleAPI(request,env,url) {
   const owner=user(request); const database=db(env);
   if(request.method!=='GET')protectWrite(request);
+  if(url.pathname==='/api/templates'&&request.method==='GET'){
+    const mine=url.searchParams.get('mine')==='1',query=(url.searchParams.get('q')||'').slice(0,80).toLowerCase(),category=url.searchParams.get('category')||'';
+    const cursor=url.searchParams.get('cursor')||'';
+    if(cursor&&!/^\d{4}-\d{2}-\d{2}T[\d:.]+Z\|[0-9a-f-]{36}$/.test(cursor))throw fail('Reload the template library.');
+    const [time='',id='']=cursor.split('|');
+    const rows=await database.prepare("SELECT id,owner,data,listed,created_at FROM shared_templates WHERE ((? = 1 AND owner = ?) OR (? = 0 AND listed = 1)) AND (? = '' OR business = ?) AND (? = '' OR instr(lower(title || ' ' || description), ?) > 0) AND (? = '' OR created_at < ? OR (created_at = ? AND id < ?)) ORDER BY created_at DESC,id DESC LIMIT 13").bind(mine?1:0,owner,mine?1:0,category,category,query,query,cursor,time,time,id).all();
+    const page=rows.results.slice(0,12),last=page.at(-1);
+    return json({templates:page.map(row=>({id:row.id,...JSON.parse(row.data),mine:row.owner===owner,listed:!!row.listed})),cursor:rows.results.length>12?last.created_at+'|'+last.id:null});
+  }
+  if(url.pathname==='/api/templates'&&request.method==='POST'){
+    let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,16000)));}catch(e){if(e.status)throw e;throw fail('Could not read this template.');}
+    if(!/^[0-9a-f-]{36}$/.test(body?.id))throw fail('Reopen the sharing window and try again.');
+    let template;try{template=globalThis.ShopDeskTemplates.validate(body.template);}catch(e){throw fail(e.message);}
+    const serialized=JSON.stringify(template),previous=await database.prepare('SELECT owner,data FROM shared_templates WHERE id = ?').bind(body.id).first();
+    if(previous){if(previous.owner!==owner||previous.data!==serialized)throw fail('This share request already exists. Reopen the sharing window.',409);return json({id:body.id});}
+    const inserted=await database.prepare('INSERT INTO shared_templates (id,owner,title,description,business,data,listed,created_at) SELECT ?,?,?,?,?,?,1,? WHERE (SELECT COUNT(*) FROM shared_templates WHERE owner = ?) < 100 ON CONFLICT(id) DO NOTHING RETURNING id').bind(body.id,owner,template.title,template.description,template.design.business,serialized,new Date().toISOString(),owner).first();
+    if(!inserted)throw fail('You can keep up to 100 shared templates. Please try an existing template.',409);
+    return json({id:body.id},201);
+  }
+  if(url.pathname.startsWith('/api/templates/')&&request.method==='PATCH'){
+    const id=url.pathname.slice('/api/templates/'.length);if(!/^[0-9a-f-]{36}$/.test(id))throw fail('Template not found.',404);
+    let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,1000)));}catch{throw fail('Choose whether to list this template.');}
+    if(typeof body?.listed!=='boolean')throw fail('Choose whether to list this template.');
+    const updated=await database.prepare('UPDATE shared_templates SET listed = ? WHERE id = ? AND owner = ? RETURNING id').bind(body.listed?1:0,id,owner).first();
+    if(!updated)throw fail('Template not found in your account.',404);
+    return json({id,listed:body.listed});
+  }
   const studio=url.pathname==='/api/studio',workspace=studio||url.pathname==='/api/workspace';
   if(workspace && request.method==='GET'){
     const record=await database.prepare('SELECT data, revision FROM poster_workspaces WHERE owner = ?').bind(owner).first();
@@ -95,14 +125,17 @@ async function handleAPI(request,env,url) {
   }
   if(url.pathname==='/api/photos' && request.method==='POST'){
     if(!env.BUCKET)throw fail('Photo storage is temporarily unavailable. Please try again.',503);
-    if(!request.headers.get('content-type')?.startsWith('image/jpeg'))throw fail('Choose a JPG, PNG or WebP photo.',415);
+    const mime=request.headers.get('content-type')?.split(';')[0].trim();
+    if(!['image/jpeg','image/png','image/webp'].includes(mime))throw fail('Choose a JPG, PNG or WebP photo.',415);
     const bytes=await readLimited(request,MAX_PHOTO);
-    if(bytes.length<4||bytes[0]!==255||bytes[1]!==216||bytes[2]!==255||bytes[bytes.length-2]!==255||bytes[bytes.length-1]!==217)throw fail('This photo could not be read. Try another JPG, PNG or WebP image.');
+    const signature=(offset,values)=>values.every((v,i)=>bytes[offset+i]===v);
+    const valid=mime==='image/jpeg'?bytes.length>=4&&signature(0,[255,216,255])&&signature(bytes.length-2,[255,217]):mime==='image/png'?bytes.length>=33&&signature(0,[137,80,78,71,13,10,26,10])&&signature(12,[73,72,68,82]):bytes.length>=20&&signature(0,[82,73,70,70])&&signature(8,[87,69,66,80])&&signature(12,[86,80,56]);
+    if(!valid)throw fail('This photo could not be read. Try another JPG, PNG or WebP image.');
     const count=await database.prepare('SELECT COUNT(*) AS count FROM product_photos WHERE owner = ?').bind(owner).first();
     if(count.count>=250)throw fail('Your photo storage is full. Reuse a saved product photo for now.',413);
     const id=crypto.randomUUID();const key='photos/'+id;
-    await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:'image/jpeg'}});
-    try{await database.prepare('INSERT INTO product_photos (id,owner,mime,bytes,created_at) VALUES (?,?,?,?,?)').bind(id,owner,'image/jpeg',bytes.length,new Date().toISOString()).run();}catch(e){await env.BUCKET.delete(key);throw e;}
+    await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:mime}});
+    try{await database.prepare('INSERT INTO product_photos (id,owner,mime,bytes,created_at) VALUES (?,?,?,?,?)').bind(id,owner,mime,bytes.length,new Date().toISOString()).run();}catch(e){await env.BUCKET.delete(key);throw e;}
     return json({id},201);
   }
   if(url.pathname.startsWith('/api/photos/')&&request.method==='GET'){
@@ -110,7 +143,7 @@ async function handleAPI(request,env,url) {
     const record=await database.prepare('SELECT mime FROM product_photos WHERE id = ? AND owner = ?').bind(id,owner).first();if(!record)throw fail('Photo not found.',404);
     if(!env.BUCKET)throw fail('Photos are temporarily unavailable.',503);
     const object=await env.BUCKET.get('photos/'+id);if(!object)throw fail('Photo not found.',404);
-    return new Response(object.body,{headers:{'Content-Type':'image/jpeg','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
+    return new Response(object.body,{headers:{'Content-Type':record.mime,'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}});
   }
   throw fail('This page could not be found.',404);
 }
@@ -121,7 +154,8 @@ export default {
       if(url.pathname.startsWith('/api/'))return await handleAPI(request,env,url);
       if(!['GET','HEAD'].includes(request.method))return json({error:'Method not allowed.'},405);
       const asset=ASSETS[url.pathname==='/index.html'?'/':url.pathname];if(!asset)return new Response('Not found',{status:404});
-      return new Response(request.method==='HEAD'?null:asset.body,{headers:{'Content-Type':asset.type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
+      const body=asset.encoding==='base64'?Uint8Array.from(atob(asset.body),char=>char.charCodeAt(0)):asset.body;
+      return new Response(request.method==='HEAD'?null:body,{headers:{'Content-Type':asset.type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
     } catch(error) {
       if(!error.status)console.error('ShopDesk request failed',{path:url.pathname,message:error.message});
       return json({error:error.status?error.message:'We could not reach your saved workspace. Your edits are still here; please try again.'},error.status??503);

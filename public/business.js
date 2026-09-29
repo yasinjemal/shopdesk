@@ -19,7 +19,7 @@
     return {eyebrow:data.eyebrow??p.eyebrow,terms:data.terms??p.terms,unit:p.unit,
       location:announcement?(data.venue||data.location):data.location,
       contact:[cta,data.phone].filter(Boolean).join(': '),
-      date:announcement?[(data.eventDateText||'Your event date'),data.eventTime].filter(Boolean).join(' · '):data.showDate===false?'':'Valid until '+(data.dateText||'your selected date')};
+      date:announcement?[(data.eventDateText||'Your event date'),data.eventTime].filter(Boolean).join(' · '):data.showDate===false?'':data.startDate&&data.startDateText?'Valid '+data.startDateText+' – '+(data.dateText||'your selected date'):'Valid until '+(data.dateText||'your selected date')};
   }
   function visibleItems(draft){
     const items=draft.items||[],limit=draft.purpose==='spotlight'?1:draft.template==='simple'?3:25;

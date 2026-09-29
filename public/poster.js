@@ -2,17 +2,57 @@
   'use strict';
   const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0'],teal:['#075e64','#bceae1','#f2fbfa'],gold:['#20232c','#e7c574','#faf8f1'],berry:['#941c50','#ffe0ec','#fff8fb'],violet:['#5632a0','#e3d8ff','#faf8ff'],cobalt:['#134bb3','#d6e7ff','#f6f9ff'],coral:['#ab3543','#ffdad5','#fff8f6'],coffee:['#503529','#ebd2b4','#fcf8f3']};
   const collection={
+    arc:{name:'Arc Gallery',category:'elegant',theme:'raspberry',hint:'Sweeping gallery arches, framed panels and refined price rules.'},
+    ticket:{name:'Ticket Wall',category:'retail',theme:'tangerine',hint:'Perforated offer tickets, a striped masthead and a bold closing strip.'},
+    terrace:{name:'Café Terrace',category:'food',theme:'olive',hint:'Café awning stripes, soft menu panels and rounded price labels.'},
+    parade:{name:'Price Parade',category:'retail',theme:'red',hint:'An oversized sale banner, bright borders and bold price tickets.'},
+    shelf:{name:'Spotlight Shelf',category:'retail',theme:'blue',hint:'A signature masthead and a larger lead offer. Feature any item to make it the star.'},
+    paper:{name:'Paper & Ink',category:'elegant',theme:'coffee',hint:'A quiet paper catalogue with fine borders, serif headings and generous space.'},
+    wholesale:{name:'Wholesale Board',category:'retail',theme:'red',hint:'A compact shop masthead, generous product cut-outs and bold price tickets.'},
+    mosaic:{name:'Market Mosaic',category:'retail',theme:'teal',hint:'A large lead offer with mixed-size product panels. Feature any item to put it first.'},
+    fresh:{name:'Fresh Focus',category:'food',theme:'charcoal',hint:'A dark market-board background, large product photos and clear prices.'},
     pop:{name:'Colour Block',category:'retail',theme:'cobalt',hint:'A split masthead, colour-block cards and a bold closing banner.'},
     editorial:{name:'The Edit',category:'elegant',theme:'coffee',hint:'A magazine-inspired headline, photo-led cards and fine dividing lines.'},
     noir:{name:'Neon Night',category:'retail',theme:'violet',hint:'A dark canvas, bright accents and crisp white product panels.'},
     warehouse:{name:'Warehouse Deals',category:'retail',theme:'red',hint:'A high-impact sale board with square tickets and a full-width contact strip.'},
     atelier:{name:'Atelier',category:'elegant',theme:'gold',hint:'A framed masthead, refined typography and neatly bordered product cards.'},
-    street:{name:'Street Kitchen',category:'food',theme:'orange',hint:'A menu-board header, rounded cards and pill-shaped price labels.'}
+    street:{name:'Street Kitchen',category:'food',theme:'orange',hint:'A menu-board header, rounded cards and pill-shaped price labels.'},
+    sunburst:{name:'Sunburst Sale',category:'retail',theme:'terracotta',hint:'Sun-ray artwork, retro tickets and a strong sale banner.'},
+    botanical:{name:'Botanical',category:'elegant',theme:'sage',hint:'Leaf silhouettes, an arched headline and delicate price rules.'},
+    blueprint:{name:'Blueprint',category:'food',theme:'slate',hint:'A technical grid, numbered corners and precise service panels.'},
+    scrapbook:{name:'Studio Notes',category:'elegant',theme:'lavender',hint:'Layered paper, tape details and photo-note cards.'},
+    candy:{name:'Sweet Spot',category:'food',theme:'peach',hint:'Playful circles, scalloped edges and rounded price bubbles.'},
+    mono:{name:'Type Foundry',category:'retail',theme:'burgundy',hint:'Oversized type, strong rules and high-contrast offer labels.'}
   };
+  Object.assign(themes,{sage:['#355644','#dce8c8','#f5f7ed'],terracotta:['#8a3e2f','#f3c888','#fff6ea'],lavender:['#51406f','#e3d7fa','#faf6ff'],peach:['#773d39','#ffd7be','#fff7f0'],lemon:['#45531d','#eef28f','#fbfce9'],aqua:['#075569','#baf1e8','#effbfc'],burgundy:['#681e38','#f1ccd5','#fff6f8'],slate:['#30475b','#d6e6ed','#f3f7fa']});
+  Object.assign(themes,{tangerine:['#a13f0a','#ffcd8a','#fff8ee'],petrol:['#134b5a','#bce6df','#f1f8f6'],raspberry:['#821e4e','#f4cadb','#fff6fa'],olive:['#4e5730','#e2dfb7','#faf8ef'],indigo:['#343275','#d7dcfa','#f6f6ff'],cocoa:['#553936','#efc7bc','#fcf5ef']});
+  const formats={
+    poster:{label:'Portrait · 4:5',width:1080,height:1350},status:{label:'WhatsApp Status · 9:16',width:1080,height:1920},
+    square:{label:'Square · 1:1',width:1080,height:1080},landscape:{label:'Landscape · 16:9',width:1920,height:1080},
+    a4:{label:'A4 print · 210 × 297 mm',width:1080,height:1080*297/210,mm:[210,297],pixels:[2480,3508]},
+    a5:{label:'A5 print · 148 × 210 mm',width:1080,height:1080*210/148,mm:[148,210],pixels:[1748,2480]}
+  };
+  function outputSize(format,quality='standard'){
+    const f=formats[format]||formats.poster,scale=quality==='4k'?3840/Math.max(f.width,f.height):1;
+    return {...f,width:f.pixels?.[0]||Math.round(f.width*scale),height:f.pixels?.[1]||Math.round(f.height*scale)};
+  }
+  const formatHeight=format=>(formats[format]||formats.poster).height;
+  let renderOptions={},warningScale=1;
+  function surface(canvas,height,width=1080){
+    canvas.width=renderOptions.width||width;canvas.height=renderOptions.height||Math.round(height);
+    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
+    const mm=renderOptions.printMargin&&formats[renderOptions.format]?.mm,margin=mm?canvas.width*5/mm[0]:0;
+    const scale=Math.min((canvas.width-2*margin)/width,(canvas.height-2*margin)/height);
+    const x=(canvas.width-width*scale)/2,y=(canvas.height-height*scale)/2;
+    ctx.translate(x,y);ctx.scale(scale,scale);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    warningScale=renderOptions.warningScale||scale;
+    return ctx;
+  }
   let fontFamily='"DM Sans", sans-serif',priceStyle='design',priceBrand='#103e35';
   const money=n=>'R'+Number(n).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   const cropCache=new WeakMap();
-  let trimPhotos=false;
+  let trimPhotos=false,logoScale=1.25;
   function contentBounds(pixels){
     const {data,width,height}=pixels;
     const white=(x,y)=>{const i=(y*width+x)*4;return data[i+3]<12||(data[i]>244&&data[i+1]>244&&data[i+2]>244);};
@@ -65,40 +105,48 @@
     const zoom=item?.photoScale??1,px=item?.photoX??0,py=item?.photoY??0,custom=zoom!==1||px!==0||py!==0;
     const scale=Math.min(width/sw,height/sh)*zoom,w=sw*scale,h=sh*scale;
     const dx=x+(width-w)/2+px*width*.5,dy=y+(height-h)/2+py*height*.5;
-    if(item&&scale>1.5&&!photoWarnings.some(w=>w.photo===item.photo&&w.name===item.name))photoWarnings.push({photo:item.photo,name:item.name});
+    const sourceRatio=(image.sourceWidth||iw)/iw;
+    if(item&&scale*warningScale/sourceRatio>1.5&&!photoWarnings.some(w=>w.photo===item.photo&&w.name===item.name))photoWarnings.push({photo:item.photo,name:item.name});
     if(custom){ctx.save();ctx.beginPath();ctx.rect(x,y,width,height);ctx.clip();}
     ctx.fillStyle='#ffffff';ctx.fillRect(x,y,width,height);ctx.drawImage(image,sx,sy,sw,sh,dx,dy,w,h);
     if(custom)ctx.restore();
   }
+  function drawLogo(ctx,image,x,y,w,h){
+    contain(ctx,image,x,Math.max(6,y-h*(logoScale-1)/2),w*logoScale,h*logoScale);
+    return w*(logoScale-1);
+  }
   function geometry(format,count){
-    const status=format==='status',height=status?1920:1350,top=status?360:285,bottom=height-(status?300:220),gap=22;
+    const status=format==='status',height=formatHeight(format),top=status?360:285,bottom=height-(status?300:220),gap=22;
     const cardHeight=(bottom-top-gap*(count-1))/count;
     return {height,top,bottom,cardHeight,cards:Array.from({length:count},(_,i)=>({x:60,y:top+i*(cardHeight+gap),w:960,h:cardHeight})),footerY:bottom+64,status};
   }
-  function draw(canvas,data,images=new Map()){
-    photoWarnings=[];const layout=render(canvas,data,images);return {...layout,photoWarnings:[...photoWarnings]};
+  function draw(canvas,data,images=new Map(),options={}){
+    renderOptions={...options,format:data.format};photoWarnings=[];
+    try{const layout=render(canvas,data,images);return {...layout,photoWarnings:[...photoWarnings]};}finally{renderOptions={};warningScale=1;}
   }
   function render(canvas,data,images=new Map()){
-    trimPhotos=!!data.trimPhotos;
-    fontFamily=({modern:'"DM Sans", sans-serif',elegant:'Georgia, "Times New Roman", serif',geometric:'Manrope, sans-serif'})[data.typeface]||(['editorial','atelier'].includes(data.template)?'Georgia, "Times New Roman", serif':'"DM Sans", sans-serif');
+    trimPhotos=!!data.trimPhotos;logoScale=data.logoSize==='compact'?1:1.25;
+    fontFamily=({modern:'"DM Sans", sans-serif',elegant:'Georgia, "Times New Roman", serif',geometric:'Manrope, sans-serif'})[data.typeface]||(['editorial','atelier','botanical','scrapbook','paper','arc'].includes(data.template)?'Georgia, "Times New Roman", serif':'"DM Sans", sans-serif');
     priceStyle=data.priceStyle||'design';priceBrand=(themes[data.theme]||themes.green)[0];
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
+    if(['square','landscape'].includes(data.format)||(['parade','shelf','paper','arc','ticket','terrace'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose)))return drawFlexible(canvas,data,images);
     if(['event','opening'].includes(data.purpose))return drawAnnouncement(canvas,data,images);
     if(data.purpose==='spotlight')return drawSpotlight(canvas,data,images);
+    if(['wholesale','mosaic','fresh'].includes(data.template))return drawMerchant(canvas,data,images);
+    if(['sunburst','botanical','blueprint','scrapbook','candy','mono'].includes(data.template))return drawVariations(canvas,data,images);
     if(collection[data.template])return drawCollection(canvas,data,images);
     if(['super','ribbon','signature'].includes(data.template)||data.items.length>12||(data.template!=='simple'&&data.items.some(i=>i.featured)))return drawCatalogue(canvas,data,images);
     if(['boutique','menu','studio'].includes(data.template))return drawBusiness(canvas,data,images);
     if(['bold','market'].includes(data.template))return drawDesigned(canvas,data,images);
     if(data.template==='retail')return drawRetail(canvas,data,images);
-    const layout=geometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;
-    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this poster.');
+    const layout=geometry(data.format,data.items.length);const ctx=surface(canvas,layout.height);
     const [bg,accent,paper]=themes[data.theme]||themes.green;
     ctx.fillStyle=bg;ctx.fillRect(0,0,1080,layout.height);
     ctx.fillStyle=accent;ctx.fillRect(60,layout.status?116:40,70,6);
     const header=layout.status?190:112;
     const logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,60,header-65,120,90);fit(ctx,data.shop||'Your business',205,header,815,44,accent,600);}
+    if(logo){const extra=drawLogo(ctx,logo,60,header-65,120,90);fit(ctx,data.shop||'Your business',(205)+extra,header,(815)-extra,44,accent,600);}
     else fit(ctx,data.shop||'Your business',60,header,960,44,accent,600);
     fit(ctx,data.copy.eyebrow,60,header+43,960,20,accent,600);
     fit(ctx,data.headline||'Your special offers',60,header+96,960,64,'#ffffff',800);
@@ -114,10 +162,10 @@
       const nameY=card.y+(spacious?card.h*.29:67);
       fit(ctx,item.name||'Offer name',x,nameY,width,spacious?64:49,bg,700);
       if(item.size)fit(ctx,item.size,x,nameY+(spacious?59:44),width,spacious?38:31,bg,400);
-      const price=(item.price!==''&&Number.isFinite(Number(item.price))&&Number(item.price)>0)?money(item.price):'R —';
+      const price=(item.dealQuantity?item.dealQuantity+' for ':'')+((item.price!==''&&Number.isFinite(Number(item.price))&&Number(item.price)>0)?money(item.price):'R —');
       const priceY=spacious?card.y+card.h*.7:card.y+card.h-40;
       fit(ctx,price,x,priceY,width,spacious?138:Math.min(112,card.h*.38),bg,800);
-      if(spacious)fit(ctx,data.copy.unit.toUpperCase(),x,priceY+50,width,25,bg,600);
+      if(spacious)fit(ctx,item.dealQuantity?'FOR '+item.dealQuantity+' ITEMS':data.copy.unit.toUpperCase(),x,priceY+50,width,25,bg,600);
     });
     const y=layout.footerY;
     fit(ctx,data.copy.date,60,y,960,30,'#ffffff',500);
@@ -130,7 +178,7 @@
   function retailGeometry(format,count){
     if(count>12)return catalogueGeometry(format,count);
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Retail flyers need 1 to 25 products.');
-    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns);
+    const status=format==='status',height=formatHeight(format),columns=gridColumns(count),rows=Math.ceil(count/columns);
     const top=status?410:310,bottom=height-(status?300:180),gap=20,w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,top,bottom,columns,rows,cards:Array.from({length:count},(_,i)=>({x:40+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h})),footerY:bottom+36};
   }
@@ -153,12 +201,20 @@
     const left=x+(width-m.a-m.b-6)/2,baseline=y+(height+size*.72)/2;
     fit(ctx,main,left,baseline,m.a+2,size,ink,800);fit(ctx,fraction,left+m.a+5,baseline-size*.43,m.b+2,size*.48,ink,800);
   }
+  function offerPrice(ctx,item,x,y,width,height,background='#ffe132',ink='#111111'){
+    if(!item.dealQuantity){drawPrice(ctx,item.price,x,y,width,height,background,ink);return;}
+    const labelW=Math.min(78,width*.28),labelInk=priceBrand;
+    ctx.fillStyle='#ffffff';ctx.fillRect(x,y,labelW,height);
+    fit(ctx,String(item.dealQuantity),x+3,y+height*.49,labelW-6,Math.min(31,height*.5),labelInk,800);
+    fit(ctx,'FOR',x+3,y+height*.86,labelW-6,Math.min(18,height*.27),labelInk,800);
+    drawPrice(ctx,item.price,x+labelW,y,width-labelW,height,background,ink);
+  }
   function drawRetail(canvas,data,images){
-    const layout=retailGeometry(data.format,data.items.length);canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||'#cc1726';const dark='#15231d';
+    const layout=retailGeometry(data.format,data.items.length);const ctx=surface(canvas,layout.height);
+    const brand={red:'#cc1726',green:'#105940',blue:'#17386e',orange:'#b84912',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#cc1726';const dark='#15231d';
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,layout.height);
     const top=layout.status?125:22,logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your business',183,top+46,853,43,dark,800);}
+    if(logo){const extra=drawLogo(ctx,logo,40,top,122,68);fit(ctx,data.shop||'Your business',(183)+extra,top+46,(853)-extra,43,dark,800);}
     else fit(ctx,data.shop||'Your business',40,top+49,1000,44,dark,800);
     const bannerY=top+89,bannerH=126;ctx.fillStyle=brand;ctx.fillRect(0,bannerY,1080,bannerH);ctx.fillStyle='#ffe132';ctx.fillRect(0,bannerY+bannerH-9,1080,9);
     fit(ctx,data.copy.eyebrow,40,bannerY+30,1000,19,'#ffffff',700);
@@ -174,7 +230,7 @@
         const textY=Math.max(c.y+name.font,packY-15-(name.lines.length-1)*(name.font+4));
         for(const [j,line] of name.lines.entries())fit(ctx,line,labelX+4,textY+j*(name.font+4),labelW-8,name.font,dark,700);
         ctx.fillStyle=brand;ctx.fillRect(labelX,packY,labelW,packH);fit(ctx,item.size||data.copy.unit,labelX+8,packY+packH*.75,labelW-16,packH*.65,'#ffffff',700);
-        drawPrice(ctx,item.price,labelX,priceY,labelW,priceH);
+        offerPrice(ctx,item,labelX,priceY,labelW,priceH);
         continue;
       }
       const priceH=Math.min(105,Math.max(43,c.h*.2)),sizeH=Math.min(35,Math.max(21,c.h*.085)),nameSize=Math.min(34,Math.max(21,c.h*.085));
@@ -190,7 +246,7 @@
         for(const line of title.lines){fit(ctx,line,c.x+18,ty,c.w-36,title.font,brand,800);ty+=title.font+8;}
       }
       ctx.fillStyle=brand;ctx.fillRect(c.x,sizeY,c.w,sizeH);fit(ctx,item.size||data.copy.unit,c.x+10,sizeY+sizeH*.75,c.w-20,sizeH*.67,'#ffffff',700);
-      drawPrice(ctx,item.price,c.x,priceY,c.w,priceH);
+      offerPrice(ctx,item,c.x,priceY,c.w,priceH);
     }
     const fy=layout.footerY;ctx.fillStyle=brand;ctx.fillRect(0,fy-17,1080,layout.status?74:58);
     fit(ctx,data.location||data.shop||'Get in touch',40,fy+(layout.status?24:17),1000,layout.status?36:30,'#ffffff',700);
@@ -203,7 +259,7 @@
   function designedGeometry(template,format,count){
     if(count>12)return catalogueGeometry(format,count);
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Flyers need 1 to 25 products.');
-    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns),gap=18;
+    const status=format==='status',height=formatHeight(format),columns=gridColumns(count),rows=Math.ceil(count/columns),gap=18;
     const top=(template==='bold'?370:340)+(status?100:0),bottom=height-(status?290:190),w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,columns,rows,top,bottom,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:40+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
   }
@@ -216,12 +272,12 @@
   }
   function drawDesigned(canvas,data,images){
     const layout=designedGeometry(data.template,data.format,data.items.length),bold=data.template==='bold';
-    canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
+    const ctx=surface(canvas,layout.height);
+    const brand={red:'#c91328',green:'#10563e',blue:'#163b70',orange:'#a83c12',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||(bold?'#c91328':'#10563e'),ink='#15271e',accent=bold?'#ffe134':'#d4f1bc';
     ctx.fillStyle=bold?'#f3f4f1':'#ffffff';ctx.fillRect(0,0,1080,layout.height);
     const offset=layout.status?100:0,logo=data.logo?images.get(data.logo):null;
     ctx.fillStyle='#fff';ctx.fillRect(0,0,1080,bold?106+offset:layout.top-14);
-    if(logo){contain(ctx,logo,40,24+offset,122,70);fit(ctx,data.shop||'Your business',184,71+offset,856,43,ink,800);}
+    if(logo){const extra=drawLogo(ctx,logo,40,24+offset,122,70);fit(ctx,data.shop||'Your business',(184)+extra,71+offset,(856)-extra,43,ink,800);}
     else fit(ctx,data.shop||'Your business',40,71+offset,1000,46,ink,800);
     if(bold){
       const by=106+offset;ctx.fillStyle=brand;ctx.fillRect(0,by,1080,196);
@@ -257,7 +313,7 @@
       }
       roundBox(ctx,labelX,packY,labelW,packH,bold?0:5,bold?brand:'#edf5ee');
       fit(ctx,item.size||data.copy.unit,labelX+8,packY+packH*.75,labelW-16,Math.min(23,packH*.68),bold?'#ffffff':brand,700);
-      drawPrice(ctx,item.price,labelX,priceY,labelW,priceH,bold?accent:null,bold?'#151515':brand);
+      offerPrice(ctx,item,labelX,priceY,labelW,priceH,bold?accent:null,bold?'#151515':brand);
     }
     const fy=layout.footerY;
     if(bold){ctx.fillStyle=brand;ctx.fillRect(0,fy,1080,104);}else{ctx.fillStyle=brand;ctx.fillRect(40,fy,1000,3);}
@@ -269,28 +325,28 @@
   function businessGeometry(template,format,count){
     if(count>12)return catalogueGeometry(format,count);
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose 1 to 25 items.');
-    const status=format==='status',height=status?1920:1350,offset=status?100:0;
+    const status=format==='status',height=formatHeight(format),offset=status?100:0;
     const gallery=template==='boutique',columns=gallery?gridColumns(count):(count<=6?1:count<=12?2:count<=18?3:4),rows=Math.ceil(count/columns);
     const top=350+offset,bottom=height-(status?290:200),gap=gallery?18:12,w=(984-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     return {height,status,top,bottom,columns,rows,footerY:bottom+24,cards:Array.from({length:count},(_,i)=>({x:48+(i%columns)*(w+gap),y:top+Math.floor(i/columns)*(h+gap),w,h}))};
   }
   function drawBusiness(canvas,data,images){
     const layout=businessGeometry(data.template,data.format,data.items.length),gallery=data.template==='boutique',menu=data.template==='menu';
-    const brand={red:'#b91d30',green:'#1b5642',blue:'#203e63',orange:'#97441f',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||'#292822';
+    const brand={red:'#b91d30',green:'#1b5642',blue:'#203e63',orange:'#97441f',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#292822';
     const ink='#272823',paper=gallery?'#faf7f1':menu?'#fff8ec':'#f5f3f6',offset=layout.status?100:0;
-    canvas.width=1080;canvas.height=layout.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this poster.');
+    const ctx=surface(canvas,layout.height);
     ctx.fillStyle=paper;ctx.fillRect(0,0,1080,layout.height);
     const logo=data.logo?images.get(data.logo):null;
     if(gallery){
       ctx.fillStyle=brand;ctx.fillRect(48,34+offset,56,5);
-      if(logo){contain(ctx,logo,48,57+offset,98,67);fit(ctx,data.shop||'Your business',168,102+offset,864,43,ink,700);}
+      if(logo){const extra=drawLogo(ctx,logo,48,57+offset,98,67);fit(ctx,data.shop||'Your business',(168)+extra,102+offset,(864)-extra,43,ink,700);}
       else fit(ctx,data.shop||'Your business',48,102+offset,984,46,ink,700);
       fit(ctx,data.copy.eyebrow,48,158+offset,984,20,brand,600);
       nameLines(ctx,data.headline||'Find your next favourite.',48,278+offset,984,66,105,2,brand);
       fit(ctx,data.copy.date,48,321+offset,984,24,ink,400);
     }else{
       ctx.fillStyle=brand;ctx.fillRect(0,0,1080,292+offset);
-      if(logo){contain(ctx,logo,48,32+offset,98,64);fit(ctx,data.shop||'Your business',168,77+offset,864,37,'#fff',700);}
+      if(logo){const extra=drawLogo(ctx,logo,48,32+offset,98,64);fit(ctx,data.shop||'Your business',(168)+extra,77+offset,(864)-extra,37,'#fff',700);}
       else fit(ctx,data.shop||'Your business',48,77+offset,984,40,'#fff',700);
       ctx.fillStyle='#ffffff40';ctx.fillRect(48,109+offset,984,1);
       fit(ctx,data.copy.eyebrow,48,148+offset,984,20,menu?'#ffe2b6':'#efdeed',600);
@@ -311,7 +367,7 @@
         nameLines(ctx,item.name||'Item name',x,nameBottom,w,title.font,Math.min(nameH,nameBottom-c.y-pad),2,ink);
         fit(ctx,item.size||data.copy.unit,x,detailY,w,Math.min(25,c.h*.09),brand,400);
         ctx.fillStyle='#e4dfd5';ctx.fillRect(x,priceY+2,w,1);
-        drawPrice(ctx,item.price,x,priceY+6,w,priceH-6,null,brand);
+        offerPrice(ctx,item,x,priceY+6,w,priceH-6,null,brand);
       }else{
         if(!menu)roundBox(ctx,c.x,c.y,c.w,c.h,12,'#fff','#e7e1e7');
         const pad=menu?4:18,innerH=c.h-pad*2;
@@ -323,7 +379,7 @@
         nameLines(ctx,item.name||'Offer name',x,nameBottom,labelW,nameSize,innerH*.58,2,ink);
         fit(ctx,item.size||data.copy.unit,x,Math.min(c.y+c.h-16,nameBottom+34),labelW,Math.min(24,Math.max(18,innerH*.16)),brand,400);
         if(!menu)roundBox(ctx,priceX,c.y+c.h*.5-29,priceW,58,8,paper);
-        drawPrice(ctx,item.price,priceX,c.y+c.h*.5-28,priceW,56,null,brand);
+        offerPrice(ctx,item,priceX,c.y+c.h*.5-28,priceW,56,null,brand);
         if(menu){ctx.strokeStyle='#d8c4ac';ctx.lineWidth=1;ctx.setLineDash([3,6]);ctx.beginPath();ctx.moveTo(c.x,c.y+c.h-1);ctx.lineTo(c.x+c.w,c.y+c.h-1);ctx.stroke();ctx.setLineDash([]);}
       }
     }
@@ -336,14 +392,14 @@
     return layout;
   }
   function projectSurface(canvas,data){
-    const height=data.format==='status'?1920:1350,offset=data.format==='status'?100:0;
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
-    const brand={red:'#b91d30',green:'#174d3c',blue:'#1c365f',orange:'#943c1d',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||'#174d3c';
+    const height=formatHeight(data.format),offset=data.format==='status'?100:0;
+    const ctx=surface(canvas,height);
+    const brand={red:'#b91d30',green:'#174d3c',blue:'#1c365f',orange:'#943c1d',plum:'#613b59',charcoal:'#292822',teal:'#075e64',gold:'#20232c',berry:'#941c50',violet:'#5632a0',cobalt:'#134bb3',coral:'#ab3543',coffee:'#503529'}[data.theme]||themes[data.theme]?.[0]||'#174d3c';
     return {ctx,height,offset,brand};
   }
   function projectBrand(ctx,data,images,y,ink){
     const logo=data.logo?images.get(data.logo):null;
-    if(logo){contain(ctx,logo,48,y+30,108,70);fit(ctx,data.shop||'Your business',176,y+79,856,43,ink,700);}
+    if(logo){const extra=drawLogo(ctx,logo,48,y+30,108,70);fit(ctx,data.shop||'Your business',(176)+extra,y+79,(856)-extra,43,ink,700);}
     else fit(ctx,data.shop||'Your business',48,y+79,984,45,ink,700);
   }
   function projectCredit(ctx,data,y,ink){fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',800,y,232,19,ink,500);}
@@ -378,7 +434,7 @@
     const titleBottom=top+(photo?178:185),priceY=top+253;
     nameLines(ctx,item.name||'Your featured offer',x,titleBottom,w,photo?54:76,153,3,brand);
     fit(ctx,item.size||data.copy.unit,x,top+224,w,32,brand,500);
-    drawPrice(ctx,item.price,x,priceY,w,photo?118:151,'#ffe132',brand);
+    offerPrice(ctx,item,x,priceY,w,photo?118:151,'#ffe132',brand);
     nameLines(ctx,data.details||'',x,Math.min(bottom-34,priceY+(photo?340:370)),w,29,170,5,'#3f5547');
     const fy=bottom+28;fit(ctx,data.copy.date,48,fy+17,984,24,brand,500);fit(ctx,data.copy.location||data.shop||'',48,fy+56,984,29,brand,700);
     fit(ctx,data.copy.contact,48,fy+95,984,28,brand,600);fit(ctx,data.copy.terms,48,fy+144,710,20,'#617265',400);projectCredit(ctx,data,fy+144,'#617265');
@@ -388,7 +444,7 @@
   function gridColumns(count){return count<=3?1:count<=6?2:count<=12?3:count<=20?4:5;}
   function catalogueGeometry(format,count){
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose 1 to 25 items.');
-    const status=format==='status',height=status?1920:1350,columns=gridColumns(count),rows=Math.ceil(count/columns),gap=count>12?14:18;
+    const status=format==='status',height=formatHeight(format),columns=gridColumns(count),rows=Math.ceil(count/columns),gap=count>12?14:18;
     const top=(count>12?266:340)+(status?100:0),bottom=height-(status?280:180),w=(1000-gap*(columns-1))/columns,h=(bottom-top-gap*(rows-1))/rows;
     const cards=Array.from({length:count},(_,i)=>{
       const row=Math.floor(i/columns),onRow=Math.min(columns,count-row*columns),inset=(columns-onRow)*(w+gap)/2;
@@ -445,18 +501,18 @@
     if(filled){ctx.fillStyle=brand;ctx.fillRect(x,sizeY,w,sizeH);}
     fit(ctx,item.size||unit,x+6,sizeY+sizeH*.74,w-12,dense?18:21,filled?'#ffffff':brand,600);
     if(mode==='signature'){ctx.fillStyle=accent;ctx.fillRect(x,priceY,w,2);}
-    drawPrice(ctx,item.price,x,priceY+(mode==='signature'?3:0),w,priceH-(mode==='signature'?3:0),filled?accent:mode==='ribbon'?'#edf3f8':null,filled?'#161e24':brand);
+    offerPrice(ctx,item,x,priceY+(mode==='signature'?3:0),w,priceH-(mode==='signature'?3:0),filled?accent:mode==='ribbon'?'#edf3f8':null,filled?'#161e24':brand);
     ctx.restore();
   }
   function drawCatalogue(canvas,data,images){
     const layout=offerGeometry(data),{height,top,footerY:fy}=layout,offset=layout.status?100:0,dense=data.items.length>12;
     const mode=data.template,signature=['signature','boutique'].includes(mode),ribbon=mode==='ribbon',clean=['market','studio','menu'].includes(mode);
     const brand=(themes[data.theme]||themes.red)[0],accent=data.theme==='gold'?'#e7c574':signature?'#d9c28c':data.theme==='berry'?'#ffe0ec':'#ffe132',ink='#17232a';
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,height);
     ctx.fillStyle=signature?'#f7f5ef':clean?'#ffffff':'#f1f4f5';ctx.fillRect(0,0,1080,height);
     const logo=data.logo?images.get(data.logo):null,brandY=offset+18,brandBottom=offset+96;
     ctx.fillStyle=signature?brand:'#ffffff';ctx.fillRect(0,0,1080,brandBottom);
-    if(logo){contain(ctx,logo,40,brandY,100,61);fit(ctx,data.shop||'Your business',162,brandY+43,878,38,signature?'#ffffff':ink,800);}
+    if(logo){const extra=drawLogo(ctx,logo,40,brandY,100,61);fit(ctx,data.shop||'Your business',(162)+extra,brandY+43,(878)-extra,38,signature?'#ffffff':ink,800);}
     else fit(ctx,data.shop||'Your business',40,brandY+44,1000,41,signature?'#ffffff':ink,800);
     const by=brandBottom,headingBottom=top-55,headingH=headingBottom-by;
     if(signature){
@@ -533,7 +589,7 @@
     fit(ctx,item.size||unit,x+6,packY+sizeH*.73,w-12,dense?18:22,mode==='warehouse'?'#ffffff':brand,600);
     if(quiet){ctx.fillStyle=brand;ctx.fillRect(x,priceY,w,1);}
     if(mode==='street'&&priceStyle==='design')roundBox(ctx,x,priceY,w,priceH,Math.min(26,priceH/2),accent);
-    drawPrice(ctx,item.price,x,priceY+(quiet?3:0),w,priceH-(quiet?3:0),quiet||mode==='street'?null:dark?accent:mode==='warehouse'?'#ffe232':brand,quiet||mode==='street'?brand:dark||mode==='warehouse'?'#162321':'#ffffff');
+    offerPrice(ctx,item,x,priceY+(quiet?3:0),w,priceH-(quiet?3:0),quiet||mode==='street'?null:dark?accent:mode==='warehouse'?'#ffe232':brand,quiet||mode==='street'?brand:dark||mode==='warehouse'?'#162321':'#ffffff');
     ctx.restore();
   }
   function drawCollection(canvas,data,images){
@@ -541,11 +597,11 @@
     const mode=data.template,dense=data.items.length>12,[brand,pale,paper]=themes[data.theme]||themes.red;
     const noir=mode==='noir',quiet=mode==='editorial'||mode==='atelier',accent=noir?pale:mode==='warehouse'?'#ffe232':pale,ink=noir?'#ffffff':'#182526';
     const hb=top-50,headline=data.headline||'Discover your next favourite.';
-    canvas.width=1080;canvas.height=height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=surface(canvas,height);
     ctx.fillStyle=noir?'#121621':mode==='editorial'?'#ffffff':paper;ctx.fillRect(0,0,1080,height);
     const brandLine=(baseline,color,x=40,width=1000)=>{
       const logo=data.logo?images.get(data.logo):null;
-      if(logo){contain(ctx,logo,x,baseline-44,88,53);fit(ctx,data.shop||'Your business',x+107,baseline,width-107,dense?32:38,color,800);}
+      if(logo){const extra=drawLogo(ctx,logo,x,baseline-44,88,53);fit(ctx,data.shop||'Your business',(x+107)+extra,baseline,(width-107)-extra,dense?32:38,color,800);}
       else fit(ctx,data.shop||'Your business',x,baseline,width,dense?34:40,color,800);
     };
     const centered=(text,y,width,size,color)=>{
@@ -609,5 +665,265 @@
     return layout;
   }
 
-  root.ShopDeskPoster={collection,themes,draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,featuredGeometry,contentBounds,displayName,packWarning};
+  function variationCard(ctx,item,c,image,style,index){
+    const {mode,brand,accent,paper,unit}=style,dense=c.w<265,pad=dense?10:18;
+    const soft=mode==='botanical'||mode==='candy',radius=soft?(dense?16:30):mode==='sunburst'?12:0;
+    if(mode==='scrapbook'){ctx.fillStyle=accent;ctx.fillRect(c.x+4,c.y+5,c.w-4,c.h-5);}
+    roundBox(ctx,c.x,c.y,c.w-(mode==='scrapbook'?5:0),c.h-(mode==='scrapbook'?5:0),radius,'#ffffff',mode==='blueprint'?brand:'#dce2dc');
+    ctx.save();ctx.beginPath();ctx.rect(c.x+1,c.y+1,c.w-2,c.h-2);ctx.clip();
+    let decoration=0;
+    if(mode==='scrapbook'){
+      ctx.save();ctx.translate(c.x+c.w/2,c.y+9);ctx.rotate(-.07);ctx.globalAlpha=.8;ctx.fillStyle=accent;ctx.fillRect(-Math.min(44,c.w*.2),-8,Math.min(88,c.w*.4),18);ctx.restore();decoration=10;
+    }else if(mode==='blueprint'){
+      ctx.fillStyle=brand;ctx.fillRect(c.x,c.y,42,dense?22:28);fit(ctx,String(index+1).padStart(2,'0'),c.x+8,c.y+(dense?17:21),28,dense?14:17,'#ffffff',700);decoration=dense?12:18;
+      ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(c.x+c.w-25,c.y+9);ctx.lineTo(c.x+c.w-9,c.y+9);ctx.lineTo(c.x+c.w-9,c.y+25);ctx.stroke();
+    }else if(mode==='mono'){
+      ctx.fillStyle=brand;ctx.fillRect(c.x,c.y,c.w,8);decoration=6;
+    }else if(mode==='sunburst'){
+      ctx.strokeStyle=brand;ctx.lineWidth=1;ctx.setLineDash([4,5]);ctx.beginPath();ctx.moveTo(c.x+pad,c.y+13);ctx.lineTo(c.x+c.w-pad,c.y+13);ctx.stroke();ctx.setLineDash([]);decoration=8;
+    }
+    const x=c.x+pad,w=c.w-2*pad,top=c.y+pad+decoration,priceH=Math.min(84,Math.max(dense?32:42,c.h*.2)),priceY=c.y+c.h-pad-priceH,sizeH=dense?20:26,nameBottom=priceY-sizeH-8;
+    const title=lines(ctx,item.name||'Your offer',w,dense?20:Math.min(43,w*.13),2),nameH=title.lines.length*(title.font+4);
+    if(image){contain(ctx,image,x,top,w,Math.max(10,nameBottom-nameH-top-8),item);nameLines(ctx,item.name||'Your offer',x,nameBottom,w,title.font,nameH,2,'#1c2c28');}
+    else{
+      const available=Math.max(10,nameBottom-top),spacious=c.w>650&&c.h>400;
+      if(mode==='candy'){roundBox(ctx,x,top,w,available,Math.min(22,available/2),index%2?paper:accent);}
+      nameLines(ctx,item.name||'Your offer',x+4,top+available*(spacious?.6:.72),w-8,Math.min(dense?25:spacious?112:48,w*.15),available*.9,3,brand);
+    }
+    fit(ctx,item.size||unit,x,priceY-8,w,dense?17:21,brand,500);
+    if(mode==='botanical'||mode==='scrapbook'){
+      ctx.fillStyle=accent;ctx.fillRect(x,priceY,w,2);offerPrice(ctx,item,x,priceY+4,w,priceH-4,null,brand);
+    }else if(mode==='candy'){
+      if(priceStyle==='design')roundBox(ctx,x,priceY,w,priceH,priceH/2,accent);
+      offerPrice(ctx,item,x,priceY,w,priceH,null,brand);
+    }else offerPrice(ctx,item,x,priceY,w,priceH,mode==='sunburst'?accent:brand,mode==='sunburst'?brand:'#ffffff');
+    if(mode==='sunburst'){
+      ctx.fillStyle=paper;for(const y of [c.y+c.h*.38,c.y+c.h*.62])for(const side of [c.x,c.x+c.w]){ctx.beginPath();ctx.arc(side,y,6,0,Math.PI*2);ctx.fill();}
+    }
+    ctx.restore();
+  }
+  function drawVariations(canvas,data,images){
+    const layout=offerGeometry(data),{height,top,footerY:fy}=layout,mode=data.template,[brand,accent,paper]=themes[data.theme]||themes.green,dense=data.items.length>12,offset=layout.status?100:0,hb=top-42;
+    const ctx=surface(canvas,height);
+    ctx.fillStyle=mode==='blueprint'?brand:paper;ctx.fillRect(0,0,1080,height);
+    const brandLine=(y,color)=>{const logo=data.logo?images.get(data.logo):null;if(logo){const extra=drawLogo(ctx,logo,40,y-42,80,50);fit(ctx,data.shop||'Your business',(138)+extra,y,(902)-extra,dense?30:36,color,800);}else fit(ctx,data.shop||'Your business',40,y,1000,dense?34:40,color,800);};
+    const heading=(x,y,w,h,color,size=dense?46:68)=>nameLines(ctx,data.headline||'Make every day special.',x,y,w,size,h,2,color);
+    if(mode==='sunburst'){
+      ctx.save();ctx.beginPath();ctx.rect(0,0,1080,hb);ctx.clip();
+      for(let i=0;i<24;i++){const angle=i*Math.PI/12;ctx.fillStyle=i%2?accent:paper;ctx.beginPath();ctx.moveTo(880,offset+15);ctx.lineTo(880+1400*Math.cos(angle),offset+15+1400*Math.sin(angle));ctx.lineTo(880+1400*Math.cos(angle+Math.PI/12),offset+15+1400*Math.sin(angle+Math.PI/12));ctx.closePath();ctx.fill();}ctx.restore();
+      brandLine(offset+57,brand);roundBox(ctx,40,offset+78,1000,hb-offset-83,12,brand);
+      fit(ctx,data.copy.eyebrow,60,offset+111,960,20,accent,700);heading(60,hb-22,960,hb-offset-143,'#ffffff');
+    }else if(mode==='botanical'){
+      const leaf=(x,y,angle)=>{ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=accent;ctx.beginPath();ctx.ellipse(0,0,40,91,0,0,Math.PI*2);ctx.fill();ctx.restore();};
+      for(let i=0;i<4;i++){leaf(35+i*28,offset+68+i*49,-.55);leaf(1050-i*28,offset+38+i*53,.55);}
+      brandLine(offset+57,brand);roundBox(ctx,155,offset+87,770,hb-offset-90,Math.min(60,(hb-offset-90)/2),'#ffffff');
+      fit(ctx,data.copy.eyebrow,185,offset+119,710,18,brand,500);heading(185,hb-20,710,hb-offset-146,brand,dense?39:57);
+    }else if(mode==='blueprint'){
+      ctx.save();ctx.globalAlpha=.15;ctx.strokeStyle=accent;ctx.lineWidth=1;for(let x=0;x<=1080;x+=36){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,height);ctx.stroke();}for(let y=0;y<=height;y+=36){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(1080,y);ctx.stroke();}ctx.restore();
+      brandLine(offset+57,'#ffffff');ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.strokeRect(40,offset+81,1000,hb-offset-87);
+      fit(ctx,data.copy.eyebrow,62,offset+117,956,20,accent,700);heading(62,hb-24,956,hb-offset-143,'#ffffff');
+    }else if(mode==='scrapbook'){
+      brandLine(offset+57,brand);ctx.fillStyle=accent;ctx.fillRect(52,offset+98,980,hb-offset-90);ctx.fillStyle='#ffffff';ctx.fillRect(40,offset+85,980,hb-offset-98);
+      ctx.save();ctx.translate(500,offset+87);ctx.rotate(-.07);ctx.globalAlpha=.85;ctx.fillStyle=accent;ctx.fillRect(-86,-12,172,27);ctx.restore();
+      fit(ctx,data.copy.eyebrow,65,offset+132,930,19,brand,600);heading(65,hb-29,930,hb-offset-158,brand,dense?42:64);
+    }else if(mode==='candy'){
+      ctx.fillStyle=accent;ctx.fillRect(0,0,1080,hb-15);for(let x=0;x<1120;x+=80){ctx.beginPath();ctx.arc(x,hb-15,40,0,Math.PI*2);ctx.fill();}
+      ctx.save();ctx.globalAlpha=.65;ctx.fillStyle='#ffffff';for(const [x,y,r] of [[980,55,84],[870,offset+150,44],[68,offset+155,54]]){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();}ctx.restore();
+      brandLine(offset+57,brand);fit(ctx,data.copy.eyebrow,40,offset+99,1000,20,brand,700);heading(40,hb-24,1000,hb-offset-125,brand);
+    }else{
+      ctx.fillStyle=brand;ctx.fillRect(0,0,1080,offset+80);brandLine(offset+54,'#ffffff');
+      fit(ctx,data.copy.eyebrow,40,offset+116,1000,21,brand,800);heading(40,hb-22,1000,hb-offset-142,brand,dense?57:82);
+      ctx.fillStyle=brand;ctx.fillRect(40,hb-6,1000,8);ctx.fillStyle=accent;ctx.fillRect(40,hb-6,150,8);
+    }
+    fit(ctx,data.copy.date,40,top-13,1000,20,mode==='blueprint'?accent:brand,600);
+    for(const [i,item] of data.items.entries())featuredCard(ctx,layout.cards[i],brand,c=>variationCard(ctx,item,c,item.photo?images.get(item.photo):null,{mode,brand,accent,paper,unit:data.copy.unit},i));
+    if(mode==='botanical'){
+      ctx.strokeStyle=brand;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(40,fy+2);ctx.lineTo(1040,fy+2);ctx.stroke();
+      fit(ctx,data.copy.location||data.shop||'',40,fy+41,1000,29,brand,600);fit(ctx,data.copy.contact,40,fy+82,1000,25,brand,500);
+    }else if(mode==='blueprint'){
+      ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.strokeRect(40,fy,1000,105);fit(ctx,data.copy.location||data.shop||'',60,fy+39,960,29,'#ffffff',700);fit(ctx,data.copy.contact,60,fy+80,960,25,accent,600);
+    }else if(mode==='scrapbook'){
+      ctx.fillStyle=accent;ctx.fillRect(45,fy+5,995,103);ctx.fillStyle='#ffffff';ctx.fillRect(40,fy,995,103);fit(ctx,data.copy.location||data.shop||'',60,fy+40,955,29,brand,700);fit(ctx,data.copy.contact,60,fy+80,955,25,brand,500);
+    }else{
+      roundBox(ctx,40,fy,1000,105,mode==='candy'?45:mode==='sunburst'?10:0,brand);fit(ctx,data.copy.location||data.shop||'',68,fy+41,944,29,'#ffffff',800);fit(ctx,data.copy.contact,68,fy+81,944,25,accent,600);
+    }
+    fit(ctx,data.copy.terms,40,fy+140,726,19,mode==='blueprint'?accent:'#566361',400);projectCredit(ctx,data,fy+140,mode==='blueprint'?accent:'#566361');return layout;
+  }
+  function merchantGeometry(format,count,mode,featuredIndex=-1){
+    return mode==='mosaic'?featuredGeometry(format,count,featuredIndex<0?0:featuredIndex):featuredGeometry(format,count,featuredIndex);
+  }
+  function merchantCard(ctx,item,c,image,{mode,brand,accent,paper,unit}){
+    const dense=c.w<240||c.h<230,pad=dense?9:16,x=c.x+pad,y=c.y+pad,w=c.w-2*pad,h=c.h-2*pad;
+    const dark=mode==='fresh',radius=mode==='wholesale'?0:dense?12:22;
+    ctx.save();
+    if(mode==='mosaic'){ctx.shadowColor='#122d2930';ctx.shadowBlur=10;ctx.shadowOffsetY=5;}
+    roundBox(ctx,c.x,c.y,c.w,c.h,radius,'#ffffff',mode==='wholesale'?'#d5dadd':null);ctx.restore();
+    ctx.save();ctx.beginPath();ctx.rect(c.x+1,c.y+1,c.w-2,c.h-2);ctx.clip();
+    if(c.h<170){
+      const p=7,innerW=c.w-p*2,ticketH=Math.min(39,c.h*.29),ticketY=c.y+c.h-p-ticketH,contentH=ticketY-c.y-p-5;
+      const imageW=image?innerW*.43:0,tx=c.x+p+imageW+(image?5:0),tw=innerW-imageW-(image?5:0);
+      if(image)contain(ctx,image,c.x+p,c.y+p,Math.max(10,imageW-4),contentH,item);
+      const title=lines(ctx,item.name||'Your product',tw,18,2),font=Math.min(18,(contentH-17)/title.lines.length-2);
+      title.lines.forEach((line,i)=>fit(ctx,line,tx,c.y+p+font+(font+2)*i,tw,font,'#192822',700));
+      fit(ctx,item.size||unit,tx,ticketY-6,tw,13,brand,600);
+      if(mode==='wholesale'){ctx.fillStyle=accent;ctx.fillRect(c.x+p-2,ticketY-2,innerW+4,ticketH+4);}
+      offerPrice(ctx,item,c.x+p,ticketY,innerW,ticketH,dark?'#17251f':brand,'#ffffff');ctx.restore();return;
+    }
+    const priceH=Math.min(104,Math.max(dense?39:54,h*.2)),priceY=y+h-priceH;
+    const sizeH=dense?19:24,titleSize=dense?21:Math.min(34,w*.12),title=lines(ctx,item.name||'Your product',w,titleSize,2);
+    const headlineH=title.lines.length*(title.font+3),detailsBottom=priceY-sizeH-7;
+    const side=image&&(mode==='wholesale'||c.w/c.h>1.35||dense),photoW=side?w*.53:w;
+    let tx=x,tw=w,nameBottom=detailsBottom;
+    if(side){
+      contain(ctx,image,x,y,photoW-8,Math.max(15,priceY-y-12),item);
+      tx=x+photoW+4;tw=w-photoW-4;
+      nameLines(ctx,item.name||'Your product',tx,y+Math.max(headlineH,(priceY-y)*.57),tw,dense?21:Math.min(42,tw*.2),Math.max(28,priceY-y-sizeH-17),3,'#192822');
+      fit(ctx,item.size||unit,tx,priceY-13,tw,dense?16:24,brand,700);
+    }else{
+      if(image){
+        const photoH=Math.max(12,detailsBottom-headlineH-y-10);contain(ctx,image,x,y,w,photoH,item);
+        nameLines(ctx,item.name||'Your product',x,nameBottom,w,titleSize,headlineH,2,'#192822');
+      }else{
+        const space=detailsBottom-y;ctx.fillStyle=mode==='wholesale'?paper:accent;ctx.fillRect(x,y,w,Math.max(5,space));
+        nameLines(ctx,item.name||'Your product',x+7,y+space*.68,w-14,dense?26:Math.min(88,w*.18),space*.8,3,brand);
+      }
+      fit(ctx,item.size||unit,x,priceY-10,w,dense?16:24,brand,700);
+    }
+    if(mode==='wholesale'){
+      ctx.fillStyle=accent;ctx.fillRect(x-3,priceY-3,w+6,priceH+6);offerPrice(ctx,item,x,priceY,w,priceH,brand,'#ffffff');
+    }else if(dark){
+      offerPrice(ctx,item,x,priceY,w,priceH,'#17251f','#ffffff');
+    }else{
+      offerPrice(ctx,item,x,priceY,w,priceH,brand,'#ffffff');
+    }
+    if(c.featured){ctx.fillStyle=accent;ctx.fillRect(c.x,c.y,5,c.h);}
+    ctx.restore();
+  }
+  function drawMerchant(canvas,data,images){
+    const mode=data.template,layout=merchantGeometry(data.format,data.items.length,mode,data.items.findIndex(i=>i.featured));
+    const {height,top,footerY:fy}=layout,offset=layout.status?100:0,dense=data.items.length>12;
+    const [brand,pale,paper]=themes[data.theme]||themes.red,accent=mode==='wholesale'&&data.theme==='red'?'#ffe132':pale,dark=mode==='fresh';
+    const ctx=surface(canvas,height);
+    ctx.fillStyle=dark?'#15221e':mode==='mosaic'?pale:'#ffffff';ctx.fillRect(0,0,1080,height);
+    const logo=data.logo?images.get(data.logo):null;
+    const shop=(baseline,color)=>{if(logo){const extra=drawLogo(ctx,logo,40,baseline-54,106,62);fit(ctx,data.shop||'Your business',(163)+extra,baseline,(877)-extra,44,color,800);}else fit(ctx,data.shop||'Your business',40,baseline,1000,48,color,800);};
+    if(mode==='wholesale'){
+      ctx.fillStyle=brand;ctx.fillRect(0,0,1080,top-53);shop(offset+61,'#ffffff');
+      ctx.fillStyle=accent;ctx.fillRect(40,offset+83,1000,4);fit(ctx,data.copy.eyebrow,40,offset+116,1000,22,accent,800);
+      nameLines(ctx,data.headline||'Everyday value. Big savings.',40,top-78,1000,dense?57:78,top-offset-143,2,'#ffffff');
+      ctx.fillStyle='#17221e';ctx.fillRect(0,top-53,1080,39);fit(ctx,data.copy.date,40,top-26,1000,22,'#ffffff',700);
+    }else if(mode==='mosaic'){
+      ctx.fillStyle=brand;ctx.fillRect(0,0,1080,top-53);shop(offset+58,'#ffffff');
+      ctx.fillStyle=accent;ctx.fillRect(40,offset+87,70,5);fit(ctx,data.copy.eyebrow,131,offset+98,909,20,accent,800);
+      nameLines(ctx,data.headline||'Great finds for your basket.',40,top-80,1000,dense?54:77,top-offset-127,2,'#ffffff');
+      fit(ctx,data.copy.date,40,top-20,1000,22,brand,700);
+    }else{
+      ctx.save();ctx.globalAlpha=.11;ctx.strokeStyle=accent;ctx.lineWidth=2;
+      for(let i=0;i<8;i++){ctx.beginPath();ctx.ellipse(980-i*35,offset+55+i*19,40,95,-.7,0,Math.PI*2);ctx.stroke();}ctx.restore();
+      shop(offset+61,'#ffffff');ctx.fillStyle=accent;ctx.fillRect(40,offset+85,1000,2);fit(ctx,data.copy.eyebrow,40,offset+120,1000,21,accent,700);
+      nameLines(ctx,data.headline||'Fresh from our counter.',40,top-65,1000,dense?56:77,top-offset-150,2,'#ffffff');
+      fit(ctx,data.copy.date,40,top-21,1000,21,accent,600);
+    }
+    for(const [i,item] of data.items.entries())merchantCard(ctx,item,layout.cards[i],item.photo?images.get(item.photo):null,{mode,brand,accent,paper,unit:data.copy.unit});
+    ctx.fillStyle=dark?accent:brand;ctx.fillRect(0,fy,1080,110);
+    const footerInk=dark?'#17221e':'#ffffff';fit(ctx,data.copy.location||data.shop||'',40,fy+42,1000,32,footerInk,800);fit(ctx,data.copy.contact,40,fy+84,1000,27,footerInk,700);
+    fit(ctx,data.copy.terms,40,fy+143,726,18,dark?accent:'#46584e',400);projectCredit(ctx,data,fy+143,dark?accent:'#46584e');return layout;
+  }
+  function flexibleGeometry(format,count,mode,index=-1){
+    const f=formats[format]||formats.poster,width=f.width,height=f.height,wide=width>height,gap=16;
+    const top=wide||height<1200?280:330,bottom=height-160,left=40,available=width-80;
+    const columns=wide?(count<=3?count:count<=8?4:count<=15?5:6):count<=2?count:count<=6?2:count<=12?3:count<=20?4:5;
+    const grid=(n,x,y,w,h,cols)=>{
+      const rows=Math.ceil(n/cols),cw=(w-gap*(cols-1))/cols,ch=(h-gap*(rows-1))/rows;
+      return Array.from({length:n},(_,i)=>{const row=Math.floor(i/cols),onRow=Math.min(cols,n-row*cols);return {x:x+(cols-onRow)*(cw+gap)/2+(i%cols)*(cw+gap),y:y+row*(ch+gap),w:cw,h:ch};});
+    };
+    let cards=grid(count,left,top,available,bottom-top,columns);
+    if(count>1&&(index>=0||mode==='shelf')){
+      if(count>6){
+        const cols=Math.max(3,columns),rows=Math.ceil((count+3)/cols),w=(available-gap*(cols-1))/cols,h=(bottom-top-gap*(rows-1))/rows;
+        index=index<0?0:index;const rest=[];
+        for(let row=0;row<rows;row++)for(let col=0;col<cols;col++)if(!(row<2&&col<2)&&rest.length<count-1)rest.push({x:left+col*(w+gap),y:top+row*(h+gap),w,h});
+        const last=rest.filter(c=>c.y===top+(rows-1)*(h+gap));if(rows>2&&last.length<cols)last.forEach(c=>c.x+=(cols-last.length)*(w+gap)/2);
+        cards=Array.from({length:count},(_,i)=>i===index?{x:left,y:top,w:w*2+gap,h:h*2+gap,featured:true}:rest.shift());
+        return {width,height,top,bottom,cards,footerY:bottom+20,status:format==='status'};
+      }
+      index=index<0?0:index;const heroWidth=(available-gap)*(wide?.34:.42),heroHeight=(bottom-top-gap)*.43;
+      const beside=wide||count<=4;
+      const hero=beside?{x:left,y:top,w:heroWidth,h:bottom-top,featured:true}:{x:left,y:top,w:available,h:heroHeight,featured:true};
+      const rest=beside?grid(count-1,left+heroWidth+gap,top,available-heroWidth-gap,bottom-top,Math.min(columns,count-1)):grid(count-1,left,top+heroHeight+gap,available,bottom-top-heroHeight-gap,columns);
+      cards=Array.from({length:count},(_,i)=>i===index?hero:rest.shift());
+    }
+    return {width,height,top,bottom,cards,footerY:bottom+20,status:format==='status'};
+  }
+  function drawFlexible(canvas,data,images){
+    const announcement=['event','opening'].includes(data.purpose),count=announcement?1:data.items.length;
+    const mode=data.template,layout=flexibleGeometry(data.format,count,mode,data.items.findIndex(i=>i.featured));
+    const {width,height,top,bottom,footerY:fy}=layout,wide=width>height,[brand,accent,paper]=themes[data.theme]||themes.green;
+    const ctx=surface(canvas,height,width),dark=['fresh','noir','blueprint'].includes(mode),quiet=['paper','editorial','atelier','botanical','signature','arc','terrace'].includes(mode);
+    ctx.fillStyle=dark?'#17251f':quiet?paper:accent;ctx.fillRect(0,0,width,height);
+    const headerInk=quiet?brand:'#ffffff';
+    ctx.fillStyle=quiet?paper:brand;ctx.fillRect(0,0,width,top-38);
+    if(mode==='parade'||mode==='ticket'||['sunburst','warehouse','bold'].includes(mode)){
+      ctx.save();ctx.globalAlpha=.18;ctx.fillStyle=accent;
+      ctx.beginPath();ctx.moveTo(width*.7,0);ctx.lineTo(width,0);ctx.lineTo(width,top-38);ctx.lineTo(width*.57,top-38);ctx.closePath();ctx.fill();ctx.restore();
+      ctx.fillStyle=accent;ctx.fillRect(40,top-61,width-80,7);
+    }else if(mode==='shelf'){
+      ctx.fillStyle=accent;ctx.fillRect(width-22,0,22,top-38);
+      for(let i=0;i<3;i++){ctx.globalAlpha=.16;ctx.strokeStyle=accent;ctx.lineWidth=2;ctx.strokeRect(width-310+i*24,22+i*14,210,top-100);}ctx.globalAlpha=1;
+    }else if(quiet){
+      ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.strokeRect(22,22,width-44,height-44);ctx.fillStyle=brand;ctx.fillRect(40,top-54,width-80,2);
+    }
+    if(mode==='arc'){
+      ctx.save();ctx.globalAlpha=.2;ctx.strokeStyle=brand;ctx.lineWidth=18;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(width-90,top-55,85+i*31,Math.PI,Math.PI*2);ctx.stroke();}ctx.restore();
+    }
+    if(mode==='terrace'){
+      for(let x=0;x<width;x+=52){ctx.fillStyle=(x/52)%2?paper:brand;ctx.fillRect(x,top-65,52,27);}
+    }
+    if(mode==='ticket'){
+      ctx.save();ctx.globalAlpha=.24;ctx.fillStyle=accent;for(let x=0;x<width;x+=30)ctx.fillRect(x,top-49,15,11);ctx.restore();
+    }
+    const logo=data.logo?images.get(data.logo):null,shopX=logo?158+96*(logoScale-1):40;
+    if(logo)drawLogo(ctx,logo,40,26,96,60);
+    fit(ctx,data.shop||'Your business',shopX,64,width-shopX-40,36,headerInk,800);
+    const lineY=logo?116:104;
+    fit(ctx,data.copy.eyebrow,40,lineY,width-80,20,quiet?brand:accent,700);
+    nameLines(ctx,data.headline||'Your next great offer.',40,top-74,width-80,wide?70:height<1200?57:76,top-74-lineY-20,2,headerInk);
+    fit(ctx,data.copy.date,40,top-12,width-80,20,dark?accent:brand,700);
+    if(announcement){
+      const photo=data.heroPhoto?images.get(data.heroPhoto):null,h=bottom-top;
+      roundBox(ctx,40,top,width-80,h,18,'#ffffff');
+      const photoW=wide?(width-120)*.53:width-120;
+      if(photo)contain(ctx,photo,60,top+18,photoW,wide?h-36:h*.52);
+      const textX=wide&&photo?90+photoW:64,textW=width-textX-64,textTop=photo&&!wide?top+h*.56:top+40;
+      nameLines(ctx,data.details||'',textX,textTop+Math.min(130,h*.3),textW,wide?43:34,Math.min(140,h*.32),3,brand);
+      nameLines(ctx,data.copy.date,textX,bottom-65,textW,30,65,2,brand);
+      layout.cards=[];
+    }else{
+      const savedPriceStyle=priceStyle;
+      if(['paper','arc'].includes(mode)&&priceStyle==='design')priceStyle='outline';
+      if(mode==='terrace'&&priceStyle==='design')priceStyle='pill';
+      if(data.purpose==='spotlight'&&data.details)layout.cards[0].h-=104;
+      for(const [i,item] of data.items.entries()){
+        const cardMode=['parade','ticket'].includes(mode)?'wholesale':mode==='shelf'?'mosaic':dark?'fresh':quiet?'paper':mode;
+        const c=layout.cards[i];merchantCard(ctx,item,c,item.photo?images.get(item.photo):null,{mode:cardMode,brand,accent,paper,unit:data.copy.unit});
+        if(mode==='ticket'){ctx.fillStyle=accent;for(let y=c.y+12;y<c.y+c.h;y+=22){for(const x of [c.x,c.x+c.w]){ctx.beginPath();ctx.arc(x,y,4,0,Math.PI*2);ctx.fill();}}}
+        if(mode==='arc'){ctx.strokeStyle=brand;ctx.lineWidth=2;ctx.strokeRect(c.x+3,c.y+3,c.w-6,c.h-6);}
+        if(mode==='terrace'){ctx.fillStyle=brand;ctx.fillRect(c.x+14,c.y+3,c.w-28,3);}
+      }
+      priceStyle=savedPriceStyle;
+      if(data.purpose==='spotlight'&&data.details){
+        const c=layout.cards[0];roundBox(ctx,c.x,c.y+c.h+12,c.w,92,8,paper);
+        nameLines(ctx,data.details,c.x+16,bottom-16,c.w-32,26,68,3,brand);
+      }
+    }
+    ctx.fillStyle=quiet?paper:brand;ctx.fillRect(quiet?40:0,fy,quiet?width-80:width,88);
+    if(quiet){ctx.fillStyle=brand;ctx.fillRect(40,fy,width-80,2);}
+    fit(ctx,data.copy.location||data.shop||'',40,fy+34,width-80,27,headerInk,700);
+    fit(ctx,data.copy.contact,40,fy+70,width-80,24,headerInk,600);
+    fit(ctx,data.copy.terms,40,fy+116,width-290,17,dark?accent:brand,400);
+    fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',width-215,fy+116,175,17,dark?accent:brand,500);
+    return layout;
+  }
+  root.ShopDeskPoster={collection,themes,formats,outputSize,draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,featuredGeometry,merchantGeometry,flexibleGeometry,contentBounds,displayName,packWarning};
 })(typeof window!=='undefined'?window:globalThis);
