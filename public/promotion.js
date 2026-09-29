@@ -9,9 +9,22 @@
   let studioState=null,loadingWorkspace=false,createKind='client';
   let packRun=0,packBusy=false,packZip=null,packText='',packName='',packURLs=[];
   const images=new Map(),imageErrors=new Set(),imageLoads=new Map();
+  const localMode=!location.hostname.endsWith('.chatgpt.site');
+  const localWorkspaceKey='shopdesk-local-workspace-v1';
+  function localStored(){try{const raw=localStorage.getItem(localWorkspaceKey);return raw?JSON.parse(raw):null;}catch{return null;}}
+  function localApi(path,options={}){
+    if(path!=='/api/studio')return null;
+    if(options.method==='PUT'){
+      const body=JSON.parse(options.body),revision=Number(body.revision||0)+1;
+      localStorage.setItem(localWorkspaceKey,JSON.stringify(body.data));localStorage.setItem(localWorkspaceKey+'-revision',String(revision));
+      return {revision};
+    }
+    return {data:localStored(),revision:Number(localStorage.getItem(localWorkspaceKey+'-revision')||0)};
+  }
   function toast(message){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,4500);}
   function status(message,error=false){$('save-status').textContent=message;$('save-status').dataset.state=message==='All changes saved'?'saved':error?'error':'pending';$('save-status').classList.toggle('save-error',error);}
   async function api(path,options={}) {
+    if(localMode){const fallback=localApi(path,options);if(fallback)return fallback;}
     const controller=new AbortController();const timeout=setTimeout(()=>controller.abort(),20000);
     try {const response=await fetch(path,{...options,credentials:'same-origin',signal:controller.signal});const data=await response.json();if(!response.ok)throw Object.assign(new Error(data.error||'Please try again.'),{status:response.status});return data;}
     catch(e){if(e.name==='AbortError')throw new Error('The connection took too long. Your edits are still here; try again.');throw e;}
