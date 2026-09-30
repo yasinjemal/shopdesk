@@ -29,6 +29,7 @@ create or replace function public.shopdesk_save_workspace(p_owner text, p_data t
 returns integer
 language plpgsql
 security invoker
+set search_path = public
 as $$
 declare
   new_revision integer;
@@ -51,3 +52,8 @@ end;
 $$;
 revoke all on function public.shopdesk_save_workspace(text, text, integer, boolean) from public, anon, authenticated;
 grant execute on function public.shopdesk_save_workspace(text, text, integer, boolean) to service_role;
+
+-- Private photo bucket (1.5 MB cap, JPEG only), matching what the API accepts.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('shopdesk-photos', 'shopdesk-photos', false, 1500000, array['image/jpeg'])
+on conflict (id) do update set public = false, file_size_limit = 1500000, allowed_mime_types = array['image/jpeg'];
