@@ -7,7 +7,9 @@ export function createFakeSupabase({ key = 'test-service-key', bucket = 'shopdes
   async function fetchImpl(input, init = {}) {
     const url = new URL(input), method = init.method || 'GET', headers = new Headers(init.headers);
     calls.push({ method, path: url.pathname + url.search });
-    if (headers.get('apikey') !== key || headers.get('authorization') !== 'Bearer ' + key) return reply({ message: 'Invalid API key' }, 401);
+    // Mirrors the platform: an sb_ key is valid in apikey only (as a Bearer token it is an "Invalid JWT"); a legacy JWT key goes in both.
+    const bearer = headers.get('authorization');
+    if (headers.get('apikey') !== key || (key.startsWith('sb_') ? bearer !== null : bearer !== 'Bearer ' + key)) return reply({ message: 'Invalid API key' }, 401);
     const eq = name => { const v = url.searchParams.get(name); return v?.startsWith('eq.') ? v.slice(3) : undefined; };
     if (url.pathname === '/rest/v1/poster_workspaces' && method === 'GET') {
       const row = workspaces.get(eq('owner')); return reply(row ? [{ data: row.data, revision: row.revision }] : []);

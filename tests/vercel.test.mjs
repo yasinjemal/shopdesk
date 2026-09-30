@@ -171,3 +171,17 @@ test('the Vercel Node handler works over real HTTP: cookies, JSON bodies, photos
     assert.equal(response.status, 403);
   } finally { server.close(); }
 });
+
+test('works with both legacy service_role JWT keys and the new sb_secret_ keys', async () => {
+  for (const key of ['eyJhbGciOiJIUzI1NiJ9.legacy.jwt', 'sb_secret_abcdef123456']) {
+    const fake = createFakeSupabase({ key });
+    const env = { SUPABASE_URL: 'https://fake.supabase.test', SUPABASE_SERVICE_ROLE_KEY: key, SHOPDESK_AUTH_SECRET: SECRET };
+    const first = await handleVercelRequest(new Request('https://x.test/api/studio'), env, { fetch: fake.fetch });
+    assert.equal(first.status, 200, key.slice(0, 8));
+    const cookie = first.headers.get('set-cookie').split(';')[0], data = studio();
+    const put = await handleVercelRequest(new Request('https://x.test/api/studio', { method: 'PUT', headers: { cookie, 'content-type': 'application/json' }, body: JSON.stringify({ revision: 0, data }) }), env, { fetch: fake.fetch });
+    assert.equal(put.status, 200, key.slice(0, 8));
+    const photo = await handleVercelRequest(new Request('https://x.test/api/photos', { method: 'POST', headers: { cookie, 'content-type': 'image/jpeg' }, body: jpeg() }), env, { fetch: fake.fetch });
+    assert.equal(photo.status, 201, key.slice(0, 8));
+  }
+});

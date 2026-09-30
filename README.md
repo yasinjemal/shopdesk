@@ -80,7 +80,7 @@ The original app is a Worker that owned both the pages and `/api/*`. Vercel only
    | Variable | Value |
    | --- | --- |
    | `SUPABASE_URL` | `https://<project>.supabase.co` |
-   | `SUPABASE_SERVICE_ROLE_KEY` | service-role key (server only) |
+   | `SUPABASE_SERVICE_ROLE_KEY` | the `sb_secret_…` key (Project settings → API Keys → Secret keys) or the legacy `service_role` key; server only |
    | `SUPABASE_STORAGE_BUCKET` | `shopdesk-photos` |
    | `SHOPDESK_AUTH_SECRET` | random 32+ characters, e.g. `openssl rand -base64 48` |
    | `SHOPDESK_STORAGE_MODE` | optional: `supabase` to fail loudly if misconfigured, or `local` to force Browser demo mode |

@@ -9,10 +9,13 @@ const UNAVAILABLE = 'Saved products are temporarily unavailable. Please try agai
 export class VercelStorageAdapter {
   constructor({ url, serviceKey, bucket = 'shopdesk-photos', fetch = globalThis.fetch }) {
     this.base = url.replace(/\/+$/, ''); this.key = serviceKey; this.bucket = bucket; this.fetch = fetch;
+    // Legacy service_role keys are JWTs and go in both headers. New sb_secret_ keys are opaque: Supabase rejects
+    // them in Authorization ("Invalid JWT") and its gateway supplies the role itself from the apikey header.
+    this.auth = serviceKey.startsWith('sb_') ? { apikey: serviceKey } : { apikey: serviceKey, Authorization: 'Bearer ' + serviceKey };
   }
   async call(path, { headers = {}, ...init } = {}) {
     let response;
-    try { response = await this.fetch(this.base + path, { ...init, headers: { apikey: this.key, Authorization: 'Bearer ' + this.key, ...headers } }); }
+    try { response = await this.fetch(this.base + path, { ...init, headers: { ...this.auth, ...headers } }); }
     catch (e) { console.error('Supabase request failed', { path, message: e.message }); throw fail(UNAVAILABLE, 503); }
     return response;
   }
