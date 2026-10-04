@@ -2,7 +2,7 @@
   'use strict';
   const $=id=>document.getElementById(id),model=ShopDeskWords;
   let context=null,choices=[],undo=null;
-  const labels={offers:'Offers, menu or price list',spotlight:'Single-offer spotlight',event:'Event invitation',opening:'Grand opening'};
+  const labels={offers:'Offers, menu or price list',combos:'Grocery combo flyer',spotlight:'Single-offer spotlight',event:'Event invitation',opening:'Grand opening'};
   function notice(text,error=false){$('wording-message').textContent=text;$('wording-message').classList.toggle('validation',error);}
   function apply(values){
     try{const before=ShopDeskPromotion.applyWording(values,context.context);undo={before,after:values};$('undo-wording').disabled=false;notice('Wording applied. You can keep choosing or return to your flyer.');render();}

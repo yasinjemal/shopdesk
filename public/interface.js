@@ -79,6 +79,7 @@
     if(/business name/i.test(message)){showTab('business');$('shop-name').focus();return;}
     showTab('content');
     let target=/headline/i.test(message)?$('promo-headline'):/event|opening date/i.test(message)?$('event-date'):/start date/i.test(message)?$('promo-start-date'):/end date|expired/i.test(message)?$('promo-date'):null;
+    const combo=message.match(/combo (\d+)/i);if(combo)target=document.querySelector('[data-combo="'+(Number(combo[1])-1)+'"] '+(/price/i.test(message)?'.combo-price':'.combo-name'));
     const item=message.match(/item (\d+)/i);
     if(item){const card=$('promo-items').children[Number(item[1])-1];if(card){card.open=true;target=card.querySelector(/price/i.test(message)?'input[type="number"]':'input[type="text"]');}}
     (target||$('flyer-purpose')).focus();
@@ -98,7 +99,7 @@
     for(const [template,button] of templateButtons){
       await new Promise(requestAnimationFrame);
       try{
-        const data={template,theme:seeds[template],format:'poster',shop:'Your business',headline:'Your next great offer.',eyebrow:'SPECIAL OFFERS',showDate:false,phone:'',location:'Visit us today',terms:'',items:Array.from({length:template==='simple'?3:6},(_,i)=>({name:'Product '+(i+1),size:'Each',price:String(49+i*10),photo:''}))};
+        const data={template,purpose:ShopDeskCombos.styles.includes(template)?'combos':'offers',combos:ShopDeskCombos.defaults().map(c=>({...c,price:'149.99'})),theme:seeds[template],format:'poster',shop:'Your business',headline:'Your next great offer.',eyebrow:'SPECIAL OFFERS',showDate:false,phone:'',location:'Visit us today',terms:'',items:Array.from({length:template==='simple'?3:6},(_,i)=>({name:'Product '+(i+1),size:'Each',price:String(49+i*10),photo:''}))};
         ShopDeskPoster.draw(source,data);
         const thumb=button.querySelector('canvas');thumb.getContext('2d').drawImage(source,0,0,thumb.width,thumb.height);
       }catch{button.querySelector('canvas').hidden=true;}

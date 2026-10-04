@@ -58,7 +58,7 @@
   function sharedValue(){return model.create(shareDraft,$('share-template-name').value||'Untitled template',$('share-template-description').value,$('share-template-content').checked);}
   function updateShare(){
     if(!shareDraft)return;const template=sharedValue();preview($('share-template-canvas'),template);
-    $('share-template-summary').textContent=template.includeContent?'Your headline, small heading and '+template.design.itemCount+' visible item(s), plus the design.':'Design, colours, typeface and layout only. Example products in this preview are placeholders.';
+    $('share-template-summary').textContent=template.includeContent?'Your headline, small heading and '+template.design.itemCount+' visible item(s)'+(template.design.purpose==='combos'?' and combo names and bundle prices':'')+', plus the design.':'Design, colours, typeface and layout only. Example products in this preview are placeholders.';
   }
   $('open-share-template').addEventListener('click',()=>{
     try{shareDraft=ShopDeskPromotion.templateSnapshot();shareId=crypto.randomUUID();$('share-template-name').value='';$('share-template-description').value='';$('share-template-content').checked=false;error('share-template-error','');updateShare();$('share-template-dialog').showModal();$('share-template-name').focus();}catch(e){error('library-error',e.message);$('library-dialog').showModal();}

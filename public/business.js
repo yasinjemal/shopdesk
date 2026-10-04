@@ -22,7 +22,7 @@
       date:announcement?[(data.eventDateText||'Your event date'),data.eventTime].filter(Boolean).join(' · '):data.showDate===false?'':data.startDate&&data.startDateText?'Valid '+data.startDateText+' – '+(data.dateText||'your selected date'):'Valid until '+(data.dateText||'your selected date')};
   }
   function visibleItems(draft){
-    const items=draft.items||[],limit=draft.purpose==='spotlight'?1:draft.template==='simple'?3:25;
+    const items=draft.items||[],limit=draft.purpose==='combos'?20:draft.purpose==='spotlight'?1:draft.template==='simple'?3:25;
     const count=Number.isInteger(draft.itemCount)?draft.itemCount:items.length;
     return items.slice(0,Math.min(limit,count));
   }

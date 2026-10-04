@@ -1,10 +1,10 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh'],
     theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'],
     format:['poster','status','square','landscape','a4','a5'],business:['grocery','fashion','food','beauty','services','general'],
-    purpose:['offers','spotlight','event','opening'],logoSize:['compact','prominent'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
+    purpose:['offers','combos','spotlight','event','opening'],logoSize:['compact','prominent'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
   };
   const defaults={template:'bold',theme:'green',format:'poster',business:'general',purpose:'offers',logoSize:'prominent',typeface:'design',priceStyle:'design'};
   const blank=()=>({name:'',size:'',price:'',photo:''});
@@ -18,9 +18,14 @@
       const value=source[key]??defaults[key];if(!values.includes(value))throw new Error('Choose a valid '+key+'.');result[key]=value;
     }
     for(const key of ['trimPhotos','cleanNames']){if(source[key]!==undefined&&typeof source[key]!=='boolean')throw new Error('Check the photo settings.');result[key]=source[key]??false;}
-    const count=source.itemCount??source.items?.length??1,limit=result.purpose==='spotlight'?1:result.template==='simple'?3:25;
+    const count=source.itemCount??source.items?.length??1,limit=result.purpose==='combos'?20:result.purpose==='spotlight'?1:result.template==='simple'?3:25;
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose between 1 and 25 items.');
     result.itemCount=['event','opening'].includes(result.purpose)?1:Math.min(count,limit);
+    if(result.purpose==='combos'){
+      const combos=source.combos??Array.from({length:4},(_,i)=>({name:'Combo '+(i+1),price:''}));
+      if(!Array.isArray(combos)||!combos.length||combos.length>6)throw new Error('Choose 1 to 6 combos.');
+      result.combos=combos.map((c,i)=>{const price=string(c.price??'',20,'the bundle price');if(price!==''&&(!Number.isFinite(Number(price))||Number(price)<0||Number(price)>1000000))throw new Error('Check the bundle price.');return {name:includeContent?string(c.name??'',40,'the combo name'):'Combo '+(i+1),price:includeContent?price:''};});
+    }
     if(includeContent){
       result.headline=string(source.headline??'',45,'the headline');result.eyebrow=string(source.eyebrow??'',28,'the small heading');
       if(!Array.isArray(source.items)||source.items.length<result.itemCount||source.items.length>25)throw new Error('Check the template items.');
@@ -28,6 +33,7 @@
         const price=string(item.price??'',20,'the price');
         if(price!==''&&(!Number.isFinite(Number(price))||Number(price)<0||Number(price)>1000000))throw new Error('Check the template prices.');
         const deal={};if(item.dealQuantity!==undefined){if(!Number.isInteger(item.dealQuantity)||item.dealQuantity<2||item.dealQuantity>99)throw new Error('Check the multi-buy quantity.');deal.dealQuantity=item.dealQuantity;}
+        if(result.purpose==='combos')for(const [key,min,max] of [['combo',0,result.combos.length-1],['quantity',1,99]])if(item[key]!==undefined){if(!Number.isInteger(item[key])||item[key]<min||item[key]>max)throw new Error('Check the combo products.');deal[key]=item[key];}
         return {name:string(item.name??'',50,'the item name'),size:string(item.size??'',25,'the item details'),price,photo:'',...deal};
       });
     }
@@ -73,7 +79,10 @@
     ['The paper catalogue','A calm catalogue for beautiful products and thoughtful services.','general','paper','coffee','offers',6],
     ['The arc collection','Sweeping curves and framed panels for a considered collection.','fashion','arc','raspberry','offers',4],
     ['The neighbourhood ticket wall','Punchy tickets and perforated edges for everyday shop offers.','grocery','ticket','tangerine','offers',9],
-    ['At the café terrace','Awning stripes and soft price labels for your menu.','food','terrace','olive','offers',4]
+    ['At the café terrace','Awning stripes and soft price labels for your menu.','food','terrace','olive','offers',4],
+    ['Grocery combo market','Four numbered bundle frames for family essentials.','grocery','combo-board','red','combos',12],
+    ['The bundle ticket board','Bold bundle tickets with editable names and contents.','grocery','combo-ticket','blue','combos',8],
+    ['Fresh basket combos','Fresh produce bundles in clean green frames.','grocery','combo-fresh','green','combos',8]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
   root.ShopDeskTemplates={design,validate,create,draft,starters};
 })(typeof window!=='undefined'?window:globalThis);

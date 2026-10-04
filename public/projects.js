@@ -9,7 +9,8 @@
     if(!shop.name?.trim())return draft('Add a business name.');
     if(!d.headline?.trim())return draft('Add a headline.');
     const event=announcement(d),items=root.ShopDeskBusiness.visibleItems(d);
-    if(!event&&(!items.length||items.some(i=>!i.name.trim()||!Number.isFinite(Number(i.price))||Number(i.price)<=0)))return draft('Check the offer names and prices.');
+    if(d.purpose==='combos'){const message=root.ShopDeskCombos.error(d);if(message)return draft(message);}
+    if(!event&&d.purpose!=='combos'&&(!items.length||items.some(i=>!i.name.trim()||!Number.isFinite(Number(i.price))||Number(i.price)<=0)))return draft('Check the offer names and prices.');
     if(!event&&d.showDate===false)return {code:'current',label:'No end date',detail:'An ongoing menu, price list or promotion.'};
     const end=event?d.eventDate:d.date;
     if(!validDate(end)||(!event&&d.startDate&&(!validDate(d.startDate)||d.startDate>end)))return draft('Check the promotion dates.');
@@ -29,7 +30,7 @@
     const words=query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
     return entries.filter(entry=>{
       if(client&&entry.clientId!==client)return false;if(status!=='all'&&entry.status.code!==status)return false;
-      const haystack=[entry.title,entry.shop.name,entry.draft.headline,...root.ShopDeskBusiness.visibleItems(entry.draft).map(i=>i.name)].join(' ').toLocaleLowerCase();
+      const haystack=[entry.title,entry.shop.name,entry.draft.headline,...(entry.draft.combos||[]).map(c=>c.name),...root.ShopDeskBusiness.visibleItems(entry.draft).map(i=>i.name)].join(' ').toLocaleLowerCase();
       return words.every(word=>haystack.includes(word));
     });
   }

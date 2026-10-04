@@ -1,9 +1,9 @@
 (function(root){
   'use strict';
-  const optional=['photoScale','photoX','photoY','featured','dealQuantity'];
+  const optional=['photoScale','photoX','photoY','featured','dealQuantity','combo','quantity'];
   function copy(item,includeFeature=true){
     const next={name:item.name||'',size:item.size||'',price:item.price??'',photo:item.photo||''};
-    for(const key of optional)if(item[key]!==undefined&&(includeFeature||key!=='featured'))next[key]=item[key];
+    for(const key of optional)if(item[key]!==undefined&&(includeFeature||!['featured','combo','quantity'].includes(key)))next[key]=item[key];
     return next;
   }
   function price(value){

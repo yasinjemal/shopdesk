@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const clone=value=>structuredClone(value),id=()=>crypto.randomUUID();
-  const purposes={offers:'Offers, menu or price list',spotlight:'Single-offer spotlight',event:'Event invitation',opening:'Grand opening'};
+  const purposes={offers:'Offers, menu or price list',combos:'Grocery combo flyer',spotlight:'Single-offer spotlight',event:'Event invitation',opening:'Grand opening'};
   function active(state){
     const client=state.clients.find(c=>c.id===state.activeClientId);
     const project=client?.projects.find(p=>p.id===state.activeProjectId);
@@ -26,6 +26,7 @@
   function room(state){if(state.clients.reduce((n,c)=>n+c.projects.length,0)>=100)throw new Error('You have reached 100 saved projects.');}
   function suggest(source){
     const draft=root.ShopDeskBusiness.applyPreset(clone(source),source.business||'grocery'),purpose=source.purpose;
+    if(purpose==='combos')Object.assign(draft,{template:'combo-board',headline:'Everyday essentials. Better together.',eyebrow:'GROCERY COMBOS',cta:'Contact us to order',terms:'Price is for all items in each combo. While stocks last.',showDate:true});
     if(purpose==='event'||purpose==='opening')Object.assign(draft,{headline:purpose==='event'?"You're invited.":"We're opening our doors.",eyebrow:purpose==='event'?'SAVE THE DATE':'GRAND OPENING',cta:'Contact us for details',terms:'',showDate:false});
     return draft;
   }
@@ -33,6 +34,7 @@
     let draft=suggest({...source,business,purpose});
     const expiry=new Date();expiry.setDate(expiry.getDate()+7);draft.date=[expiry.getFullYear(),String(expiry.getMonth()+1).padStart(2,'0'),String(expiry.getDate()).padStart(2,'0')].join('-');
     Object.assign(draft,{purpose,startDate:'',heroPhoto:'',details:'',eventDate:'',eventTime:'',venue:'',itemCount:1,items:[{name:'',size:'',price:'',photo:''}]});
+    delete draft.combos;if(purpose==='combos')draft.combos=Array.from({length:4},(_,i)=>({name:'Combo '+(i+1),price:''}));
     return draft;
   }
   function addClient(state,name,business,purpose,title){
@@ -45,7 +47,7 @@
     room(state);const next=clone(state),{client,project:source}=active(next),projectId=id();
     const draft=newDraft(source.draft,source.draft.business||'grocery',purpose);
     // Keep the client's chosen palette and offer design for their next project.
-    draft.theme=source.draft.theme;draft.template=source.draft.template||'bold';
+    draft.theme=source.draft.theme;draft.template=purpose==='combos'?'combo-board':source.draft.template?.startsWith('combo-')?'bold':source.draft.template||'bold';
     client.projects.push({id:projectId,title:title.trim()||'Untitled project',draft});return select(next,client.id,projectId);
   }
   function duplicate(state){

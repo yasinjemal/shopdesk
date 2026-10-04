@@ -2,6 +2,9 @@
   'use strict';
   const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0'],teal:['#075e64','#bceae1','#f2fbfa'],gold:['#20232c','#e7c574','#faf8f1'],berry:['#941c50','#ffe0ec','#fff8fb'],violet:['#5632a0','#e3d8ff','#faf8ff'],cobalt:['#134bb3','#d6e7ff','#f6f9ff'],coral:['#ab3543','#ffdad5','#fff8f6'],coffee:['#503529','#ebd2b4','#fcf8f3']};
   const collection={
+    'combo-board':{name:'Combo Market',category:'retail',theme:'red',hint:'Numbered grocery bundles, crisp product panels and one price for each complete combo.'},
+    'combo-ticket':{name:'Bundle Tickets',category:'retail',theme:'blue',hint:'Perforated bundle tickets, bold number tabs and high-impact price blocks.'},
+    'combo-fresh':{name:'Fresh Basket',category:'food',theme:'green',hint:'Fresh market stripes, soft basket frames and a clean grocery masthead.'},
     arc:{name:'Arc Gallery',category:'elegant',theme:'raspberry',hint:'Sweeping gallery arches, framed panels and refined price rules.'},
     ticket:{name:'Ticket Wall',category:'retail',theme:'tangerine',hint:'Perforated offer tickets, a striped masthead and a bold closing strip.'},
     terrace:{name:'Café Terrace',category:'food',theme:'olive',hint:'Café awning stripes, soft menu panels and rounded price labels.'},
@@ -130,6 +133,7 @@
     priceStyle=data.priceStyle||'design';priceBrand=(themes[data.theme]||themes.green)[0];
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
+    if(data.purpose==='combos')return drawCombos(canvas,data,images);
     if(['square','landscape'].includes(data.format)||(['parade','shelf','paper','arc','ticket','terrace'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose)))return drawFlexible(canvas,data,images);
     if(['event','opening'].includes(data.purpose))return drawAnnouncement(canvas,data,images);
     if(data.purpose==='spotlight')return drawSpotlight(canvas,data,images);
@@ -925,5 +929,79 @@
     fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',width-215,fy+116,175,17,dark?accent:brand,500);
     return layout;
   }
-  root.ShopDeskPoster={collection,themes,formats,outputSize,draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,featuredGeometry,merchantGeometry,flexibleGeometry,contentBounds,displayName,packWarning};
+
+  function comboBands(h){return {head:Math.max(36,Math.min(70,h*.19)),foot:Math.max(38,Math.min(86,h*.22)),gap:h<180?6:20};}
+  function comboGeometry(data){
+    const f=formats[data.format]||formats.poster,width=f.width,height=f.height,wide=width>height;
+    const groups=root.ShopDeskCombos.groups(data).filter(g=>g.items.length),count=groups.length||1;
+    const cols=count===1?1:wide&&count>=3?3:2,rows=Math.ceil(count/cols),gap=20,left=40,top=height<1200?260:300,bottom=height-172;
+    const cards=[],frames=[];
+    const weights=Array.from({length:rows},(_,r)=>Math.sqrt(Math.max(1,...groups.slice(r*cols,(r+1)*cols).map(g=>g.items.length)))+.5);
+    const weightTotal=weights.reduce((a,b)=>a+b,0),heights=weights.map(weight=>(bottom-top-gap*(rows-1))*weight/weightTotal);
+    groups.forEach((group,index)=>{
+      const row=Math.floor(index/cols),onRow=Math.min(cols,count-row*cols),h=heights[row],rowGroups=groups.slice(row*cols,(row+1)*cols);
+      const rowWeights=rowGroups.map(g=>Math.sqrt(g.items.length)+.8),rowTotal=rowWeights.reduce((a,b)=>a+b,0),available=width-left*2-gap*(onRow-1);
+      const widths=rowWeights.map(weight=>available*weight/rowTotal),column=index%cols,w=widths[column];
+      const frame={x:left+widths.slice(0,column).reduce((a,b)=>a+b,0)+column*gap,y:top+heights.slice(0,row).reduce((a,b)=>a+b,0)+row*gap,w,h,group};frames.push(frame);
+      const {head,foot,gap:inset}=comboBands(h),innerH=h-head-foot-inset,innerW=w-24;
+      // Pick a grid using the photo area rather than a fixed product count.
+      let columns=1,best=-Infinity;
+      for(let c=1;c<=Math.min(8,group.items.length);c++){
+        const r=Math.ceil(group.items.length/c),cw=innerW/c,ch=innerH/r;
+        const score=Math.min(cw,ch*1.15)-Math.abs(cw-ch*.85)*.13;
+        if(score>best){best=score;columns=c;}
+      }
+      const productRows=Math.ceil(group.items.length/columns),cw=innerW/columns,ch=innerH/productRows;
+      group.items.forEach((item,i)=>{
+        const r=Math.floor(i/columns),onRow=Math.min(columns,group.items.length-r*columns);
+        cards[item.sourceIndex]={x:frame.x+12+(columns-onRow)*cw/2+(i%columns)*cw,y:frame.y+head+r*ch,w:cw,h:ch,item};
+      });
+    });
+    return {width,height,top,bottom,cards,frames,footerY:bottom+20};
+  }
+  function comboName(ctx,text,x,bottom,width,size,colour){
+    let font=size,rows=[];
+    do{ctx.font=`700 ${font}px ${fontFamily}`;rows=[];let line='';for(const word of text.split(/\s+/)){const next=line?line+' '+word:word;if(line&&ctx.measureText(next).width>width){rows.push(line);line=word;}else line=next;}if(line)rows.push(line);if(rows.length<=2)break;font--;}while(font>=12);
+    font=Math.max(12,font);if(rows.length>2)rows=[rows[0],rows.slice(1).join(' ')];ctx.font=`700 ${font}px ${fontFamily}`;ctx.fillStyle=colour;rows.forEach((row,i)=>ctx.fillText(row,x,bottom-(rows.length-1-i)*font*1.2,width));
+  }
+  function drawCombos(canvas,data,images){
+    const layout=comboGeometry(data),{width,height,frames,cards}=layout,ctx=surface(canvas,height,width);
+    const [brand,accent,paper]=themes[data.theme]||themes.red,ticket=data.template==='combo-ticket',fresh=data.template==='combo-fresh';
+    ctx.fillStyle=fresh?paper:accent;ctx.fillRect(0,0,width,height);
+    ctx.fillStyle=brand;ctx.fillRect(0,0,width,layout.top-42);
+    if(ticket){ctx.save();ctx.globalAlpha=.13;ctx.strokeStyle=accent;ctx.lineWidth=12;for(let x=-220;x<width;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+220,layout.top-42);ctx.stroke();}ctx.restore();}
+    if(fresh){ctx.save();ctx.globalAlpha=.13;ctx.fillStyle=accent;for(let x=width*.65;x<width;x+=46){ctx.beginPath();ctx.ellipse(x,80,26,105,-.6,0,Math.PI*2);ctx.fill();}ctx.restore();}
+    const logo=data.logo?images.get(data.logo):null,extra=logo?drawLogo(ctx,logo,40,24,110,68):0,shopX=logo?170+extra:40;
+    fit(ctx,data.shop||'Your grocery store',shopX,72,width-shopX-40,34,'#ffffff',800);
+    fit(ctx,data.copy.eyebrow||'GROCERY COMBOS',40,117,width-80,20,accent,700);
+    nameLines(ctx,data.headline||'Everyday essentials. Better together.',40,layout.top-66,width-80,52,100,2,'#ffffff');
+    fit(ctx,data.copy.date||'Choose your favourite combo',40,layout.top-12,width-80,22,brand,700);
+    for(const frame of frames){
+      const {group,x,y,w,h}=frame,{head,foot}=comboBands(h);
+      ctx.save();ctx.shadowColor='#153b2520';ctx.shadowBlur=12;ctx.shadowOffsetY=5;roundBox(ctx,x,y,w,h,fresh?22:ticket?8:12,'#ffffff');ctx.restore();
+      roundBox(ctx,x+10,y+8,Math.min(90,w*.21),head-16,fresh?20:5,brand);
+      fit(ctx,'COMBO '+group.number,x+18,y+8+(head-16)*.72,Math.min(74,w*.21-16),Math.min(18,(head-16)*.65),'#ffffff',800);
+      fit(ctx,group.name||'Name your combo',x+Math.min(112,w*.25),y+head*.63,w-Math.min(124,w*.27),Math.min(28,head*.43),brand,800);
+      ctx.strokeStyle=paper;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+12,y+head-4);ctx.lineTo(x+w-12,y+head-4);ctx.stroke();
+      if(ticket){ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle=brand;ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(x+12,y+h-foot);ctx.lineTo(x+w-12,y+h-foot);ctx.stroke();ctx.restore();}
+      for(const item of group.items){
+        const c=cards[item.sourceIndex],horizontal=c.w/c.h>3,font=Math.max(12,Math.min(25,c.w*.13,c.h*(horizontal?.27:.15))),packFont=Math.max(11,font*.82);
+        const textX=c.x+(horizontal?Math.min(c.w*.32,c.h+16):8),textW=c.w-(textX-c.x)-8,nameBottom=c.y+c.h-packFont-10;
+        const photoHeight=horizontal?c.h-8:Math.max(8,nameBottom-font*2.4-c.y-6),photoWidth=horizontal?textX-c.x-16:c.w-16;
+        const photo=item.photo?images.get(item.photo):null;
+        if(photo)contain(ctx,photo,c.x+8,c.y+4,photoWidth,photoHeight,item);
+        else{roundBox(ctx,c.x+8,c.y+4,photoWidth,photoHeight,6,paper);fit(ctx,'INCLUDED',c.x+12,c.y+4+photoHeight*.56,Math.max(12,photoWidth-8),Math.min(18,font),brand,600);}
+        comboName(ctx,(item.quantity||1)+' × '+(item.name||'Product name'),textX,nameBottom,textW,font,'#202d27');
+        ctx.fillStyle=brand;ctx.font=`600 ${packFont}px ${fontFamily}`;ctx.fillText(item.size||'',textX,c.y+c.h-5,textW);
+      }
+      const priceY=y+h-foot+8,priceH=foot-16;
+      offerPrice(ctx,{price:group.price},x+12,priceY,w-24,priceH,fresh?paper:brand,fresh?brand:'#ffffff');
+    }
+    const fy=layout.footerY;ctx.fillStyle=brand;ctx.fillRect(0,fy,width,92);
+    fit(ctx,data.copy.location||data.shop||'',40,fy+34,width-80,27,'#ffffff',800);fit(ctx,data.copy.contact,40,fy+70,width-80,24,'#ffffff',600);
+    fit(ctx,data.copy.terms,40,fy+122,width-270,17,brand,400);fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',width-210,fy+122,170,16,brand,500);
+    return layout;
+  }
+
+  root.ShopDeskPoster={comboGeometry,collection,themes,formats,outputSize,draw,geometry,retailGeometry,designedGeometry,businessGeometry,catalogueGeometry,featuredGeometry,merchantGeometry,flexibleGeometry,contentBounds,displayName,packWarning};
 })(typeof window!=='undefined'?window:globalThis);

@@ -2,6 +2,15 @@
   'use strict';
   const money=value=>'R'+Number(value).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
   function plan(data){
+    if(data?.purpose==='combos'){
+      const message=root.ShopDeskCombos.error(data);if(message)throw new Error(message);
+      const fullFormat=['square','landscape','a4','a5'].includes(data.format)?data.format:'poster';
+      const groups=root.ShopDeskCombos.groups(data).filter(g=>g.items.length),pages=groups.length;
+      return [{name:'01-full-flyer.png',label:'Full combo flyer',detail:groups.length+' complete combos',data:{...data,format:fullFormat}},...groups.map((group,index)=>({
+        name:String(index+2).padStart(2,'0')+'-combo-'+group.number+'.png',label:'Combo '+group.number+' · '+group.name,detail:group.items.length+' products · 9:16',
+        data:{...data,format:'status',exportQuality:'standard',itemCount:group.items.length,items:group.items.map(item=>({...item,combo:0})),combos:[{name:group.name,price:group.price}],comboOffset:group.number-1,packPage:{index:index+1,total:pages}}
+      }))];
+    }
     if(data?.items && !['event','opening'].includes(data.purpose) && (data.items.length>25 || (data.itemCount===undefined && data.purpose==='spotlight' && data.items.length!==1) || (data.itemCount===undefined && data.template==='simple' && data.items.length>3)))throw new Error('Choose a valid number of offers for this layout.');
     if(data?.items)data={...data,items:root.ShopDeskBusiness.visibleItems(data),itemCount:undefined};
     const fullFormat=['square','landscape','a4','a5'].includes(data?.format)?data.format:'poster';
@@ -22,7 +31,10 @@
   }
   function caption(data){
     data={...data,items:root.ShopDeskBusiness.visibleItems(data)};
-    const rows=['event','opening'].includes(data.purpose)?[]:data.items.map(item=>{
+    const rows=data.purpose==='combos'?root.ShopDeskCombos.groups(data).filter(g=>g.items.length).flatMap(group=>[
+      'Combo '+group.number+' · '+group.name+' — '+money(group.price)+' for the complete combo',
+      ...group.items.map(item=>(item.quantity||1)+' × '+(data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name)+(item.size?' · '+item.size:'')),''
+    ]):['event','opening'].includes(data.purpose)?[]:data.items.map(item=>{
       const name=data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name;
       return name+(item.size?' · '+item.size:'')+' — '+(item.dealQuantity?item.dealQuantity+' for ':'')+money(item.price);
     });

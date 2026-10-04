@@ -13,6 +13,7 @@ function item(value) {
   const photo = value.photo == null ? '' : text(value.photo, 36, 'the product photo');
   if (photo && !/^[0-9a-f-]{36}$/.test(photo)) throw fail('Invalid photo.');
   const styling={};
+  for(const [key,min,max] of [['combo',0,5],['quantity',1,99]])if(value[key]!==undefined){if(!Number.isInteger(value[key])||value[key]<min||value[key]>max)throw fail('Check the combo assignment or quantity.');styling[key]=value[key];}
   if(value.dealQuantity!==undefined){if(!Number.isInteger(value.dealQuantity)||value.dealQuantity<2||value.dealQuantity>99)throw fail('Choose a multi-buy quantity from 2 to 99.');styling.dealQuantity=value.dealQuantity;}
   for(const [key,min,max] of [['photoScale',.5,2],['photoX',-1,1],['photoY',-1,1]])if(value[key]!==undefined){if(!Number.isFinite(value[key])||value[key]<min||value[key]>max)throw fail('Check the product photo framing.');styling[key]=value[key];}
   if(value.featured!==undefined){if(typeof value.featured!=='boolean')throw fail('Choose a valid featured offer.');styling.featured=value.featured;}
@@ -22,9 +23,15 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace'].includes(template)) throw fail('Choose a poster template.');
-  const maxItems = template === 'simple' ? 3 : 25;
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh'].includes(template)) throw fail('Choose a poster template.');
+  const maxItems = d.purpose==='combos'?20:template === 'simple' ? 3 : 25;
   const finishing={};
+  if(d.combos!==undefined){
+    if(!Array.isArray(d.combos)||!d.combos.length||d.combos.length>6)throw fail('Choose 1 to 6 combos.');
+    finishing.combos=d.combos.map(c=>{if(!c||typeof c!=='object')throw fail('Check your combo.');const price=text(c.price,20,'the bundle price');if(price!==''&&(!Number.isFinite(Number(price))||Number(price)<0||Number(price)>1000000))throw fail('Check the bundle price.');return {name:text(c.name,40,'the combo name'),price};});
+    if(d.items?.some(i=>i.combo!==undefined&&i.combo>=d.combos.length))throw fail('Choose an existing combo for each product.');
+  }
+
   for(const [key,values] of [['logoSize',['compact','prominent']],['exportQuality',['standard','4k']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
     if(!values.includes(d[key]))throw fail('Choose a valid design finish.');finishing[key]=d[key];
   }
@@ -32,7 +39,7 @@ export function validateWorkspace(data) {
     if(!Number.isInteger(d.itemCount)||d.itemCount<1||d.itemCount>25||!Array.isArray(d.items)||d.itemCount>d.items.length)throw fail('Choose between 1 and 25 items.');
     finishing.itemCount=d.itemCount;
   }
-  if(d.purpose!==undefined){if(!['offers','spotlight','event','opening'].includes(d.purpose))throw fail('Choose a flyer purpose.');finishing.purpose=d.purpose;}
+  if(d.purpose!==undefined){if(!['offers','combos','spotlight','event','opening'].includes(d.purpose))throw fail('Choose a flyer purpose.');finishing.purpose=d.purpose;}
   for(const [key,max] of [['details',180],['eventDate',10],['eventTime',40],['venue',80],['heroPhoto',36]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the project details');
   if(finishing.eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.eventDate))throw fail('Check the event date.');
   if(finishing.heroPhoto&&!/^[0-9a-f-]{36}$/.test(finishing.heroPhoto))throw fail('Invalid main photo.');
