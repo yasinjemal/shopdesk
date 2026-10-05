@@ -36,3 +36,23 @@ test('combo template reuse strips private fields and photos while retaining sele
   assert.deepEqual(ShopDeskTemplates.validate(content),content);
   assert.equal(ShopDeskCombos.groups(ShopDeskTemplates.draft(content)).length,4);
 });
+
+test('basket variations are independent and preserve reserved products, original prices and framing',()=>{
+  const draft=sample().draft;draft.items=draft.items.slice(0,20);draft.itemCount=8;draft.items[0].photo=crypto.randomUUID();draft.items[0].photoScale=1.3;draft.items[0].featured=true;
+  const before=structuredClone(draft),next=ShopDeskCombos.duplicate(draft,0);
+  assert.deepEqual(draft,before);assert.equal(next.itemCount,10);assert.equal(next.items.length,22);
+  assert.deepEqual(next.items.slice(10),before.items.slice(8));
+  assert.equal(next.items[8].photo,draft.items[0].photo);assert.equal(next.items[8].photoScale,1.3);assert.equal(next.items[8].price,'19.99');assert.equal(next.items[8].featured,undefined);assert.equal(next.items[8].combo,4);
+  next.combos[4].price='99.99';next.items[8].name='Different rice';next.items[8].quantity=9;assert.deepEqual(draft,before);
+  assert.equal(validateWorkspace({...sample(),draft:next}).draft.combos[4].price,'99.99');
+  assert.throws(()=>ShopDeskCombos.duplicate(sample().draft,0),/Make room/);
+  assert.throws(()=>ShopDeskCombos.duplicate({...draft,combos:[...draft.combos,{name:'Five',price:''},{name:'Six',price:''}]},0),/6 combos/);
+});
+
+test('adding directly to a basket pins legacy assignments and fills empty cards without losing retained items',()=>{
+  const draft={purpose:'combos',itemCount:3,combos:ShopDeskCombos.defaults(),items:[{name:'Rice',size:'1 kg',price:'25.99',photo:''},{name:'',size:'',price:'',photo:''},{name:'Beans',size:'500 g',price:'15.99',photo:''},{name:'Reserved',size:'',price:'40',photo:''}]};
+  const before=structuredClone(draft),blank={name:'',size:'',price:'',photo:''};
+  const next=ShopDeskCombos.add(draft,2,[blank,blank]);assert.deepEqual(draft,before);
+  assert.equal(next.itemCount,4);assert.equal(next.items.length,5);assert.equal(next.items[0].combo,0);assert.equal(next.items[2].combo,2);assert.equal(next.items[1].combo,2);assert.equal(next.items[3].combo,2);assert.equal(next.items[4].name,'Reserved');assert.equal(next.items[4].combo,3);
+  const full=sample().draft,beforeFull=structuredClone(full);assert.throws(()=>ShopDeskCombos.add(full,0,[draft.items[0]]),/Make room/);assert.deepEqual(full,beforeFull);
+});

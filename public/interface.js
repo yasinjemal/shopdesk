@@ -79,9 +79,9 @@
     if(/business name/i.test(message)){showTab('business');$('shop-name').focus();return;}
     showTab('content');
     let target=/headline/i.test(message)?$('promo-headline'):/event|opening date/i.test(message)?$('event-date'):/start date/i.test(message)?$('promo-start-date'):/end date|expired/i.test(message)?$('promo-date'):null;
-    const combo=message.match(/combo (\d+)/i);if(combo)target=document.querySelector('[data-combo="'+(Number(combo[1])-1)+'"] '+(/price/i.test(message)?'.combo-price':'.combo-name'));
+    const combo=message.match(/combo (\d+)/i);if(combo){ShopDeskPromotion.selectCombo(Number(combo[1])-1);target=document.querySelector('[data-combo="'+(Number(combo[1])-1)+'"] '+(/price/i.test(message)?'.combo-price':'.combo-name'));}
     const item=message.match(/item (\d+)/i);
-    if(item){const card=$('promo-items').children[Number(item[1])-1];if(card){card.open=true;target=card.querySelector(/price/i.test(message)?'input[type="number"]':'input[type="text"]');}}
+    if(item){const card=$('promo-items').querySelector('.promo-item[data-index="'+(Number(item[1])-1)+'"]');if(card){if(card.closest('.combo-control'))ShopDeskPromotion.selectCombo(Number(card.closest('.combo-control').dataset.combo));card.open=true;target=card.querySelector(/price|packs/i.test(message)?'input[type="number"]':'input[type="text"]');}}
     (target||$('flyer-purpose')).focus();
   });
   $('reset-design-finishes').addEventListener('click',()=>{

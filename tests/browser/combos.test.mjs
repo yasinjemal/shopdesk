@@ -18,17 +18,17 @@ for(const width of [320,1280])test(`grocery bundles can be edited, saved and exp
       await card.getByLabel('Product name',{exact:true}).fill(['Rice','Cooking oil','Sugar','Flour','Beans'][i%5]+' '+(i+1));
       await card.getByLabel('Pack / quantity',{exact:true}).fill('1 kg');await card.getByLabel('Price (R)',{exact:true}).fill('29.99');
     }
-    await page.locator('#flyer-purpose').selectOption('combos');assert.equal(await page.locator('#promo-items > details').count(),20);assert.equal(await page.locator('#product-count').inputValue(),'20');
+    await page.locator('#flyer-purpose').selectOption('combos');assert.equal(await page.locator('#promo-items .promo-item').count(),20);assert.equal(await page.locator('#product-count').inputValue(),'20');
     assert.match(await page.locator('#promo-error').innerText(),/bundle price/);
-    for(let i=0;i<4;i++){await page.locator('.combo-name').nth(i).fill(['Family pantry','Breakfast basket','Cleaning essentials','Weekend top-up'][i]);await page.locator('.combo-price').nth(i).fill(String(149+i*20)+'.99');}
-    const first=page.locator('#promo-items > details').first();if(await first.getAttribute('open')===null)await first.locator('.item-heading').click();
+    for(let i=0;i<4;i++){await click('[data-combo-choice="'+i+'"]');await page.locator('.combo-name').nth(i).fill(['Family pantry','Breakfast basket','Cleaning essentials','Weekend top-up'][i]);await page.locator('.combo-price').nth(i).fill(String(149+i*20)+'.99');}
+    await click('[data-combo-choice="0"]');const first=page.locator('#promo-items .promo-item[data-index="0"]');if(await first.getAttribute('open')===null)await first.locator('.item-heading').click();
     await first.getByLabel('Packs in this combo',{exact:true}).fill('2');await first.locator('.combo-assignment').selectOption('1');
     await click('#add-combo');await click('#add-combo');assert.equal(await page.locator('#add-combo').isDisabled(),true);
-    await page.locator('.remove-combo').last().click();await page.locator('.remove-combo').last().click();assert.equal(await page.locator('.combo-control').count(),4);
-    await first.locator('.move-item').last().click();assert.match(await page.locator('#promo-items > details').nth(1).locator('.item-heading').innerText(),/2 × · Combo 2/);
-    await page.locator('#promo-items > details').nth(1).locator('.remove-item').click();await click('#undo-remove-item');assert.equal(await page.locator('#promo-items > details').count(),20);
-    assert.match(await page.locator('#promo-items > details').nth(1).locator('.item-heading').innerText(),/2 × · Combo 2/);
-    const card=page.locator('#promo-items > details').nth(1);if(await card.getAttribute('open')===null)await card.locator('.item-heading').click();
+    await page.locator('.combo-control:not([hidden]) .remove-combo').click();await page.locator('.combo-control:not([hidden]) .remove-combo').click();assert.equal(await page.locator('.combo-control').count(),4);
+    await click('[data-combo-choice="1"]');await first.locator('.move-item').last().click();assert.match(await page.locator('#promo-items .promo-item[data-index="1"]').locator('.item-heading').innerText(),/2 ×/);
+    await page.locator('#promo-items .promo-item[data-index="1"]').locator('.remove-item').click();await click('#undo-remove-item');assert.equal(await page.locator('#promo-items .promo-item').count(),20);
+    assert.match(await page.locator('#promo-items .promo-item[data-index="1"]').locator('.item-heading').innerText(),/2 ×/);
+    const card=page.locator('#promo-items .promo-item[data-index="1"]');if(await card.getAttribute('open')===null)await card.locator('.item-heading').click();
     const image=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=600;c.height=900;const g=c.getContext('2d');g.fillStyle='white';g.fillRect(0,0,600,900);g.fillStyle='#dfbc68';g.fillRect(80,45,440,780);g.fillStyle='#176b42';g.fillRect(80,220,440,370);g.fillStyle='white';g.font='bold 90px sans-serif';g.fillText('PANTRY',90,360);g.font='70px sans-serif';g.fillText('Rice',180,485);return c.toDataURL().split(',')[1];});
     await card.locator('input[type=file]').setInputFiles({name:'grocery.png',mimeType:'image/png',buffer:Buffer.from(image,'base64')});await page.waitForFunction(()=>!document.querySelector('#download-promo').disabled);
     await page.waitForFunction(()=>document.querySelector('#save-status').textContent==='All changes saved');await page.reload();await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
