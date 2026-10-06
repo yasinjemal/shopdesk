@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal'],
     theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'],
     format:['poster','status','square','landscape','a4','a5'],business:['grocery','fashion','food','beauty','services','general'],
     purpose:['offers','combos','spotlight','event','opening'],logoSize:['compact','prominent'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
@@ -82,7 +82,12 @@
     ['At the café terrace','Awning stripes and soft price labels for your menu.','food','terrace','olive','offers',4],
     ['Grocery combo market','Four numbered bundle frames for family essentials.','grocery','combo-board','red','combos',12],
     ['The bundle ticket board','Bold bundle tickets with editable names and contents.','grocery','combo-ticket','blue','combos',8],
-    ['Fresh basket combos','Fresh produce bundles in clean green frames.','grocery','combo-fresh','green','combos',8]
+    ['Fresh basket combos','Fresh produce bundles in clean green frames.','grocery','combo-fresh','green','combos',8],
+    ['The grocer gazette','An editorial circular with numbered offers and fine price rules.','grocery','gazette','petrol','offers',6],
+    ['Harvest market picks','Curved produce panels and soft, fresh-market colours.','grocery','harvest','olive','offers',6],
+    ['The value ledger','A compact grocery list with clear product and price columns.','grocery','ledger','cobalt','offers',8],
+    ['The midnight pantry','A premium dark catalogue for a considered grocery selection.','grocery','midnight','gold','offers',6],
+    ['Diagonal grocery deals','An angled masthead and bold two-tone prices for shop promotions.','grocery','diagonal','red','offers',9]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
   root.ShopDeskTemplates={design,validate,create,draft,starters};
 })(typeof window!=='undefined'?window:globalThis);
