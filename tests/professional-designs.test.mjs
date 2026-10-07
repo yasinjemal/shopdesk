@@ -7,7 +7,9 @@ import '../public/templates.js';
 import '../public/pack.js';
 import {validateWorkspace,validateStudio} from '../worker/index.js';
 
-const styles=['gazette','harvest','ledger','midnight','diagonal'];
+const originalStyles=['gazette','harvest','ledger','midnight','diagonal'];
+const retailStyles=['circular','frontpage','aisle','price-blocks','fresh-cut','split-banner'];
+const styles=[...originalStyles,...retailStyles];
 test('professional grocery styles survive save, duplicate, sharing and promotion packs',()=>{
   for(const template of styles){
     const draft={headline:'Weekly grocery offers',date:'2030-10-15',template,theme:ShopDeskPoster.collection[template].theme,format:'a4',exportQuality:'4k',business:'grocery',purpose:'offers',itemCount:1,typeface:'geometric',priceStyle:'pill',keepColours:true,items:[{name:'Rice',size:'2 kg',price:'49.99',photo:crypto.randomUUID(),photoScale:1.2,photoX:.2,dealQuantity:2,featured:true},{name:'Reserved beans',size:'410 g',price:'15',photo:''}]};
@@ -20,10 +22,12 @@ test('professional grocery styles survive save, duplicate, sharing and promotion
     for(const page of ShopDeskPack.plan(copy))assert.equal(page.data.template,template);
   }
   // Append starters: saved favourites keep the same identifiers and contents.
-  assert.equal(ShopDeskTemplates.starters.length,35);
+  assert.equal(ShopDeskTemplates.starters.length,43);
   assert.equal(ShopDeskTemplates.starters[0].id,'starter-0');assert.equal(ShopDeskTemplates.starters[0].design.template,'warehouse');
   assert.equal(ShopDeskTemplates.starters[29].id,'starter-29');assert.equal(ShopDeskTemplates.starters[29].design.template,'combo-fresh');
-  assert.deepEqual(ShopDeskTemplates.starters.slice(30).map(t=>t.design.template),styles);
+  assert.deepEqual(ShopDeskTemplates.starters.slice(30,35).map(t=>t.design.template),originalStyles);
+  assert.deepEqual(ShopDeskTemplates.starters.slice(35).map(t=>t.design.template),[...retailStyles,'combo-circular','combo-receipt']);
+  for(const starter of ShopDeskTemplates.starters.slice(35))assert.equal(validateWorkspace({shop:{name:'Local grocery',phone:'',location:''},products:[],draft:ShopDeskTemplates.draft(starter)}).draft.template,starter.design.template);
 });
 test('professional layouts keep all 1–25 products inside six shapes without overlap',()=>{
   for(const format of Object.keys(ShopDeskPoster.formats))for(const style of styles)for(let count=1;count<=25;count++)for(const index of [-1,0,count-1]){

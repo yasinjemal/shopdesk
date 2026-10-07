@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  const styles=['combo-board','combo-ticket','combo-fresh'];
+  const styles=['combo-board','combo-ticket','combo-fresh','combo-circular','combo-receipt'];
   const defaults=()=>Array.from({length:4},(_,i)=>({name:'Combo '+(i+1),price:''}));
   const groupOf=(item,index,count)=>Math.min(count-1,item.combo??index%count);
   const blank=item=>!item.name?.trim()&&!item.size?.trim()&&!item.price&&!item.photo;

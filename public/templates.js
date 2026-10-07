@@ -1,7 +1,7 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt'],
     theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'],
     format:['poster','status','square','landscape','a4','a5'],business:['grocery','fashion','food','beauty','services','general'],
     purpose:['offers','combos','spotlight','event','opening'],logoSize:['compact','prominent'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
@@ -87,7 +87,15 @@
     ['Harvest market picks','Curved produce panels and soft, fresh-market colours.','grocery','harvest','olive','offers',6],
     ['The value ledger','A compact grocery list with clear product and price columns.','grocery','ledger','cobalt','offers',8],
     ['The midnight pantry','A premium dark catalogue for a considered grocery selection.','grocery','midnight','gold','offers',6],
-    ['Diagonal grocery deals','An angled masthead and bold two-tone prices for shop promotions.','grocery','diagonal','red','offers',9]
+    ['Diagonal grocery deals','An angled masthead and bold two-tone prices for shop promotions.','grocery','diagonal','red','offers',9],
+    ['The weekly supermarket circular','A familiar campaign band and ruled grocery grid.','grocery','circular','red','offers',12],
+    ['The catalogue front page','One lead offer with supporting grocery deals.','grocery','frontpage','blue','offers',9],
+    ['Along the grocery aisles','Horizontal product strips with dedicated price columns.','grocery','aisle','petrol','offers',6],
+    ['Everyday price blocks','Large price plates for a practical grocery promotion.','grocery','price-blocks','tangerine','offers',9],
+    ['The fresh food circular','Curved photo panels for fresh counter and market finds.','grocery','fresh-cut','green','offers',6],
+    ['The split banner catalogue','A modern two-part masthead and quietly framed offers.','grocery','split-banner','indigo','offers',6],
+    ['The supermarket combo circular','Outlined bundle frames with a complete price for each basket.','grocery','combo-circular','red','combos',12],
+    ['The basket receipt','Itemised bundles with receipt rules and perforated edges.','grocery','combo-receipt','charcoal','combos',8]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
   root.ShopDeskTemplates={design,validate,create,draft,starters};
 })(typeof window!=='undefined'?window:globalThis);

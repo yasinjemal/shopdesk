@@ -2,6 +2,14 @@
   'use strict';
   const themes={green:['#103e35','#c6f39b','#f7f9ef'],blue:['#182c5c','#cbe6ff','#f3f7ff'],orange:['#763714','#ffe29c','#fff8ec'],red:['#c91424','#ffe232','#ffffff'],plum:['#613b59','#f0dbe8','#fff9fc'],charcoal:['#292822','#e3d3b7','#faf7f0'],teal:['#075e64','#bceae1','#f2fbfa'],gold:['#20232c','#e7c574','#faf8f1'],berry:['#941c50','#ffe0ec','#fff8fb'],violet:['#5632a0','#e3d8ff','#faf8ff'],cobalt:['#134bb3','#d6e7ff','#f6f9ff'],coral:['#ab3543','#ffdad5','#fff8f6'],coffee:['#503529','#ebd2b4','#fcf8f3']};
   const collection={
+    circular:{name:'Weekly Circular',category:'retail',theme:'red',hint:'A classic supermarket circular with a campaign band, clean product cut-outs and ruled offer cells.'},
+    frontpage:{name:'Front-page Feature',category:'retail',theme:'blue',hint:'A catalogue cover with one lead offer and supporting deals. Feature any product to change the lead.'},
+    aisle:{name:'Aisle Strips',category:'retail',theme:'petrol',hint:'Horizontal grocery strips with photos, pack details and a dedicated price column. Dense pages switch to compact cells.'},
+    'price-blocks':{name:'Price Blocks',category:'retail',theme:'tangerine',hint:'A bold discount-store grid with large price blocks and alternating product panels.'},
+    'fresh-cut':{name:'Fresh Cut',category:'food',theme:'green',hint:'A fresh-food circular with generous photo stages, curved corners and a crisp market masthead.'},
+    'split-banner':{name:'Split Banner',category:'elegant',theme:'indigo',hint:'A modern store catalogue with a split masthead, framed offers and restrained price rules.'},
+    'combo-circular':{name:'Combo Circular',category:'retail',theme:'red',hint:'A white supermarket circular with outlined bundle frames and one clear total for each combo.'},
+    'combo-receipt':{name:'Basket Receipt',category:'retail',theme:'charcoal',hint:'Receipt-inspired bundle panels with perforated edges, itemised contents and a complete-basket total.'},
     gazette:{name:'Grocer Gazette',category:'elegant',theme:'petrol',hint:'An editorial grocery circular with numbered offers, fine rules and understated price labels.'},
     harvest:{name:'Harvest Market',category:'food',theme:'olive',hint:'A fresh produce market with curved panels, circular photo stages and soft price labels.'},
     ledger:{name:'Value Ledger',category:'retail',theme:'cobalt',hint:'A compact value list with side-by-side product details and clear price columns.'},
@@ -139,6 +147,7 @@
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
     if(data.purpose==='combos')return drawCombos(canvas,data,images);
+    if(['circular','frontpage','aisle','price-blocks','fresh-cut','split-banner'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose))return drawTrade(canvas,data,images);
     if(['gazette','harvest','ledger','midnight','diagonal'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose))return drawProfessional(canvas,data,images);
     if(['square','landscape'].includes(data.format)||(['parade','shelf','paper','arc','ticket','terrace'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose)))return drawFlexible(canvas,data,images);
     if(['event','opening'].includes(data.purpose))return drawAnnouncement(canvas,data,images);
@@ -937,10 +946,11 @@
   }
 
   function professionalGeometry(format,count,mode,index=-1){
-    const layout=flexibleGeometry(format,count,mode,index);
+    const layout=flexibleGeometry(format,count,mode==='frontpage'?'shelf':mode,index);
+    if(mode==='frontpage')return layout;
     if(index>=0)return layout;
-    const photoGrid=['harvest','midnight'].includes(mode)&&layout.width<=layout.height&&count>=5&&count<=9;
-    if(mode!=='ledger'&&!photoGrid)return layout;
+    const photoGrid=['harvest','midnight','fresh-cut'].includes(mode)&&layout.width<=layout.height&&count>=5&&count<=9;
+    if(!['ledger','aisle'].includes(mode)&&!photoGrid)return layout;
     const {width,top,bottom}=layout,gap=14,wide=width>layout.height;
     const cols=photoGrid?3:wide?(count<=6?2:count<=15?3:5):count<=4?1:count<=8?2:count<=15?3:count<=20?4:5;
     const rows=Math.ceil(count/cols),w=(width-80-gap*(cols-1))/cols,h=(bottom-top-gap*(rows-1))/rows;
@@ -951,10 +961,22 @@
     const night=mode==='midnight',ledger=mode==='ledger',harvest=mode==='harvest',gazette=mode==='gazette';
     const dense=c.w<240||c.h<210,pad=dense?9:18,x=c.x+pad,y=c.y+pad,w=c.w-pad*2,h=c.h-pad*2,ink=night?'#fff8eb':brand;
     ctx.save();
-    roundBox(ctx,c.x,c.y,c.w,c.h,harvest?Math.min(32,c.w*.12):night?5:0,night?brand:'#ffffff',night?accent:gazette?brand:null);
+    const blocks=mode==='price-blocks',framed=mode==='split-banner',cut=mode==='fresh-cut';
+    roundBox(ctx,c.x,c.y,c.w,c.h,harvest?Math.min(32,c.w*.12):cut?[Math.min(38,c.w*.15),0,0,0]:night?5:0,night?brand:blocks&&index%2?paper:'#ffffff',night?accent:gazette||framed?brand:null);
     ctx.beginPath();ctx.rect(c.x+1,c.y+1,c.w-2,c.h-2);ctx.clip();
-    const priceH=Math.min(90,Math.max(30,h*.2)),priceY=y+h-priceH;
-    const contentH=priceY-y-8,short=c.h<180,side=ledger||short||c.w/c.h>2.2;
+    if(mode==='aisle'&&c.w>290&&c.h>130){
+      const priceW=Math.min(190,w*.25),photoW=w*.24,tx=x+photoW+12,tw=w-photoW-priceW-32,priceX=x+w-priceW;
+      ctx.fillStyle=accent;ctx.fillRect(c.x,c.y,5,c.h);
+      if(image)contain(ctx,image,x,y,photoW,h,item);
+      const titleH=Math.max(30,h-40),font=Math.min(34,tw*.15,titleH/2.5);
+      comboName(ctx,item.name||'Your product',tx,y+h*.55,tw,font,brand);
+      fit(ctx,item.size||unit,tx,Math.min(y+h-8,y+h*.55+Math.min(30,h*.2)),tw,18,brand,600);
+      const ticketH=Math.min(150,h*.56);
+      offerPrice(ctx,item,priceX,y+(h-ticketH)/2,priceW,ticketH,brand,'#ffffff');
+      ctx.restore();return;
+    }
+    const priceH=Math.min(blocks?110:90,Math.max(30,h*(blocks?.27:.2))),priceY=y+h-priceH;
+    const contentH=priceY-y-8,short=c.h<180,side=ledger||mode==='aisle'||short||c.w/c.h>2.2;
     if(gazette&&!short){fit(ctx,String(index+1).padStart(2,'0'),x,y+16,w,14,brand,500);ctx.fillStyle=brand;ctx.fillRect(x,y+24,w,1);}
     let tx=x,tw=w,nameBottom=priceY-(dense?29:39),nameH=Math.min(70,contentH*.32),photoX=x,photoY=y+(gazette&&!short?34:0),photoW=w,photoH=Math.max(8,nameBottom-nameH-photoY-8);
     if(side){
@@ -981,12 +1003,15 @@
       comboName(ctx,item.name||'Your product',tx,priceY-29,tw,font,ink);
     }else nameLines(ctx,item.name||'Your product',tx,nameBottom,tw,titleSize,nameH,2,ink);
     fit(ctx,item.size||unit,tx,priceY-9,tw,dense?13:20,ink,600);
-    if(mode==='diagonal'){
+    if(mode==='diagonal'||blocks){
       ctx.fillStyle=accent;ctx.beginPath();ctx.moveTo(c.x+c.w-32,c.y);ctx.lineTo(c.x+c.w,c.y);ctx.lineTo(c.x+c.w,c.y+32);ctx.closePath();ctx.fill();
       ctx.fillStyle=accent;ctx.fillRect(x-3,priceY-3,w+6,priceH+6);
     }
     if(ledger){ctx.fillStyle=accent;ctx.fillRect(c.x,c.y,4,c.h);}
-    offerPrice(ctx,item,x,priceY,w,priceH,gazette?null:night||harvest?accent:brand,gazette?brand:night||harvest?brand:'#ffffff');
+    if(mode==='circular'){ctx.fillStyle=brand;ctx.fillRect(c.x,c.y+c.h-1,c.w,1);}
+    if(mode==='frontpage'){ctx.fillStyle=accent;ctx.fillRect(c.x,c.y,6,c.h);}
+    if(cut){ctx.fillStyle=brand;ctx.fillRect(x,y,Math.min(38,w*.18),3);}
+    offerPrice(ctx,item,x,priceY,w,priceH,gazette||framed?null:night||harvest||cut?accent:brand,gazette||framed?brand:night||harvest||cut?brand:'#ffffff');
     if(c.featured){ctx.strokeStyle=night?accent:brand;ctx.lineWidth=4;ctx.strokeRect(c.x+2,c.y+2,c.w-4,c.h-4);}
     ctx.restore();
   }
@@ -1034,6 +1059,48 @@
     return layout;
   }
 
+  function drawTrade(canvas,data,images){
+    const mode=data.template,layout=professionalGeometry(data.format,data.items.length,mode,data.items.findIndex(i=>i.featured));
+    const {width,height,top,footerY:fy}=layout,[brand,accent,paper]=themes[data.theme]||themes.red;
+    const ctx=surface(canvas,height,width),quiet=mode==='fresh-cut'||mode==='price-blocks',split=mode==='split-banner';
+    ctx.fillStyle=mode==='price-blocks'?accent:paper;ctx.fillRect(0,0,width,height);
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,width,96);
+    const logo=data.logo?images.get(data.logo):null,shopX=logo?158+96*(logoScale-1):40;
+    if(logo)drawLogo(ctx,logo,40,24,96,60);
+    fit(ctx,data.shop||'Your grocery store',shopX,62,width-shopX-40,38,brand,800);
+    ctx.fillStyle=quiet?paper:brand;ctx.fillRect(0,96,width,top-134);
+    if(mode==='frontpage'){
+      ctx.save();ctx.globalAlpha=.12;ctx.strokeStyle=accent;ctx.lineWidth=12;
+      for(let i=0;i<3;i++)ctx.strokeRect(width-240+i*26,115+i*14,170,top-166);ctx.restore();
+    }else if(mode==='aisle'){
+      ctx.fillStyle=accent;ctx.fillRect(0,96,16,top-134);ctx.fillRect(40,top-52,width-80,3);
+    }else if(mode==='price-blocks'){
+      ctx.fillStyle=accent;ctx.fillRect(width-112,96,112,top-134);ctx.fillStyle=brand;ctx.fillRect(40,top-52,width-80,7);
+    }else if(mode==='fresh-cut'){
+      ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=accent;
+      for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(width-60-i*70,145+i*16,55-i*8,0,Math.PI*2);ctx.fill();}ctx.restore();
+      ctx.fillStyle=brand;ctx.fillRect(40,top-48,width-80,2);
+    }else if(split){
+      ctx.fillStyle=accent;ctx.fillRect(width*.84,96,width*.16,top-134);ctx.fillStyle=paper;ctx.fillRect(width*.82,96,8,top-134);
+    }else{ctx.fillStyle=accent;ctx.fillRect(0,top-45,width,7);}
+    fit(ctx,data.copy.eyebrow,40,132,split?width*.75:width-80,20,quiet?brand:accent,800);
+    nameLines(ctx,data.headline||'Your weekly grocery selection.',40,top-72,split?width*.76:width-80,width>height?74:68,top-216,2,quiet?brand:'#ffffff');
+    fit(ctx,data.copy.date,40,top-12,width-80,21,brand,700);
+    const savedPriceStyle=priceStyle;
+    try{
+      if(split&&priceStyle==='design')priceStyle='outline';
+      data.items.forEach((item,index)=>professionalCard(ctx,item,layout.cards[index],item.photo?images.get(item.photo):null,{mode,brand,accent,paper,unit:data.copy.unit,index}));
+    }finally{priceStyle=savedPriceStyle;}
+    ctx.fillStyle=mode==='fresh-cut'?'#ffffff':brand;ctx.fillRect(0,fy,width,88);
+    const footerInk=mode==='fresh-cut'?brand:'#ffffff';
+    if(mode==='fresh-cut'){ctx.fillStyle=brand;ctx.fillRect(40,fy,width-80,2);}
+    fit(ctx,data.copy.location||data.shop||'',40,fy+34,width-80,27,footerInk,800);
+    fit(ctx,data.copy.contact,40,fy+70,width-80,24,footerInk,600);
+    fit(ctx,data.copy.terms,40,fy+116,width-290,17,brand,400);
+    fit(ctx,data.packPage?'ShopDesk · '+data.packPage.index+' / '+data.packPage.total:'ShopDesk',width-215,fy+116,175,17,brand,500);
+    return layout;
+  }
+
   function comboBands(h){return {head:Math.max(36,Math.min(70,h*.19)),foot:Math.max(38,Math.min(86,h*.22)),gap:h<180?6:20};}
   function comboGeometry(data){
     const f=formats[data.format]||formats.poster,width=f.width,height=f.height,wide=width>height;
@@ -1070,24 +1137,26 @@
   }
   function drawCombos(canvas,data,images){
     const layout=comboGeometry(data),{width,height,frames,cards}=layout,ctx=surface(canvas,height,width);
-    const [brand,accent,paper]=themes[data.theme]||themes.red,ticket=data.template==='combo-ticket',fresh=data.template==='combo-fresh';
-    ctx.fillStyle=fresh?paper:accent;ctx.fillRect(0,0,width,height);
-    ctx.fillStyle=brand;ctx.fillRect(0,0,width,layout.top-42);
+    const [brand,accent,paper]=themes[data.theme]||themes.red,ticket=data.template==='combo-ticket',fresh=data.template==='combo-fresh',circular=data.template==='combo-circular',receipt=data.template==='combo-receipt',quiet=circular||receipt;
+    ctx.fillStyle=quiet?'#ffffff':fresh?paper:accent;ctx.fillRect(0,0,width,height);
+    ctx.fillStyle=quiet?paper:brand;ctx.fillRect(0,0,width,layout.top-42);
     if(ticket){ctx.save();ctx.globalAlpha=.13;ctx.strokeStyle=accent;ctx.lineWidth=12;for(let x=-220;x<width;x+=42){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+220,layout.top-42);ctx.stroke();}ctx.restore();}
     if(fresh){ctx.save();ctx.globalAlpha=.13;ctx.fillStyle=accent;for(let x=width*.65;x<width;x+=46){ctx.beginPath();ctx.ellipse(x,80,26,105,-.6,0,Math.PI*2);ctx.fill();}ctx.restore();}
     const logo=data.logo?images.get(data.logo):null,extra=logo?drawLogo(ctx,logo,40,24,110,68):0,shopX=logo?170+extra:40;
-    fit(ctx,data.shop||'Your grocery store',shopX,72,width-shopX-40,34,'#ffffff',800);
-    fit(ctx,data.copy.eyebrow||'GROCERY COMBOS',40,117,width-80,20,accent,700);
-    nameLines(ctx,data.headline||'Everyday essentials. Better together.',40,layout.top-66,width-80,52,100,2,'#ffffff');
+    if(quiet){ctx.fillStyle=brand;ctx.fillRect(40,95,width-80,receipt?1:4);ctx.fillRect(40,layout.top-45,width-80,receipt?1:6);}
+    fit(ctx,data.shop||'Your grocery store',shopX,72,width-shopX-40,34,quiet?brand:'#ffffff',800);
+    fit(ctx,data.copy.eyebrow||'GROCERY COMBOS',40,117,width-80,20,quiet?brand:accent,700);
+    nameLines(ctx,data.headline||'Everyday essentials. Better together.',40,layout.top-66,width-80,52,100,2,quiet?brand:'#ffffff');
     fit(ctx,data.copy.date||'Choose your favourite combo',40,layout.top-12,width-80,22,brand,700);
     for(const frame of frames){
       const {group,x,y,w,h}=frame,{head,foot}=comboBands(h);
-      ctx.save();ctx.shadowColor='#153b2520';ctx.shadowBlur=12;ctx.shadowOffsetY=5;roundBox(ctx,x,y,w,h,fresh?22:ticket?8:12,'#ffffff');ctx.restore();
+      ctx.save();if(!quiet){ctx.shadowColor='#153b2520';ctx.shadowBlur=12;ctx.shadowOffsetY=5;}roundBox(ctx,x,y,w,h,fresh?22:quiet?0:ticket?8:12,'#ffffff',quiet?brand:null);ctx.restore();
+      if(receipt){ctx.save();ctx.fillStyle='#ffffff';ctx.strokeStyle=brand;ctx.lineWidth=1;for(let rx=x+8;rx<x+w-8;rx+=18){ctx.beginPath();ctx.arc(rx,y+h,4,Math.PI,Math.PI*2);ctx.fill();ctx.stroke();}ctx.restore();}
       roundBox(ctx,x+10,y+8,Math.min(90,w*.21),head-16,fresh?20:5,brand);
       fit(ctx,'COMBO '+group.number,x+18,y+8+(head-16)*.72,Math.min(74,w*.21-16),Math.min(18,(head-16)*.65),'#ffffff',800);
       fit(ctx,group.name||'Name your combo',x+Math.min(112,w*.25),y+head*.63,w-Math.min(124,w*.27),Math.min(28,head*.43),brand,800);
       ctx.strokeStyle=paper;ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+12,y+head-4);ctx.lineTo(x+w-12,y+head-4);ctx.stroke();
-      if(ticket){ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle=brand;ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(x+12,y+h-foot);ctx.lineTo(x+w-12,y+h-foot);ctx.stroke();ctx.restore();}
+      if(ticket||receipt){ctx.save();ctx.setLineDash([4,5]);ctx.strokeStyle=brand;ctx.globalAlpha=.3;ctx.beginPath();ctx.moveTo(x+12,y+h-foot);ctx.lineTo(x+w-12,y+h-foot);ctx.stroke();ctx.restore();}
       for(const item of group.items){
         const c=cards[item.sourceIndex],horizontal=c.w/c.h>3,font=Math.max(12,Math.min(25,c.w*.13,c.h*(horizontal?.27:.15))),packFont=Math.max(11,font*.82);
         const textX=c.x+(horizontal?Math.min(c.w*.32,c.h+16):8),textW=c.w-(textX-c.x)-8,nameBottom=c.y+c.h-packFont-10;
@@ -1099,7 +1168,7 @@
         ctx.fillStyle=brand;ctx.font=`600 ${packFont}px ${fontFamily}`;ctx.fillText(item.size||'',textX,c.y+c.h-5,textW);
       }
       const priceY=y+h-foot+8,priceH=foot-16;
-      offerPrice(ctx,{price:group.price},x+12,priceY,w-24,priceH,fresh?paper:brand,fresh?brand:'#ffffff');
+      offerPrice(ctx,{price:group.price},x+12,priceY,w-24,priceH,receipt?null:fresh?paper:brand,receipt||fresh?brand:'#ffffff');
     }
     const fy=layout.footerY;ctx.fillStyle=brand;ctx.fillRect(0,fy,width,92);
     fit(ctx,data.copy.location||data.shop||'',40,fy+34,width-80,27,'#ffffff',800);fit(ctx,data.copy.contact,40,fy+70,width-80,24,'#ffffff',600);
