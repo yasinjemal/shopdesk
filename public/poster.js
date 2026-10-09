@@ -63,9 +63,10 @@
   }
   const formatHeight=format=>(formats[format]||formats.poster).height;
   let renderOptions={},warningScale=1;
+  let lastCtx=null;
   function surface(canvas,height,width=1080){
     canvas.width=renderOptions.width||width;canvas.height=renderOptions.height||Math.round(height);
-    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');
+    const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Your browser cannot create this flyer.');lastCtx=ctx;
     ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);
     const mm=renderOptions.printMargin&&formats[renderOptions.format]?.mm,margin=mm?canvas.width*5/mm[0]:0;
     const scale=Math.min((canvas.width-2*margin)/width,(canvas.height-2*margin)/height);
@@ -147,9 +148,26 @@
     const cardHeight=(bottom-top-gap*(count-1))/count;
     return {height,top,bottom,cardHeight,cards:Array.from({length:count},(_,i)=>({x:60,y:top+i*(cardHeight+gap),w:960,h:cardHeight})),footerY:bottom+64,status};
   }
+  // Section labels (Fresh produce, Butchery, Household…) sit on the card corner
+  // in every design, the way leaflets group a page into departments.
+  function sectionTags(ctx,data){
+    if(!ctx||data.purpose==='combos'||['event','opening'].includes(data.purpose))return;
+    const items=root.ShopDeskBusiness.visibleItems(data),cards=lastLayoutCards||[];
+    const brand=(themes[data.theme]||themes.green)[0];
+    const listDesign=['household','cashcarry','ledger','aisle'].includes(data.template);
+    items.forEach((item,i)=>{
+      const c=cards[i],label=(item.section||'').trim();if(!c||!label||c.h<110)return;
+      const size=c.w<240?11:13;ctx.font=`800 ${size}px ${fontFamily}`;
+      const text=label.toUpperCase(),w=Math.min(c.w-16,ctx.measureText(text).width+16),h=size+10,x=listDesign?c.x+c.w-6-w:c.x+6;
+      ctx.save();ctx.beginPath();ctx.rect(c.x,c.y,c.w,c.h);ctx.clip();
+      roundBox(ctx,x,c.y+6,w,h,4,brand);fit(ctx,text,x+8,c.y+6+h*.74,w-16,size,'#ffffff',800);
+      ctx.restore();
+    });
+  }
+  let lastLayoutCards=null;
   function draw(canvas,data,images=new Map(),options={}){
-    renderOptions={...options,format:data.format};photoWarnings=[];
-    try{const layout=render(canvas,data,images);return {...layout,photoWarnings:[...photoWarnings]};}finally{renderOptions={};warningScale=1;}
+    renderOptions={...options,format:data.format};photoWarnings=[];lastCtx=null;
+    try{const layout=render(canvas,data,images);lastLayoutCards=layout.cards;sectionTags(lastCtx,{...data,items:root.ShopDeskBusiness.visibleItems(data)});return {...layout,photoWarnings:[...photoWarnings]};}finally{renderOptions={};warningScale=1;lastLayoutCards=null;}
   }
   function render(canvas,data,images=new Map()){
     trimPhotos=!!data.trimPhotos;logoScale=data.logoSize==='compact'?1:1.25;
@@ -219,11 +237,27 @@
     if(result.length>maxLines)result=[...result.slice(0,maxLines-1),result.slice(maxLines-1).join(' ')];
     return {lines:result,font:Math.max(18,font)};
   }
+  // A previous price is only ever shown when the person entered it; the save
+  // amount is arithmetic on their two numbers, never an invented claim.
+  function wasLine(item,value){
+    if(!item?.wasPrice)return '';const was=Number(item.wasPrice),now=Number(value);
+    if(!Number.isFinite(was)||was<=0||!Number.isFinite(now)||now<=0||was<=now)return '';
+    return 'was '+money(was)+'  ·  save '+money(was-now);
+  }
+  let currentItem=null;
   function drawPrice(ctx,value,x,y,width,height,background='#ffe132',ink='#111111'){
     if(priceStyle!=='design'){
       const outline=priceStyle==='outline';background=outline?'#ffffff':priceBrand;ink=outline?priceBrand:'#ffffff';
       roundBox(ctx,x+1,y+1,width-2,height-2,priceStyle==='pill'?Math.min(30,height/2):2,background,outline?priceBrand:null);
     }else if(background){ctx.fillStyle=background;ctx.fillRect(x,y,width,height);}
+    const was=height>=44&&width>=120?wasLine(currentItem,value):'';
+    if(was){
+      const size=Math.max(11,Math.min(16,height*.2));ctx.font=`600 ${size}px ${fontFamily}`;
+      const text=ctx.measureText(was).width>width-16?was.split('  ·  ')[0]:was,w=ctx.measureText(text).width;
+      fit(ctx,text,x+(width-w)/2,y+size+Math.max(3,height*.06),w+2,size,ink,600);
+      const strike=ctx.measureText(text.split('  ·  ')[0]).width;ctx.fillStyle=ink;ctx.fillRect(x+(width-w)/2,y+size*.62+Math.max(3,height*.06),strike,Math.max(1,size*.09));
+      const used=size+Math.max(3,height*.06)+2;y+=used;height-=used;
+    }
     const cents=value!==''&&Number.isFinite(Number(value))&&Number(value)>0?Math.round(Number(value)*100):null;
     if(cents===null){fit(ctx,'R —',x+12,y+height*.8,width-24,height*.75,ink,800);return;}
     const main='R'+Math.floor(cents/100).toLocaleString('en-ZA'),fraction=String(cents%100).padStart(2,'0');let size=Math.min(height*.86,width*.31);
@@ -233,6 +267,9 @@
     fit(ctx,main,left,baseline,m.a+2,size,ink,800);fit(ctx,fraction,left+m.a+5,baseline-size*.43,m.b+2,size*.48,ink,800);
   }
   function offerPrice(ctx,item,x,y,width,height,background='#ffe132',ink='#111111'){
+    currentItem=item;try{offerPriceInner(ctx,item,x,y,width,height,background,ink);}finally{currentItem=null;}
+  }
+  function offerPriceInner(ctx,item,x,y,width,height,background,ink){
     if(!item.dealQuantity){drawPrice(ctx,item.price,x,y,width,height,background,ink);return;}
     const labelW=Math.min(78,width*.28),labelInk=priceBrand;
     ctx.fillStyle='#ffffff';ctx.fillRect(x,y,labelW,height);

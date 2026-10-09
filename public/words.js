@@ -23,6 +23,9 @@
   const promotions={
     weekly:[['Weekly specials for your family table.','WEEKLY SPECIALS'],['This week’s specials. Fill your trolley.','THIS WEEK ONLY'],['A considered selection for the week ahead.','THE WEEKLY SELECTION']],
     weekend:[['Your weekend shop, sorted.','WEEKEND SPECIALS'],['Big weekend. Big value.','WEEKEND DEALS'],['Everything for a good weekend.','THE WEEKEND EDIT']],
+    monthend:[['Month-end specials for the month ahead.','MONTH-END SPECIALS'],['Payday prices. Fill the trolley.','MONTH-END DEALS'],['A month-end selection, clearly priced.','THE MONTH-END LIST']],
+    seasonal:[['Seasonal specials for your home.','SEASONAL SPECIALS'],['New season. New prices.','SEASONAL DEALS'],['A seasonal selection, simply priced.','THE SEASON’S PICKS']],
+    hardware:[['Tools and materials, clearly priced.','HARDWARE & BUILDING'],['Build it this month.','BUILD SPECIALS'],['Everything for the job, in one list.','THE BUILDING LIST']],
     wholesale:[['Wholesale prices for your business.','WHOLESALE PRICES'],['Stock up by the case.','CASH & CARRY'],['Bulk packs, clearly priced.','THE WHOLESALE LIST'],],
     produce:[['Fresh from the market this week.','FRESH PRODUCE'],['Fresh in today. Pick yours.','FRESH PICKS'],['Seasonal produce, simply priced.','FROM THE MARKET']],
     butchery:[['Quality cuts from our butchery.','FROM OUR BUTCHERY'],['Braai-ready cuts and packs.','BUTCHERY SPECIALS'],['Cut to order, priced per kilogram.','THE BUTCHER’S COUNTER']],

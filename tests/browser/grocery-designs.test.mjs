@@ -44,7 +44,27 @@ for(const width of [320,1280])test(`grocery designs respond, save, export and ke
     await page.waitForFunction(()=>!document.querySelector('#download-promo').disabled);
     await click('label:has(input[value="a5"])');download=page.waitForEvent('download');await click('#download-print');file=await readFile(await (await download).path());assert.match(file.toString('latin1'),/^%PDF-1.4/);assert.match(file.toString('latin1'),/MediaBox \[0 0 419\.5276 595\.2756\]/);
     await page.waitForFunction(()=>!document.querySelector('#download-promo').disabled);
-    await click('label:has(input[value="status"])');await page.locator('#export-quality').selectOption('standard');
+    // Previous price and section label: entered by the person, drawn on the flyer, kept after reload.
+    await click('#tab-content');const first=page.locator('#promo-items > details').first();if(!await first.evaluate(c=>c.open))await first.locator('summary').click();
+    await first.locator('.offer-options summary').click();
+    const plain=await page.locator('#promo-canvas').evaluate(c=>c.toDataURL());
+    await first.getByLabel('Previous price (optional)').fill('109.99');await first.getByLabel('Section label (optional)').fill('Butchery');
+    await page.waitForFunction(()=>document.querySelector('#save-status').textContent==='All changes saved');
+    assert.notEqual(await page.locator('#promo-canvas').evaluate(c=>c.toDataURL()),plain);
+    await page.reload();await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    assert.equal((await page.evaluate(()=>ShopDeskPromotion.itemState().items[0])).wasPrice,'109.99');assert.equal((await page.evaluate(()=>ShopDeskPromotion.itemState().items[0])).section,'Butchery');
+    assert.ok((await page.evaluate(()=>ShopDeskPack.caption({...ShopDeskPromotion.templateSnapshot(),shop:'x',items:ShopDeskPromotion.itemState().items}))).includes('(was R109.99)'));
+    // A multi-page A4 catalogue PDF for more than twelve offers.
+    await click('#tab-content');await click('#open-bulk');await page.locator('#bulk-source').fill(Array.from({length:8},(_,i)=>'Extra line '+(i+1)+', 1 kg, R'+(10+i)).join('\n'));await click('#review-bulk');await click('#apply-bulk');await page.waitForFunction(()=>!document.querySelector('#bulk-dialog').open);
+    await click('#tab-style');await click('label:has(input[value="a4"])');
+    assert.equal(await page.locator('#print-pages-field').isHidden(),false);await page.locator('#print-pages').selectOption('catalogue');
+    await page.waitForFunction(()=>document.querySelector('#download-print').textContent.includes('2-page'));
+    download=page.waitForEvent('download');await click('#download-print');file=await readFile(await (await download).path());
+    const text=file.toString('latin1');assert.match(text,/\/Count 2/);assert.equal((text.match(/\/Type \/Page\b(?! s)/g)||[]).length,2);assert.match(text,/MediaBox \[0 0 595\.2756 841\.8898\]/);
+    await page.waitForFunction(()=>!document.querySelector('#download-promo').disabled);
+    await page.reload();await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);assert.equal(await page.locator('#print-pages').inputValue(),'catalogue');
+    await page.locator('#print-pages').selectOption('single');await click('#tab-content');await page.locator('#product-count').selectOption('6');
+    await click('#tab-style');await click('label:has(input[value="status"])');await page.locator('#export-quality').selectOption('standard');
     await click('#create-pack-bottom');await page.waitForFunction(()=>!document.querySelector('#download-pack').disabled);
     assert.equal(await page.locator('#pack-previews img').count(),3);await click('#close-pack');
     // Step buttons keep an obvious next action and the download step reflects readiness.

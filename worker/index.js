@@ -17,6 +17,8 @@ function item(value) {
   if(value.dealQuantity!==undefined){if(!Number.isInteger(value.dealQuantity)||value.dealQuantity<2||value.dealQuantity>99)throw fail('Choose a multi-buy quantity from 2 to 99.');styling.dealQuantity=value.dealQuantity;}
   for(const [key,min,max] of [['photoScale',.5,2],['photoX',-1,1],['photoY',-1,1]])if(value[key]!==undefined){if(!Number.isFinite(value[key])||value[key]<min||value[key]>max)throw fail('Check the product photo framing.');styling[key]=value[key];}
   if(value.featured!==undefined){if(typeof value.featured!=='boolean')throw fail('Choose a valid featured offer.');styling.featured=value.featured;}
+  if(value.wasPrice!==undefined){const was=text(value.wasPrice,20,'the previous price');if(was!==''&&(!Number.isFinite(Number(was))||Number(was)<0||Number(was)>1000000))throw fail('Previous prices must be between R0 and R1,000,000.');if(was!=='')styling.wasPrice=was;}
+  if(value.section!==undefined){const section=text(value.section,24,'the section label');if(section)styling.section=section;}
   return { name:text(value.name,50,'the product name'),size:text(value.size,25,'the pack size'),price,photo,...styling };
 }
 export function validateWorkspace(data) {
@@ -32,7 +34,7 @@ export function validateWorkspace(data) {
     if(d.items?.some(i=>i.combo!==undefined&&i.combo>=d.combos.length))throw fail('Choose an existing combo for each product.');
   }
 
-  for(const [key,values] of [['logoSize',['compact','prominent']],['exportQuality',['standard','4k']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
+  for(const [key,values] of [['logoSize',['compact','prominent']],['exportQuality',['standard','4k']],['printPages',['single','catalogue']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
     if(!values.includes(d[key]))throw fail('Choose a valid design finish.');finishing[key]=d[key];
   }
   if(d.itemCount!==undefined){
@@ -40,7 +42,7 @@ export function validateWorkspace(data) {
     finishing.itemCount=d.itemCount;
   }
   if(d.purpose!==undefined){if(!['offers','combos','spotlight','event','opening'].includes(d.purpose))throw fail('Choose a flyer purpose.');finishing.purpose=d.purpose;}
-  if(d.promotion!==undefined&&d.promotion!==''){if(!['weekly','weekend','wholesale','produce','butchery','bakery','household','single','combos','sale','menu','collection','services','event','opening'].includes(d.promotion))throw fail('Choose a promotion type.');finishing.promotion=d.promotion;}
+  if(d.promotion!==undefined&&d.promotion!==''){if(!['weekly','weekend','monthend','seasonal','wholesale','produce','butchery','bakery','household','hardware','single','combos','sale','menu','collection','services','event','opening'].includes(d.promotion))throw fail('Choose a promotion type.');finishing.promotion=d.promotion;}
   for(const [key,max] of [['details',180],['eventDate',10],['eventTime',40],['venue',80],['heroPhoto',36]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the project details');
   if(finishing.eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.eventDate))throw fail('Check the event date.');
   if(finishing.heroPhoto&&!/^[0-9a-f-]{36}$/.test(finishing.heroPhoto))throw fail('Invalid main photo.');

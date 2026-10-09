@@ -9,7 +9,7 @@
   const defaults={template:'bold',theme:'green',format:'poster',business:'general',purpose:'offers',logoSize:'prominent',typeface:'design',priceStyle:'design'};
   // Promotion types describe what a flyer is for. They guide wording and the
   // gallery filters without changing how a design renders.
-  const promotions={weekly:'Weekly specials',weekend:'Weekend promotion',wholesale:'Wholesale catalogue',produce:'Fresh produce',butchery:'Butchery',bakery:'Bakery offers',household:'Household essentials',single:'Single product promotion',combos:'Grocery combos',sale:'Sale / price drop',menu:'Menu & price list',collection:'New collection',services:'Service price list',event:'Event',opening:'Grand opening'};
+  const promotions={weekly:'Weekly specials',weekend:'Weekend promotion',monthend:'Month-end specials',seasonal:'Seasonal savings',wholesale:'Wholesale catalogue',produce:'Fresh produce',butchery:'Butchery',bakery:'Bakery offers',household:'Household essentials',hardware:'Hardware & building',single:'Single product promotion',combos:'Grocery combos',sale:'Sale / price drop',menu:'Menu & price list',collection:'New collection',services:'Service price list',event:'Event',opening:'Grand opening'};
   const styles={bold:'Bold & bright',classic:'Classic supermarket',fresh:'Fresh & natural',clean:'Clean & minimal',premium:'Premium & dark',playful:'Playful & warm'};
   const blank=()=>({name:'',size:'',price:'',photo:''});
   function string(value,max,label){if(typeof value!=='string'||value.length>max)throw new Error('Check '+label+'.');return value.trim();}
@@ -38,6 +38,8 @@
         const price=string(item.price??'',20,'the price');
         if(price!==''&&(!Number.isFinite(Number(price))||Number(price)<0||Number(price)>1000000))throw new Error('Check the template prices.');
         const deal={};if(item.dealQuantity!==undefined){if(!Number.isInteger(item.dealQuantity)||item.dealQuantity<2||item.dealQuantity>99)throw new Error('Check the multi-buy quantity.');deal.dealQuantity=item.dealQuantity;}
+        if(item.wasPrice!==undefined&&item.wasPrice!==''){const was=string(item.wasPrice,20,'the previous price');if(!Number.isFinite(Number(was))||Number(was)<0||Number(was)>1000000)throw new Error('Check the previous prices.');deal.wasPrice=was;}
+        if(item.section!==undefined&&item.section!==''){deal.section=string(item.section,24,'the section label');}
         if(result.purpose==='combos')for(const [key,min,max] of [['combo',0,result.combos.length-1],['quantity',1,99]])if(item[key]!==undefined){if(!Number.isInteger(item[key])||item[key]<min||item[key]>max)throw new Error('Check the combo products.');deal[key]=item[key];}
         return {name:string(item.name??'',50,'the item name'),size:string(item.size??'',25,'the item details'),price,photo:'',...deal};
       });
@@ -125,14 +127,26 @@
     ['Salon price tags','Swing tags for treatments and services with clear prices.','beauty','tagsale','lavender','offers',6,{promotion:'services'}],
     ['Boutique tag sale','Fashion offers on swing tags with a soft raspberry palette.','fashion','tagsale','raspberry','offers',6,{promotion:'sale'}],
     ['Service essentials list','A ticked list of services with clear prices and inclusions.','services','household','slate','offers',8,{promotion:'services'}],
-    ['Weekend combo market','Four numbered grocery baskets with one price per complete combo.','grocery','combo-board','tomato','combos',12,{promotion:'combos'}]
+    ['Weekend combo market','Four numbered grocery baskets with one price per complete combo.','grocery','combo-board','tomato','combos',12,{promotion:'combos'}],
+    // Catalogue-style starters modelled on how South African retail leaflets are organised.
+    ['Month-end specials catalogue','A multi-page A4 leaflet with ruled cells, department tags and page numbers.','grocery','circular','red','offers',16,{promotion:'monthend',format:'a4'}],
+    ['Mid-month price blocks','Large price plates for a mid-month promotion with previous prices shown.','grocery','price-blocks','tangerine','offers',12,{promotion:'monthend'}],
+    ['Seasonal savings crate','Fresh seasonal picks in crate frames with hanging tags.','grocery','crate','olive','offers',9,{promotion:'seasonal'}],
+    ['Cash & carry month-end list','A 25-line wholesale list that prints as a numbered A4 catalogue.','grocery','cashcarry','petrol','offers',25,{promotion:'wholesale',format:'a4'}],
+    ['Pantry staples on Status','Eight ticked essentials for a WhatsApp Status post.','grocery','household','tomato','offers',8,{promotion:'weekly',format:'status'}],
+    ['Personal care & baby essentials','A calm essentials list for toiletries and baby products.','grocery','household','lavender','offers',10,{promotion:'household'}],
+    ['Build & hardware price list','Tools and materials in a cash-and-carry table with pack columns.','general','cashcarry','slate','offers',16,{promotion:'hardware'}],
+    ['Front-page lead offer','One hero deal with supporting specials, like a leaflet cover.','grocery','frontpage','red','offers',9,{promotion:'weekly'}],
+    ['Butchery per-kg board','Square A5 butchery board priced per kilogram.','grocery','butcher','kraft','offers',6,{promotion:'butchery',format:'a5'}],
+    ['Landscape weekend deals','A wide weekend layout for screens and social banners.','grocery','weekend','tomato','offers',8,{promotion:'weekend',format:'landscape'}]
   ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>{
     const {promotion,...design}=finishes;
     return {id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...design,...(promotion?{promotion}:{})},title,description)};
   });
   // Gallery tags for the original starters: promotion type and visual style.
   const tags=['weekly/bold','menu/playful','collection/clean','services/clean','single/bold','opening/bold','weekend/bold','produce/fresh','services/clean','collection/playful','bakery/playful','sale/bold','menu/playful','services/clean','services/clean','collection/clean','bakery/playful','household/bold','wholesale/classic','weekly/bold','produce/premium','sale/bold','weekly/clean','collection/clean','collection/clean','weekly/bold','menu/fresh','combos/bold','combos/bold','combos/fresh','weekly/clean','produce/fresh','household/clean','weekly/premium','weekly/bold','weekly/classic','weekly/classic','household/classic','household/bold','produce/fresh','weekly/clean','combos/classic','combos/clean',
-    'weekend/bold','butchery/premium','bakery/playful','household/clean','single/bold','wholesale/classic','produce/fresh','sale/playful','weekly/bold','household/fresh','weekend/bold','wholesale/clean','produce/fresh','single/bold','menu/premium','bakery/playful','services/playful','sale/playful','services/clean','combos/bold'];
+    'weekend/bold','butchery/premium','bakery/playful','household/clean','single/bold','wholesale/classic','produce/fresh','sale/playful','weekly/bold','household/fresh','weekend/bold','wholesale/clean','produce/fresh','single/bold','menu/premium','bakery/playful','services/playful','sale/playful','services/clean','combos/bold',
+    'monthend/classic','monthend/bold','seasonal/fresh','wholesale/classic','weekly/bold','household/clean','hardware/clean','weekly/classic','butchery/premium','weekend/bold'];
   starters.forEach((starter,i)=>{const [promotion,style]=(tags[i]||'weekly/bold').split('/');starter.design.promotion=starter.design.promotion||promotion;starter.promotion=starter.design.promotion;starter.style=style;});
   root.ShopDeskTemplates={design,validate,create,draft,starters,promotions,styles};
 })(typeof window!=='undefined'?window:globalThis);

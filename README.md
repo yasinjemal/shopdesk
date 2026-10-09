@@ -28,7 +28,7 @@ The project bar keeps businesses and saved flyers together; **My flyers** opens 
 
 ## Flyer designs
 
-55 designs, 30 palettes, four typography settings and four price-label settings. All design identifiers are unchanged; the eight grocery designs below are additions.
+55 designs, 30 palettes, four typography settings and four price-label settings, with optional previous prices and department tags on every design. All design identifiers are unchanged; the eight grocery designs below are additions.
 
 | Design | Composition | Image treatment | Price label system |
 | --- | --- | --- | --- |
@@ -45,6 +45,16 @@ Grocery promotion coverage: weekly specials, weekend promotions, wholesale catal
 
 Promotion types are an optional `draft.promotion` value (additive, no migration). They shape wording suggestions and gallery filters only; they never change prices or text.
 
+### Leaflet conventions (catalogue study)
+
+`docs/catalogue-research.md` records a study of my-catalogue.co.za, the South African catalogue aggregator, and the retail leaflets it lists. The conventions it surfaced became these features:
+
+- **Previous price and saving.** Each offer can carry an optional previous price. It is struck through inside the price plate with the saving worked out from the two numbers, on every design, in captions and in shared content. Nothing is shown unless the person typed it.
+- **Department tags.** An optional section label (Fresh produce, Butchery, Household…) appears as a tag on the card in every design, with a datalist of common departments.
+- **Catalogue pages.** A4 and A5 exports with more than twelve offers can print as a numbered multi-page catalogue PDF that repeats the heading and contact strip on every page. The choice is saved with the flyer as `draft.printPages`.
+- **Weekday validity dates.** Flyer dates print as "Valid Thu 8 October – Wed 21 October 2026".
+- **New promotion types and starters.** Month-end specials, seasonal savings and hardware & building, with ten catalogue-style starters (73 in total) including a multi-page month-end catalogue, a 25-line cash-and-carry list, a build & hardware price list and an A5 butchery board.
+
 ## Grocery design research
 
 Sources used for the price hierarchy, pack-size, date and contact conventions in the grocery designs. Several pages could only be read through search summaries from this environment; the statutory source was read directly.
@@ -59,13 +69,13 @@ Sources used for the price hierarchy, pack-size, date and contact conventions in
 
 ## Screenshots and verification
 
-`docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
+`docs/catalogue-research.md` records the catalogue study. `docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
 
-Verified in this environment: 55 unit tests and 33 browser checks pass; the production build completes; standard, 4K (3,840 px long edge), A4 (2,480 × 3,508) and A5 PDF (419.5 × 595.3 pt) exports have the expected dimensions; a crowded 20-product, six-basket combo flyer exports at 4K; and a schemaVersion 1 workspace saved through the old API opens, upgrades and exports.
+Verified in this environment: 58 unit tests and 33 browser checks pass; the production build completes; standard, 4K (3,840 px long edge), A4 (2,480 × 3,508) and A5 PDF (419.5 × 595.3 pt) exports have the expected dimensions; a crowded 20-product, six-basket combo flyer exports at 4K; and a schemaVersion 1 workspace saved through the old API opens, upgrades and exports.
 
 ## Features kept from ShopDesk
 
-- 43 original starters with their identifiers and contents (`starter-0` … `starter-42`); 20 new starters are appended.
+- 43 original starters with their identifiers and contents (`starter-0` … `starter-42`); 30 new starters are appended.
 - Community template library with explicit allowlisted sharing, unlisting and account ownership checks. Private flyers are never published automatically.
 - Saved businesses (clients), projects, products, photos, logos, hidden items, photo framing, featured offers, multi-buy quantities, combo quantities and reserved items.
 - Six shapes (4:5, 9:16 Status, 1:1, 16:9, A4, A5), standard and 4K PNG exports, A4/A5 print PDFs and promotion packs with Status pages and a caption.

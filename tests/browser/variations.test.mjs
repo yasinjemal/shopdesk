@@ -50,7 +50,7 @@ for(const width of [320,390,1280])test(`new designs, colour lock, ordering and u
     await click('#promo-items > details >> nth=1 >> .remove-item');
     assert.equal(await page.locator('#item-undo').isVisible(),true);
     if(!await page.locator('#promo-items > details').first().evaluate(el=>el.open))await page.locator('#promo-items > details').first().locator('summary').click();
-    await page.locator('#promo-items > details').first().locator('input[type="number"]').fill('45.50');
+    await page.locator('#promo-items > details').first().locator('input[type="number"]').first().fill('45.50');
     await click('#undo-remove-item');
     state=await page.evaluate(()=>ShopDeskPromotion.itemState());
     assert.equal(state.items[0].price,'45.50');assert.deepEqual(state.items[1],original);

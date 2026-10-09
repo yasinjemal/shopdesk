@@ -32,7 +32,7 @@ for(const width of [320,1280])test(`retail designs, multi-buy totals and promoti
   state=await page.evaluate(()=>ShopDeskPromotion.itemState());assert.equal(state.items[0].dealQuantity,2);assert.ok(state.items[0].photo);assert.equal(state.products[0].dealQuantity,2);
   const download=page.waitForEvent('download');await click('#download-promo');assert.match((await download).suggestedFilename(),/\.png$/);
   await click('#create-pack-bottom');await page.waitForFunction(()=>!document.querySelector('#download-pack').disabled);
-  const caption=await page.locator('#pack-caption-text').inputValue();assert.match(caption,/2 for R10[.,]00/);assert.match(caption,/2 for R20[.,]00/);assert.match(caption,/20 September 2030 – 25 September 2030/);
+  const caption=await page.locator('#pack-caption-text').inputValue();assert.match(caption,/2 for R10[.,]00/);assert.match(caption,/2 for R20[.,]00/);assert.match(caption,/Valid Fri 20 September 2030 – Wed 25 September 2030/);
   await click('#close-pack');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);
  }finally{await browser?.close();await app.close();}
 });

@@ -36,7 +36,8 @@
       ...group.items.map(item=>(item.quantity||1)+' × '+(data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name)+(item.size?' · '+item.size:'')),''
     ]):['event','opening'].includes(data.purpose)?[]:data.items.map(item=>{
       const name=data.cleanNames?root.ShopDeskPoster.displayName(item.name,item.size):item.name;
-      return name+(item.size?' · '+item.size:'')+' — '+(item.dealQuantity?item.dealQuantity+' for ':'')+money(item.price);
+      const was=item.wasPrice&&Number(item.wasPrice)>Number(item.price)?' (was '+money(item.wasPrice)+')':'';
+      return (item.section?item.section+': ':'')+name+(item.size?' · '+item.size:'')+' — '+(item.dealQuantity?item.dealQuantity+' for ':'')+money(item.price)+was;
     });
     const copy=root.ShopDeskBusiness.copy(data);
     return [data.shop,data.headline,'',...rows,...(data.purpose&&data.purpose!=='offers'&&data.details?[data.details]:[]),'',...[copy.date,copy.location,copy.contact,copy.terms].filter(Boolean)].join('\n');
@@ -62,5 +63,19 @@
     view.setUint32(0,0x06054b50,true);view.setUint16(8,files.length,true);view.setUint16(10,files.length,true);view.setUint32(12,directorySize,true);view.setUint32(16,offset,true);
     return new Blob([...parts,...directory,end],{type:'application/zip'});
   }
-  root.ShopDeskPack={plan,caption,zip,crc32};
+  // Print catalogue pages: the same design repeated with a fixed number of
+  // offers per page and page numbers, like a multi-page leaflet.
+  function catalogue(data,perPage=12){
+    if(!data||data.purpose==='combos'||['event','opening'].includes(data.purpose))throw new Error('Catalogue pages are available for offers, menus and price lists.');
+    const items=root.ShopDeskBusiness.visibleItems(data);
+    if(!items.length||items.length>25)throw new Error('Choose 1 to 25 offers for catalogue pages.');
+    // Pages are balanced (16 offers become 8 + 8, not 12 + 4) so the last page never looks empty.
+    const total=Math.ceil(items.length/perPage),pages=[];let offset=0;
+    for(let page=0;page<total;page++){
+      const count=Math.ceil((items.length-offset)/(total-page)),slice=items.slice(offset,offset+count);offset+=count;
+      pages.push({...data,items:slice,itemCount:slice.length,packPage:{index:page+1,total}});
+    }
+    return pages;
+  }
+  root.ShopDeskPack={plan,caption,catalogue,zip,crc32};
 })(typeof window!=='undefined'?window:globalThis);
