@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 const day=(offset=0)=>{const d=new Date();d.setDate(d.getDate()+offset);return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');};
@@ -17,10 +17,10 @@ for(const width of [320,1280])test(`saved flyer search and independent new editi
   const clientId=id(),otherId=id(),otherProject={id:id(),title:'Beauty menu',draft:{...structuredClone(d),showDate:false,items:[{name:'Haircut',size:'',price:'70',photo:''}],itemCount:1}};
   const initial={schemaVersion:2,activeClientId:clientId,activeProjectId:source.id,clients:[{id:clientId,shop:{name:'North Market',phone:'0721234567',location:'Market Street'},products:[],projects},{id:otherId,shop:{name:'Quiet Salon',phone:'',location:''},products:[],projects:[otherProject]}]};
   const saved=await fetch(app.url+'/api/studio',{method:'PUT',headers:{...headers,'content-type':'application/json'},body:JSON.stringify({revision:0,data:initial})});assert.equal(saved.status,200);
-  browser=await chromium.launch({channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chromium',headless:true});
+  browser=await launch();
   const page=await browser.newPage({viewport:{width,height:900},isMobile:width<700,hasTouch:width<700}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(12000);
   const click=s=>width<700?page.locator(s).tap():page.locator(s).click();
-  await page.goto(app.url,{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!document.querySelector('#open-projects').disabled);
+  await page.goto(app.url+'#promotion',{waitUntil:'domcontentloaded'});await page.waitForFunction(()=>!document.querySelector('#open-projects').disabled);
   await click('#open-projects');assert.equal(await page.locator('#projects-dialog').evaluate(el=>el.open),true);
   assert.equal(await page.locator('.project-card').count(),6);assert.match(await page.locator('#projects-count').textContent(),/9 saved flyers/);
   await click('#projects-next');assert.equal(await page.locator('.project-card').count(),3);assert.equal(await page.locator('#projects-page').textContent(),'Page 2 of 2');

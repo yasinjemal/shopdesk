@@ -18,7 +18,7 @@
     const pt=paper.map(mm=>(mm*72/25.4).toFixed(4)),encoder=new TextEncoder(),parts=[],offsets=[0];let length=0;
     const add=value=>{const bytes=typeof value==='string'?encoder.encode(value):value;parts.push(bytes);length+=bytes.length;};
     const object=(id,body)=>{offsets[id]=length;add(id+' 0 obj\n'+body+'\nendobj\n');};
-    add('%PDF-1.4\n%ShopDesk\n');
+    add('%PDF-1.4\n%Handbill\n');
     object(1,'<< /Type /Catalog /Pages 2 0 R >>');
     object(2,'<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
     object(3,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+pt.join(' ')+'] /Resources << /XObject << /Photo 4 0 R >> >> /Contents 5 0 R >>');

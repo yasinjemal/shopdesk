@@ -12,7 +12,7 @@
   }
   async function open(entry){
     if(busy)return;busy=true;render();message('projects-error','');
-    try{await ShopDeskPromotion.openProject(entry.clientId,entry.projectId);$('projects-dialog').close();ShopDeskInterface.showTab('content',true);}
+    try{await ShopDeskPromotion.openProject(entry.clientId,entry.projectId);$('projects-dialog').close();window.ShopDeskApp?.navigate('promotion');ShopDeskInterface.showTab('content',true);}
     catch(e){message('projects-error',e.message);}finally{busy=false;if($('projects-dialog').open)render();}
   }
   function edition(entry){
@@ -78,7 +78,7 @@
     event.preventDefault();if(!selected||busy)return;busy=true;$('edition-fields').disabled=true;$('close-edition').disabled=true;message('edition-error','');
     try{
       await ShopDeskPromotion.newEdition(selected.clientId,selected.projectId,{title:$('edition-name').value,startDate:$('edition-start').value,endDate:$('edition-end').value,eventDate:$('edition-event-date').value});
-      $('edition-dialog').close();$('projects-dialog').close();ShopDeskInterface.showTab('content',true);
+      $('edition-dialog').close();$('projects-dialog').close();window.ShopDeskApp?.navigate('promotion');ShopDeskInterface.showTab('content',true);
     }catch(e){message('edition-error',e.message);}
     finally{busy=false;$('edition-fields').disabled=false;$('close-edition').disabled=false;}
   });

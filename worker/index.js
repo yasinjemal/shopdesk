@@ -4,7 +4,7 @@ const MAX_PHOTO = 1500000;
 const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' } });
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
 const db = env => { if (!env.DB) throw fail('Saved products are temporarily unavailable. Please try again.', 503); return env.DB; };
-function user(request) { const id = request.headers.get('oai-authenticated-user-id'); if (!id) throw fail('Please reopen ShopDesk and sign in to load your saved products.', 401); return id; }
+function user(request) { const id = request.headers.get('oai-authenticated-user-id'); if (!id) throw fail('Please reopen Handbill and sign in to load your saved flyers.', 401); return id; }
 function text(value, max, label) { if (typeof value !== 'string' || value.length > max) throw fail('Check ' + label + '.'); return value.trim(); }
 function item(value) {
   if (!value || typeof value !== 'object') throw fail('Check your product details.');
@@ -23,7 +23,7 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt'].includes(template)) throw fail('Choose a poster template.');
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt','weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale'].includes(template)) throw fail('Choose a poster template.');
   const maxItems = d.purpose==='combos'?20:template === 'simple' ? 3 : 25;
   const finishing={};
   if(d.combos!==undefined){
@@ -40,13 +40,14 @@ export function validateWorkspace(data) {
     finishing.itemCount=d.itemCount;
   }
   if(d.purpose!==undefined){if(!['offers','combos','spotlight','event','opening'].includes(d.purpose))throw fail('Choose a flyer purpose.');finishing.purpose=d.purpose;}
+  if(d.promotion!==undefined&&d.promotion!==''){if(!['weekly','weekend','wholesale','produce','butchery','bakery','household','single','combos','sale','menu','collection','services','event','opening'].includes(d.promotion))throw fail('Choose a promotion type.');finishing.promotion=d.promotion;}
   for(const [key,max] of [['details',180],['eventDate',10],['eventTime',40],['venue',80],['heroPhoto',36]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the project details');
   if(finishing.eventDate&&!/^\d{4}-\d{2}-\d{2}$/.test(finishing.eventDate))throw fail('Check the event date.');
   if(finishing.heroPhoto&&!/^[0-9a-f-]{36}$/.test(finishing.heroPhoto))throw fail('Invalid main photo.');
   for(const key of ['trimPhotos','cleanNames','showDate','keepColours'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
   if(d.business!==undefined){if(!['grocery','fashion','food','beauty','services','general'].includes(d.business))throw fail('Choose a business type.');finishing.business=d.business;}
   for(const [key,max] of [['eyebrow',28],['cta',40],['terms',80]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the poster wording');
-  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'].includes(d.theme) || !['poster','status','square','landscape','a4','a5'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
+  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa','tomato','kraft','mint'].includes(d.theme) || !['poster','status','square','landscape','a4','a5'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
   if(d.items.filter(i=>i?.featured===true).length>1)throw fail('Choose only one featured offer per flyer.');
   const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
   if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');
@@ -78,8 +79,8 @@ async function readLimited(request, limit) {
   const result=new Uint8Array(size);let offset=0;for(const chunk of chunks){result.set(chunk,offset);offset+=chunk.byteLength;}return result;
 }
 function protectWrite(request) {
-  if (request.headers.get('sec-fetch-site') === 'cross-site') throw fail('Open ShopDesk to make this change.',403);
-  const origin=request.headers.get('origin');if(origin && origin!==new URL(request.url).origin)throw fail('Open ShopDesk to make this change.',403);
+  if (request.headers.get('sec-fetch-site') === 'cross-site') throw fail('Open Handbill to make this change.',403);
+  const origin=request.headers.get('origin');if(origin && origin!==new URL(request.url).origin)throw fail('Open Handbill to make this change.',403);
 }
 async function handleAPI(request,env,url) {
   const owner=user(request); const database=db(env);
@@ -114,7 +115,7 @@ async function handleAPI(request,env,url) {
   const studio=url.pathname==='/api/studio',workspace=studio||url.pathname==='/api/workspace';
   if(workspace && request.method==='GET'){
     const record=await database.prepare('SELECT data, revision FROM poster_workspaces WHERE owner = ?').bind(owner).first();
-    if(!studio&&record&&JSON.parse(record.data).schemaVersion===2)throw fail('Designer Mode is ready. Refresh ShopDesk to open your clients and projects.',409);
+    if(!studio&&record&&JSON.parse(record.data).schemaVersion===2)throw fail('Your workspace is ready. Refresh Handbill to open your clients and projects.',409);
     return json({data:record?JSON.parse(record.data):null,revision:record?.revision??0});
   }
   if(workspace && request.method==='PUT'){
@@ -164,7 +165,7 @@ export default {
       const body=asset.encoding==='base64'?Uint8Array.from(atob(asset.body),char=>char.charCodeAt(0)):asset.body;
       return new Response(request.method==='HEAD'?null:body,{headers:{'Content-Type':asset.type,'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff','Referrer-Policy':'strict-origin-when-cross-origin'}});
     } catch(error) {
-      if(!error.status)console.error('ShopDesk request failed',{path:url.pathname,message:error.message});
+      if(!error.status)console.error('Handbill request failed',{path:url.pathname,message:error.message});
       return json({error:error.status?error.message:'We could not reach your saved workspace. Your edits are still here; please try again.'},error.status??503);
     }
   }

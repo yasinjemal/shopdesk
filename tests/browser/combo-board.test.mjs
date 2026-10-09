@@ -1,17 +1,17 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir} from 'node:fs/promises';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 for(const width of [320,1280])test(`basket board supports touch quantities, reuse, independent variations and targeted bulk additions at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chrome'});
+    browser=await launch();
     const page=await browser.newPage({viewport:{width,height:1000},isMobile:width<700,hasTouch:width<700});page.setDefaultTimeout(10000);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));const click=async s=>width<700?page.locator(s).tap():page.locator(s).click();
     const panel='.combo-control:not([hidden])',card=panel+' .promo-item';
-    await page.goto(app.url,{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);await click('#tab-content');
+    await page.goto(app.url+'#promotion',{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);await click('#tab-content');
     await page.locator('#promo-items .promo-item input[type=text]').first().fill('Long grain rice');await page.locator('#promo-items .promo-item').getByLabel('Pack / quantity',{exact:true}).fill('5 kg');
     await click('#promo-items .save-product');
     await page.locator('#flyer-purpose').selectOption('combos');await click(panel+' .combo-name-ideas > summary');await page.getByRole('button',{name:'Family pantry',exact:true}).click();await page.locator(panel+' .combo-price').fill('149.99');

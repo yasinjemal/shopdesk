@@ -22,7 +22,7 @@
   function open(){
     try{
       context=ShopDeskPromotion.wordingContext();choices=model.sets(context);undo=null;$('undo-wording').disabled=true;notice('');
-      $('wording-context').textContent=ShopDeskBusiness.get(context.business).label+' · '+labels[context.purpose||'offers'];
+      $('wording-context').textContent=[ShopDeskBusiness.get(context.business).label,ShopDeskTemplates.promotions[context.promotion],labels[context.purpose||'offers']].filter(Boolean).join(' · ');
       $('wording-tone').value=ShopDeskPoster.collection[context.template]?.category==='elegant'?'refined':'friendly';render();
       $('wording-dialog').showModal();$('wording-title').focus();
     }catch(e){$('editor-action-error').textContent=e.message;$('editor-action-error').hidden=false;}

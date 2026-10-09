@@ -44,7 +44,7 @@
   function activeCount(){return Math.min(selectedCount,capacity());}
   function activeItems(){return items.slice(0,activeCount());}
   function pinCombos(){if(comboMode())items.forEach((item,index)=>item.combo=ShopDeskCombos.groupOf(item,index,combos.length));}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{...(combosSaved||comboMode()?{combos:structuredClone(combos)}:{}),...($('logo-size').value==='compact'?{logoSize:'compact'}:{}),exportQuality:$('export-quality').value,keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{...(combosSaved||comboMode()?{combos:structuredClone(combos)}:{}),...($('logo-size').value==='compact'?{logoSize:'compact'}:{}),...($('flyer-promotion').value?{promotion:$('flyer-promotion').value}:{}),exportQuality:$('export-quality').value,keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
   function capture(){if(studioState)studioState=ShopDeskStudio.capture(studioState,snapshot(),$('project-name').value);}
   function changed(){if(!ready)return;if(comboMode())combosSaved=true;capture();renderDesigner();dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
@@ -60,7 +60,7 @@
     $('project-name').value=title;$('business-type').value=d.business||'grocery';$('promo-eyebrow').value=d.eyebrow??p.eyebrow;$('promo-cta').value=d.cta??p.cta;$('promo-terms').value=d.terms??p.terms;$('show-date').checked=d.showDate??true;
     $('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';
     $('promo-headline').value=d.headline;$('promo-date').value=d.date;$('promo-start-date').value=d.startDate||'';$('promo-theme').value=d.theme;$('poster-template').value=d.template||'simple';$('trim-photos').checked=d.trimPhotos??false;$('clean-names').checked=d.cleanNames??false;
-    $('flyer-purpose').value=d.purpose||'offers';$('promo-details').value=d.details||'';$('event-date').value=d.eventDate||'';$('event-time').value=d.eventTime||'';$('event-venue').value=d.venue||'';heroPhoto=d.heroPhoto||'';
+    $('flyer-purpose').value=d.purpose||'offers';$('flyer-promotion').value=d.promotion||'';if($('flyer-promotion').value!==(d.promotion||''))$('flyer-promotion').value='';$('promo-details').value=d.details||'';$('event-date').value=d.eventDate||'';$('event-time').value=d.eventTime||'';$('event-venue').value=d.venue||'';heroPhoto=d.heroPhoto||'';
     finishingChosen=d.trimPhotos!==undefined||d.cleanNames!==undefined;document.querySelector('[name="poster-format"][value="'+d.format+'"]').checked=true;
     activeCombo=0;combosSaved=Array.isArray(d.combos);combos=structuredClone(d.combos||ShopDeskCombos.defaults());items=structuredClone(d.items);selectedCount=d.itemCount??items.length;products=structuredClone(data.products);
     renderBusiness();renderItems();renderSaved();renderLogo();renderHero();renderDesigner();
@@ -86,9 +86,9 @@
     if(!studioState)return;
     const fill=(id,entries,value)=>{const select=$(id);select.replaceChildren();for(const [key,label] of entries){const o=document.createElement('option');o.value=key;o.textContent=label;select.append(o);}select.value=value;};
     const {client}=ShopDeskStudio.active(studioState);
-    fill('client-picker',studioState.clients.map(c=>[c.id,c.shop.name||'Unnamed client']),studioState.activeClientId);
+    fill('client-picker',studioState.clients.map(c=>[c.id,c.shop.name||'Unnamed business']),studioState.activeClientId);
     fill('project-picker',client.projects.map(p=>[p.id,p.title]),studioState.activeProjectId);
-    const count=studioState.clients.reduce((n,c)=>n+c.projects.length,0);$('studio-count').textContent=studioState.clients.length+' / 20 clients · '+count+' / 100 projects';
+    const count=studioState.clients.reduce((n,c)=>n+c.projects.length,0);$('studio-count').textContent=studioState.clients.length+' / 20 businesses · '+count+' / 100 flyers';
     $('new-client').disabled=studioState.clients.length>=20||count>=100;$('new-project').disabled=count>=100;$('duplicate-project').disabled=count>=100;$('start-project').disabled=$('designer-fields').disabled||count>=100;
   }
   async function switchProject(clientId,projectId){
@@ -99,7 +99,7 @@
   $('project-picker').addEventListener('change',event=>switchProject(studioState.activeClientId,event.target.value));
   function openCreate(kind){
     if(!ready||loadingWorkspace||pendingPhotos||blocked)return;createKind=kind;const client=kind==='client';
-    $('studio-dialog-title').textContent=client?'New client':'New project';$('create-studio-entry').textContent=client?'Create client':'Create project';$('new-client-fields').hidden=!client;$('new-client-name').required=client;
+    $('studio-dialog-title').textContent=client?'New business':'New flyer';$('create-studio-entry').textContent=client?'Create business':'Create flyer';$('new-client-fields').hidden=!client;$('new-client-name').required=client;
     $('new-client-name').value='';$('new-project-name').value='';$('new-client-business').value=$('business-type').value;$('new-project-purpose').value='offers';$('studio-create-error').hidden=true;$('studio-dialog').showModal();
     $(client?'new-client-name':'new-project-name').focus();
   }
@@ -108,9 +108,9 @@
   $('close-studio-dialog').addEventListener('click',()=>$('studio-dialog').close());
   $('studio-create-form').addEventListener('submit',async event=>{
     event.preventDefault();if(!ready||loadingWorkspace||pendingPhotos||blocked)return;
-    try{const title=$('new-project-name').value.trim(),name=$('new-client-name').value.trim();if(!title||(createKind==='client'&&!name))throw new Error('Enter the client and project names.');capture();
+    try{const title=$('new-project-name').value.trim(),name=$('new-client-name').value.trim();if(!title||(createKind==='client'&&!name))throw new Error('Enter the business and flyer names.');capture();
       studioState=createKind==='client'?ShopDeskStudio.addClient(studioState,name,$('new-client-business').value,$('new-project-purpose').value,title):ShopDeskStudio.addProject(studioState,title,$('new-project-purpose').value);
-      dirty=true;change++;$('studio-dialog').close();await showActive();changed();clearTimeout(saveTimer);save();toast(createKind==='client'?'Your new client is ready.':'Your new project is ready.');
+      dirty=true;change++;$('studio-dialog').close();await showActive();changed();clearTimeout(saveTimer);save();toast(createKind==='client'?'Your new business is ready.':'Your new flyer is ready.');
     }catch(e){$('studio-create-error').textContent=e.message;$('studio-create-error').hidden=false;}
   });
   $('duplicate-project').addEventListener('click',async()=>{
@@ -387,7 +387,7 @@
   $('close-combo-products').addEventListener('click',()=>$('combo-product-dialog').close());
   $('combo-product-dialog').addEventListener('close',()=>{$('promo-items').querySelector('.combo-control:not([hidden]) .reuse-combo-product')?.focus();});
   function renderBusiness(){
-    const p=ShopDeskStudio.suggest(snapshot().draft);$('business-suggestion').textContent='Suggested: '+(announcement()?ShopDeskStudio.purposes[p.purpose]:designNames[p.template])+' · “'+p.headline+'” · '+p.cta+'.';
+    const p=ShopDeskStudio.suggest(snapshot().draft);$('business-suggestion').textContent='Suggested: '+(announcement()?ShopDeskStudio.purposes[p.purpose]:designNames[p.template]||ShopDeskPoster.collection[p.template]?.name||p.template)+' · “'+p.headline+'” · '+p.cta+'.';
     const ann=announcement(),purpose=$('flyer-purpose').value;
     $('date-field').hidden=ann||!$('show-date').checked;$('date-toggle').hidden=ann;$('template-field').hidden=!['offers','combos'].includes(purpose);$('template-hint').hidden=!['offers','combos'].includes(purpose);$('item-layout-control').hidden=!['offers','combos'].includes(purpose);$('offer-fields').hidden=ann;$('announcement-fields').hidden=!ann;$('details-field').hidden=['offers','combos'].includes(purpose);$('combo-editor').hidden=!comboMode();
     $('add-item').textContent='+ Add a new '+profile().item.toLowerCase();
@@ -400,7 +400,7 @@
     $('show-date').checked=d.showDate;renderBusiness();renderItems();changed();toast('Style applied. Edit the wording below to make it yours.');
   });
   $('show-date').addEventListener('change',renderBusiness);
-  $('flyer-purpose').addEventListener('change',async()=>{if(comboMode()){selectedCount=Math.min(selectedCount,20);if(!ShopDeskCombos.styles.includes($('poster-template').value))$('poster-template').value='combo-board';}else if(ShopDeskCombos.styles.includes($('poster-template').value))$('poster-template').value='bold';renderBusiness();renderItems();changed();await preloadPhotos();draw();});
+  $('flyer-purpose').addEventListener('change',async()=>{if(comboMode()){selectedCount=Math.min(selectedCount,20);if(!$('flyer-promotion').value)$('flyer-promotion').value='combos';if(!ShopDeskCombos.styles.includes($('poster-template').value))$('poster-template').value='combo-board';}else if(ShopDeskCombos.styles.includes($('poster-template').value))$('poster-template').value='bold';renderBusiness();renderItems();changed();await preloadPhotos();draw();});
   function renderHero(){
     const thumb=$('hero-thumb');thumb.replaceChildren();if(heroPhoto){const img=document.createElement('img');setPhotoThumb(img,heroPhoto);img.alt='Main project photo';thumb.append(img);}else thumb.textContent='Main photo';$('hero-label').textContent=heroPhoto?'Change main photo':'Add main photo';$('remove-hero').hidden=!heroPhoto;
   }
@@ -514,7 +514,7 @@
     if(exportBusy||packBusy)return;
     try{
       const d=validatePoster();exportBusy=true;draw();await document.fonts?.ready;
-      const blob=await exportImage(d,type);download(blob,'shopdesk-'+d.format+'-'+iso()+'.'+type);
+      const blob=await exportImage(d,type);download(blob,'handbill-'+d.format+'-'+iso()+'.'+type);
       toast(type==='pdf'?'Your print PDF is ready. Choose Actual size (100%) when printing.':'Your image is ready to share.');
     }catch(e){toast(e.message||'Could not create this download. Try Standard quality.');}
     finally{exportBusy=false;draw();}
@@ -522,7 +522,7 @@
   $('download-promo').addEventListener('click',()=>downloadFlyer('png'));
   $('download-print').addEventListener('click',()=>downloadFlyer('pdf'));
   $('export-quality').addEventListener('change',changed);
-  $('copy-promo').addEventListener('click',async()=>{try{const content=ShopDeskPack.caption(validatePoster());try{await navigator.clipboard.writeText(content);toast('Offer text copied. Paste it into your customer message.');}catch{download(new Blob([content],{type:'text/plain;charset=utf-8'}),'shopdesk-offer.txt');toast('Offer text downloaded.');}}catch(e){toast(e.message);}});
+  $('copy-promo').addEventListener('click',async()=>{try{const content=ShopDeskPack.caption(validatePoster());try{await navigator.clipboard.writeText(content);toast('Offer text copied. Paste it into your customer message.');}catch{download(new Blob([content],{type:'text/plain;charset=utf-8'}),'handbill-offer.txt');toast('Offer text downloaded.');}}catch(e){toast(e.message);}});
   function clearPack(){
     $('pack-previews').replaceChildren();$('download-pack-caption').removeAttribute('href');$('pack-caption-text').value='';$('pack-download-detail').textContent='All images and your caption in one ZIP.';
     const retired=packURLs;setTimeout(()=>retired.forEach(url=>URL.revokeObjectURL(url)),30000);packURLs=[];packZip=null;packText='';$('download-pack').disabled=true;
@@ -553,7 +553,7 @@
       packText=ShopDeskPack.caption(data);const captionBlob=new Blob([packText],{type:'text/plain;charset=utf-8'});files.push({name:'caption.txt',blob:captionBlob});
       $('pack-caption-text').value=packText;const url=URL.createObjectURL(captionBlob);packURLs.push(url);$('download-pack-caption').href=url;
       $('pack-output').hidden=false;$('pack-progress').textContent='Your images and caption are ready. Preparing the complete download…';
-      const zip=await ShopDeskPack.zip(files);if(run!==packRun)return;packZip=zip;packName='shopdesk-'+($('project-name').value.trim().replace(/[^a-z0-9]+/gi,'-').slice(0,50)||'project')+'.zip';
+      const zip=await ShopDeskPack.zip(files);if(run!==packRun)return;packZip=zip;packName='handbill-'+($('project-name').value.trim().replace(/[^a-z0-9]+/gi,'-').slice(0,50)||'project')+'.zip';
       $('download-pack').disabled=false;$('pack-download-detail').textContent=files.length+' files · '+(zip.size/1000000).toFixed(1)+' MB · ZIP';
       const count=outputs.length-1;$('pack-progress').textContent='Ready: 1 flyer, '+count+' Status '+(count===1?'page':'pages')+' and your caption. Created from this project.';
     }catch(e){if(run===packRun){$('pack-error').textContent=e.message||'We could not finish the pack. Close this window and try again.';$('pack-error').hidden=false;$('pack-progress').textContent='Your pack could not be completed.';}}
@@ -571,7 +571,7 @@
   function batchContext(){return studioState?studioState.activeClientId+':'+studioState.activeProjectId:'';}
   function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked||exportBusy||packBusy)throw new Error('Wait for the project to finish loading, saving photos or creating downloads.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
   Object.assign(window.ShopDeskPromotion,{
-    wordingContext(){assertEditable(batchContext());const d=snapshot().draft;return {context:batchContext(),business:d.business,purpose:d.purpose,template:d.template,showDate:d.showDate,values:Object.fromEntries(Object.keys(ShopDeskWords.fields).map(key=>[key,d[key]]))};},
+    wordingContext(){assertEditable(batchContext());const d=snapshot().draft;return {context:batchContext(),business:d.business,purpose:d.purpose,promotion:d.promotion||'',template:d.template,showDate:d.showDate,values:Object.fromEntries(Object.keys(ShopDeskWords.fields).map(key=>[key,d[key]]))};},
     applyWording(values,context){assertEditable(context);const selected=ShopDeskWords.validate(values),before={};for(const [key,value] of Object.entries(selected)){const field=$('promo-'+(key==='headline'?'headline':key));before[key]=field.value;field.value=value;}changed();return before;},
     projectCatalog(){assertEditable(batchContext());capture();return structuredClone(studioState);},
     async openProject(clientId,projectId){assertEditable(batchContext());ShopDeskStudio.select(studioState,clientId,projectId);await switchProject(clientId,projectId);},

@@ -7,18 +7,24 @@
   const priceKeys = ['cost','extras','bulk','pack','waste','target','round'];
   let currentPrice = null, currentCash = null, toastTimer;
   const drawPoster = () => ShopDeskPromotion.draw();
-  const pageNames = {pricing:'Product pricing',promotion:'Flyer studio',cash:'Daily cash closing'};
+  // Templates open first. The editor is the second page; the pricing and cash
+  // tools remain available by link and hash for existing users.
+  const pageNames={templates:'Templates',promotion:'Flyer editor',pricing:'Product pricing (legacy tool)',cash:'Daily cash closing (legacy tool)'};
   function navigate(page, updateHash = true) {
-    if (!Object.hasOwn(pageNames, page)) page = 'promotion';
+    if (!Object.hasOwn(pageNames, page)) page = 'templates';
     document.querySelectorAll('.page').forEach(el => {el.hidden = el.id !== 'page-' + page;el.classList.toggle('active', !el.hidden);});
-    document.querySelectorAll('[data-page]').forEach(el => {const active = el.dataset.page === page;el.classList.toggle('active',active);if(active) el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+    document.querySelectorAll('.nav-item[data-page]').forEach(el => {const active = el.dataset.page === page;el.classList.toggle('active',active);if(active) el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
     $('current-tool').textContent = pageNames[page];
+    document.title=page==='templates'?'Handbill — Ready-made business flyers':pageNames[page]+' — Handbill';
     if(updateHash && location.hash !== '#' + page) history.replaceState(null, '', '#' + page);
     if(page === 'promotion') drawPoster();
+    if(updateHash)window.scrollTo({top:0,behavior:'instant'});
+    window.dispatchEvent(new CustomEvent('shopdesk:page',{detail:{page}}));
   }
-  document.querySelectorAll('[data-page]').forEach(el => el.addEventListener('click', () => navigate(el.dataset.page)));
+  document.querySelectorAll('[data-page]').forEach(el => el.addEventListener('click', event => {if(el.tagName==='A')event.preventDefault();navigate(el.dataset.page);}));
   window.addEventListener('hashchange', () => navigate(location.hash.slice(1), false));
-  document.querySelector('.brand').addEventListener('click', () => navigate('promotion'));
+  document.querySelector('.brand').addEventListener('click', event => {event.preventDefault();navigate('templates');});
+  window.ShopDeskApp={navigate,page:()=>document.querySelector('.page:not([hidden])')?.id.replace('page-','')};
   document.querySelectorAll('form').forEach(form => form.addEventListener('submit', event => event.preventDefault()));
   function toast(message) { clearTimeout(toastTimer); $('toast').textContent = message; $('toast').hidden = false; toastTimer = setTimeout(() => $('toast').hidden = true, 4500); }
   function priceInput() {return {...Object.fromEntries(priceKeys.map(k => [k,$(k).value])), basis:document.querySelector('input[name="basis"]:checked').value};}
@@ -73,8 +79,8 @@
   $('download-cash').addEventListener('click',()=>{
     const r=updateCash();if(!r)return;if(!$('cash-date').value){toast('Choose a trading date for your summary.');$('cash-date').focus();return;}
     const labels={opening:'Opening till float',sales:'Cash sales collected',added:'Other cash added',expenses:'Expenses paid from till',refunds:'Cash refunds',withdrawn:'Cash taken out / banked',counted:'Actual cash counted'};
-    const text=['SHOPDESK — DAILY CASH CLOSING','Trading date: '+dateText($('cash-date').value),'',...cashKeys.map(k=>labels[k]+': '+money(r.amounts[k])),'','Expected cash: '+money(r.expected),'Difference: '+(r.difference<0?'-':r.difference>0?'+':'')+money(Math.abs(r.difference)),'Status: '+r.status.toUpperCase(),'','Closing note: '+($('cash-note').value.trim()||'None'),'','Cash reconciliation only. This summary does not calculate business profit.'].join('\n');
-    download(new Blob([text],{type:'text/plain;charset=utf-8'}),'shopdesk-cash-'+$('cash-date').value+'.txt');toast('Closing summary downloaded.');
+    const text=['HANDBILL — DAILY CASH CLOSING','Trading date: '+dateText($('cash-date').value),'',...cashKeys.map(k=>labels[k]+': '+money(r.amounts[k])),'','Expected cash: '+money(r.expected),'Difference: '+(r.difference<0?'-':r.difference>0?'+':'')+money(Math.abs(r.difference)),'Status: '+r.status.toUpperCase(),'','Closing note: '+($('cash-note').value.trim()||'None'),'','Cash reconciliation only. This summary does not calculate business profit.'].join('\n');
+    download(new Blob([text],{type:'text/plain;charset=utf-8'}),'handbill-cash-'+$('cash-date').value+'.txt');toast('Closing summary downloaded.');
   });
   function registerTools(){
     const context=document.modelContext;if(!context?.registerTool)return;
@@ -91,6 +97,6 @@
     }];
     tools.forEach(tool=>{try{Promise.resolve(context.registerTool(tool,{signal:controller.signal})).catch(()=>{});}catch{}});
   }
-  updatePricing();updateCash();navigate(location.hash.slice(1)||'promotion',false);drawPoster();registerTools();
+  updatePricing();updateCash();navigate(location.hash.slice(1)||'templates',false);drawPoster();registerTools();
   if(document.fonts?.ready)document.fonts.ready.then(drawPoster);
 })();

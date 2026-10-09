@@ -1,16 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 for(const width of [320,1280])test(`crafted copy, logo sizing and new styles work at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,...(process.env.SHOPDESK_BROWSER_CHANNEL?{channel:process.env.SHOPDESK_BROWSER_CHANNEL}:{})});
+    browser=await launch();
     const page=await browser.newPage({viewport:{width,height:900},isMobile:width<700,hasTouch:width<700});page.setDefaultTimeout(10000);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));const click=s=>width<700?page.locator(s).tap():page.locator(s).click();
-    await page.goto(app.url,{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    await page.goto(app.url+'#promotion',{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     await click('#tab-content');await page.locator('#promo-headline').fill('My own headline');await page.locator('#promo-terms').fill('My own footer');
     const items=await page.evaluate(()=>ShopDeskPromotion.itemState().items);
     await click('#open-wording');assert.match(await page.locator('#wording-context').innerText(),/Grocery/);
@@ -54,8 +54,8 @@ for(const width of [320,1280])test(`crafted copy, logo sizing and new styles wor
 test('larger logos fit every design and new artwork renders in every shape',async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,...(process.env.SHOPDESK_BROWSER_CHANNEL?{channel:process.env.SHOPDESK_BROWSER_CHANNEL}:{})});
-    const page=await browser.newPage();await page.goto(app.url,{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    browser=await launch();
+    const page=await browser.newPage();await page.goto(app.url+'#promotion',{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     const result=await page.evaluate(async()=>{
       await document.fonts.ready;
       const logo=document.createElement('canvas');logo.width=300;logo.height=180;const g=logo.getContext('2d');g.fillStyle='#153b2e';g.fillRect(0,0,300,180);g.fillStyle='white';g.font='bold 54px sans-serif';g.fillText('LOCAL',48,107);

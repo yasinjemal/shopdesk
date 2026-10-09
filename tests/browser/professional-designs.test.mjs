@@ -1,18 +1,18 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,readFile,writeFile} from 'node:fs/promises';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 const styles=['gazette','harvest','ledger','midnight','diagonal'];
 for(const width of [320,1280])test(`professional designs respond, save and export at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chrome'});
+    browser=await launch();
     const page=await browser.newPage({viewport:{width,height:900},isMobile:width<700,hasTouch:width<700}),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
     const click=s=>width<700?page.locator(s).tap():page.locator(s).click();
-    await page.goto(app.url);await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    await page.goto(app.url+'#promotion');await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     await click('#tab-content');await click('#open-bulk');
     await page.locator('#bulk-source').fill('Sugar beans, 1 kg, R29.99\nLong grain rice, 10 kg, R119.99\nCake flour, 2 kg, R34.99\nCooking oil, 5 L, R129.99\nRolled oats, 1 kg, R44.99\nTea selection, 100 bags, R39.99');
     await click('#review-bulk');await click('#apply-bulk');await page.waitForFunction(()=>!document.querySelector('#bulk-dialog').open);
@@ -50,7 +50,7 @@ for(const width of [320,1280])test(`professional designs respond, save and expor
 test('five professional styles remain distinct in the same colour and render dense and featured shapes',async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chrome'});const page=await browser.newPage();await page.goto(app.url);
+    browser=await launch();const page=await browser.newPage();await page.goto(app.url+'#promotion');
     await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     const result=await page.evaluate(async(styles)=>{
       await document.fonts.ready;

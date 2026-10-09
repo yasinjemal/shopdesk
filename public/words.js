@@ -18,10 +18,28 @@
     opening:[['A new beginning. Come say hello.','WE’RE OPENING OUR DOORS','Ask about our opening','Please check the opening date and visiting times.'],['New doors. New possibilities.','GRAND OPENING','Contact us for opening details','Opening arrangements are available on enquiry.'],['We look forward to welcoming you.','A NEW CHAPTER','Enquire about our opening','Please confirm the opening details before visiting.']],
     spotlight:[['One favourite. All the attention.','IN THE SPOTLIGHT'],['Take a closer look at this one.','THE FEATURED OFFER'],['A closer look at something special.','THE SPOTLIGHT EDIT']]
   };
+  // Promotion wording replaces the headline and small heading for a specific
+  // kind of flyer. Contact messages and footers stay with the business.
+  const promotions={
+    weekly:[['Weekly specials for your family table.','WEEKLY SPECIALS'],['This week’s specials. Fill your trolley.','THIS WEEK ONLY'],['A considered selection for the week ahead.','THE WEEKLY SELECTION']],
+    weekend:[['Your weekend shop, sorted.','WEEKEND SPECIALS'],['Big weekend. Big value.','WEEKEND DEALS'],['Everything for a good weekend.','THE WEEKEND EDIT']],
+    wholesale:[['Wholesale prices for your business.','WHOLESALE PRICES'],['Stock up by the case.','CASH & CARRY'],['Bulk packs, clearly priced.','THE WHOLESALE LIST'],],
+    produce:[['Fresh from the market this week.','FRESH PRODUCE'],['Fresh in today. Pick yours.','FRESH PICKS'],['Seasonal produce, simply priced.','FROM THE MARKET']],
+    butchery:[['Quality cuts from our butchery.','FROM OUR BUTCHERY'],['Braai-ready cuts and packs.','BUTCHERY SPECIALS'],['Cut to order, priced per kilogram.','THE BUTCHER’S COUNTER']],
+    bakery:[['Baked fresh every morning.','FROM OUR BAKERY'],['Warm bakes, ready today.','BAKERY SPECIALS'],['Breads and bakes, made by hand.','THE BAKERY COUNTER']],
+    household:[['Everyday essentials, all in one place.','HOUSEHOLD ESSENTIALS'],['Stock up on the basics.','HOME ESSENTIALS'],['The practical things, clearly priced.','THE ESSENTIALS LIST']],
+    single:[['This week’s big deal.','THIS WEEK’S DEAL'],['One product. One price. Take a look.','THE BIG PRICE'],['A closer look at one favourite.','PRODUCT OF THE WEEK']],
+    sale:[['Prices worth a second look.','PRICE DROP'],['Sale on now. Don’t miss it.','SALE'],['Reduced prices, for a short time.','THE SALE EDIT']],
+    menu:[['What are you craving today?','FROM OUR KITCHEN'],['Today’s specials, hot and ready.','TODAY’S SPECIALS'],['Something to savour.','AT THE TABLE']],
+    collection:[['Find something that feels like you.','NEW COLLECTION'],['New in. Just for you.','JUST ARRIVED'],['A collection to make your own.','THE NEW COLLECTION']],
+    services:[['Good service, close to home.','OUR SERVICES'],['Tell us what you need.','SERVICES & PRICES'],['Practical help. Personal attention.','THE SERVICE LIST']]
+  };
   function sets(context={}){
     const source=bank[context.business]||bank.general;
     return Object.entries(tones).map(([id,label],i)=>{
       const values=Object.fromEntries(Object.keys(fields).map((field,j)=>[field,source[i][j]]));
+      const promotion=promotions[context.promotion]?.[i];
+      if(promotion&&!['combos','event','opening','spotlight'].includes(context.purpose)){values.headline=promotion[0];values.eyebrow=promotion[1];}
       const occasion=occasions[context.purpose]?.[i];
       if(occasion)Object.keys(fields).forEach((field,j)=>{if(occasion[j]!==undefined)values[field]=occasion[j];});
       if(context.purpose==='spotlight'&&context.showDate===false)values.eyebrow=['IN THE SPOTLIGHT','TAKE A CLOSER LOOK','THE SPOTLIGHT EDIT'][i];
@@ -35,5 +53,5 @@
       result[key]=value;
     }return result;
   }
-  root.ShopDeskWords={tones,fields,sets,validate};
+  root.ShopDeskWords={tones,fields,promotions,sets,validate};
 })(typeof window!=='undefined'?window:globalThis);

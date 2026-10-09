@@ -1,16 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,readFile} from 'node:fs/promises';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 for(const width of [320,1280])test(`grocery bundles can be edited, saved and exported at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chrome'});
+    browser=await launch();
     const page=await browser.newPage({viewport:{width,height:900},isMobile:width<700,hasTouch:width<700});page.setDefaultTimeout(10000);
     const errors=[];page.on('pageerror',e=>errors.push(e.message));const click=s=>width<700?page.locator(s).tap():page.locator(s).click();
-    await page.goto(app.url,{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    await page.goto(app.url+'#promotion',{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     await click('#tab-content');await page.locator('#product-count').selectOption('25');
     // Real editor inputs establish the retained normal flyer, without a test-only model setter.
     for(let i=0;i<25;i++){

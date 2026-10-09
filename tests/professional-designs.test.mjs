@@ -22,11 +22,11 @@ test('professional grocery styles survive save, duplicate, sharing and promotion
     for(const page of ShopDeskPack.plan(copy))assert.equal(page.data.template,template);
   }
   // Append starters: saved favourites keep the same identifiers and contents.
-  assert.equal(ShopDeskTemplates.starters.length,43);
+  assert.ok(ShopDeskTemplates.starters.length>=63);
   assert.equal(ShopDeskTemplates.starters[0].id,'starter-0');assert.equal(ShopDeskTemplates.starters[0].design.template,'warehouse');
   assert.equal(ShopDeskTemplates.starters[29].id,'starter-29');assert.equal(ShopDeskTemplates.starters[29].design.template,'combo-fresh');
   assert.deepEqual(ShopDeskTemplates.starters.slice(30,35).map(t=>t.design.template),originalStyles);
-  assert.deepEqual(ShopDeskTemplates.starters.slice(35).map(t=>t.design.template),[...retailStyles,'combo-circular','combo-receipt']);
+  assert.deepEqual(ShopDeskTemplates.starters.slice(35,43).map(t=>t.design.template),[...retailStyles,'combo-circular','combo-receipt']);
   for(const starter of ShopDeskTemplates.starters.slice(35))assert.equal(validateWorkspace({shop:{name:'Local grocery',phone:'',location:''},products:[],draft:ShopDeskTemplates.draft(starter)}).draft.template,starter.design.template);
 });
 test('professional layouts keep all 1–25 products inside six shapes without overlap',()=>{

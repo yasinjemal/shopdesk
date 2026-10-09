@@ -3,10 +3,10 @@
   const $=id=>document.getElementById(id),api=window.ShopDeskPromotion;
   let bulkRows=[],bulkContext='',bulkBusy=false,savedContext='',savedProducts=[],savedSelection=new Map(),savedBusy=false,photoIndex=-1,photoContext='';
   function message(id,text){$(id).textContent=text;$(id).hidden=!text;}
-  function launchError(error){message('editor-action-error',error.message||'This tool could not open. Please reopen ShopDesk and try again.');$('editor-action-error').focus();}
+  function launchError(error){message('editor-action-error',error.message||'This tool could not open. Please reopen Handbill and try again.');$('editor-action-error').focus();}
   function state(){
     message('editor-action-error','');
-    if(typeof api?.itemState!=='function')throw new Error('The editor has not finished loading. Reopen ShopDesk to load the latest controls. Your saved projects are kept.');
+    if(typeof api?.itemState!=='function')throw new Error('The editor has not finished loading. Reopen Handbill to load the latest controls. Your saved projects are kept.');
     const value=api.itemState();if(!value.ready)throw new Error(value.unavailableReason||'Wait for your project to load, then try again.');return value;
   }
   function capacityMessage(current){

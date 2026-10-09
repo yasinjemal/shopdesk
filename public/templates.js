@@ -1,12 +1,16 @@
 (function(root){
   'use strict';
   const choices={
-    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt'],
-    theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa'],
+    template:['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt','weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale'],
+    theme:['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa','tomato','kraft','mint'],
     format:['poster','status','square','landscape','a4','a5'],business:['grocery','fashion','food','beauty','services','general'],
     purpose:['offers','combos','spotlight','event','opening'],logoSize:['compact','prominent'],typeface:['design','modern','elegant','geometric'],priceStyle:['design','solid','outline','pill']
   };
   const defaults={template:'bold',theme:'green',format:'poster',business:'general',purpose:'offers',logoSize:'prominent',typeface:'design',priceStyle:'design'};
+  // Promotion types describe what a flyer is for. They guide wording and the
+  // gallery filters without changing how a design renders.
+  const promotions={weekly:'Weekly specials',weekend:'Weekend promotion',wholesale:'Wholesale catalogue',produce:'Fresh produce',butchery:'Butchery',bakery:'Bakery offers',household:'Household essentials',single:'Single product promotion',combos:'Grocery combos',sale:'Sale / price drop',menu:'Menu & price list',collection:'New collection',services:'Service price list',event:'Event',opening:'Grand opening'};
+  const styles={bold:'Bold & bright',classic:'Classic supermarket',fresh:'Fresh & natural',clean:'Clean & minimal',premium:'Premium & dark',playful:'Playful & warm'};
   const blank=()=>({name:'',size:'',price:'',photo:''});
   function string(value,max,label){if(typeof value!=='string'||value.length>max)throw new Error('Check '+label+'.');return value.trim();}
   // Explicit allowlist: never copy account IDs, photos, contact details, dates,
@@ -18,6 +22,7 @@
       const value=source[key]??defaults[key];if(!values.includes(value))throw new Error('Choose a valid '+key+'.');result[key]=value;
     }
     for(const key of ['trimPhotos','cleanNames']){if(source[key]!==undefined&&typeof source[key]!=='boolean')throw new Error('Check the photo settings.');result[key]=source[key]??false;}
+    if(source.promotion!==undefined&&source.promotion!==''){if(!Object.hasOwn(promotions,source.promotion))throw new Error('Choose a valid promotion type.');result.promotion=source.promotion;}
     const count=source.itemCount??source.items?.length??1,limit=result.purpose==='combos'?20:result.purpose==='spotlight'?1:result.template==='simple'?3:25;
     if(!Number.isInteger(count)||count<1||count>25)throw new Error('Choose between 1 and 25 items.');
     result.itemCount=['event','opening'].includes(result.purpose)?1:Math.min(count,limit);
@@ -49,6 +54,10 @@
     const value=validate(template),d=value.design;
     const expiry=new Date();expiry.setDate(expiry.getDate()+7);
     const next=root.ShopDeskStudio.suggest({...d});
+    // A promotion type seeds crafted wording for a brand-new project only; it
+    // never rewrites text in an existing flyer.
+    const crafted=!value.includeContent&&d.promotion&&root.ShopDeskWords?.promotions?.[d.promotion]?.[0];
+    if(crafted&&!['combos','event','opening'].includes(d.purpose)){next.headline=crafted[0];next.eyebrow=crafted[1];}
     Object.assign(next,d,{date:[expiry.getFullYear(),String(expiry.getMonth()+1).padStart(2,'0'),String(expiry.getDate()).padStart(2,'0')].join('-'),eventDate:'',eventTime:'',venue:'',details:'',heroPhoto:'',items:d.items?structuredClone(d.items):Array.from({length:d.itemCount},blank)});
     return next;
   }
@@ -95,7 +104,35 @@
     ['The fresh food circular','Curved photo panels for fresh counter and market finds.','grocery','fresh-cut','green','offers',6],
     ['The split banner catalogue','A modern two-part masthead and quietly framed offers.','grocery','split-banner','indigo','offers',6],
     ['The supermarket combo circular','Outlined bundle frames with a complete price for each basket.','grocery','combo-circular','red','combos',12],
-    ['The basket receipt','Itemised bundles with receipt rules and perforated edges.','grocery','combo-receipt','charcoal','combos',8]
-  ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>({id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...finishes},title,description)}));
-  root.ShopDeskTemplates={design,validate,create,draft,starters};
+    ['The basket receipt','Itemised bundles with receipt rules and perforated edges.','grocery','combo-receipt','charcoal','combos',8],
+    // Grocery-first additions (starter-43 onwards). Earlier identifiers never change.
+    ['Weekend burst specials','A starburst weekend heading, generous photos and round price badges.','grocery','weekend','tomato','offers',6,{promotion:'weekend'}],
+    ['The butcher’s block','Striped awning, kraft panels and white price tags for cuts sold per kg.','grocery','butcher','kraft','offers',6,{promotion:'butchery'}],
+    ['Bakery board','A chalkboard bakery menu with oval photos and soft price pills.','grocery','bakery','cocoa','offers',6,{promotion:'bakery'}],
+    ['Household essentials list','Ticked rows, pack-size pills and clear prices for a long list of essentials.','grocery','household','cobalt','offers',10,{promotion:'household'}],
+    ['One big price','A single product with its photo and one oversized price.','grocery','bigprice','tomato','spotlight',1,{promotion:'single'}],
+    ['Cash & carry catalogue','A wholesale table with product, pack and price columns for up to 25 lines.','grocery','cashcarry','petrol','offers',16,{promotion:'wholesale'}],
+    ['Produce crate','Fresh produce in slatted crate frames with hanging chalk price tags.','grocery','crate','mint','offers',6,{promotion:'produce'}],
+    ['Tag sale','Every offer on its own swing tag with a big ticket price.','grocery','tagsale','lemon','offers',9,{promotion:'sale'}],
+    ['Hero deals of the week','A few headline offers, each with an oversized price and photo.','grocery','bigprice','tomato','offers',5,{promotion:'weekly'}],
+    ['Month-end stock-up','A fresh green essentials list for the month-end shop, sized for A4 printing.','grocery','household','mint','offers',12,{promotion:'household',format:'a4'}],
+    ['Weekend braai pack','A butchery Status page for the weekend’s cuts and packs.','grocery','butcher','tomato','offers',4,{promotion:'weekend',format:'status'}],
+    ['Wholesale price list','A calm A4 cash-and-carry list with 20 lines and clear pack columns.','grocery','cashcarry','slate','offers',20,{promotion:'wholesale',format:'a4',priceStyle:'outline'}],
+    ['Fresh produce Status','Four crate frames for today’s fresh picks, sized for WhatsApp Status.','grocery','crate','mint','offers',4,{promotion:'produce',format:'status'}],
+    ['Square single-product promo','One product, one big price, ready for a square social post.','grocery','bigprice','cobalt','spotlight',1,{promotion:'single',format:'square'}],
+    ['Restaurant specials board','A chalkboard specials board for today’s dishes.','food','bakery','charcoal','offers',6,{promotion:'menu',typeface:'elegant'}],
+    ['Weekend bakes','Warm chalkboard tiles for weekend bakes and treats.','food','bakery','peach','offers',4,{promotion:'bakery'}],
+    ['Salon price tags','Swing tags for treatments and services with clear prices.','beauty','tagsale','lavender','offers',6,{promotion:'services'}],
+    ['Boutique tag sale','Fashion offers on swing tags with a soft raspberry palette.','fashion','tagsale','raspberry','offers',6,{promotion:'sale'}],
+    ['Service essentials list','A ticked list of services with clear prices and inclusions.','services','household','slate','offers',8,{promotion:'services'}],
+    ['Weekend combo market','Four numbered grocery baskets with one price per complete combo.','grocery','combo-board','tomato','combos',12,{promotion:'combos'}]
+  ].map(([title,description,business,template,theme,purpose,itemCount,finishes={}],i)=>{
+    const {promotion,...design}=finishes;
+    return {id:'starter-'+i,starter:true,...create({business,template,theme,purpose,itemCount,...design,...(promotion?{promotion}:{})},title,description)};
+  });
+  // Gallery tags for the original starters: promotion type and visual style.
+  const tags=['weekly/bold','menu/playful','collection/clean','services/clean','single/bold','opening/bold','weekend/bold','produce/fresh','services/clean','collection/playful','bakery/playful','sale/bold','menu/playful','services/clean','services/clean','collection/clean','bakery/playful','household/bold','wholesale/classic','weekly/bold','produce/premium','sale/bold','weekly/clean','collection/clean','collection/clean','weekly/bold','menu/fresh','combos/bold','combos/bold','combos/fresh','weekly/clean','produce/fresh','household/clean','weekly/premium','weekly/bold','weekly/classic','weekly/classic','household/classic','household/bold','produce/fresh','weekly/clean','combos/classic','combos/clean',
+    'weekend/bold','butchery/premium','bakery/playful','household/clean','single/bold','wholesale/classic','produce/fresh','sale/playful','weekly/bold','household/fresh','weekend/bold','wholesale/clean','produce/fresh','single/bold','menu/premium','bakery/playful','services/playful','sale/playful','services/clean','combos/bold'];
+  starters.forEach((starter,i)=>{const [promotion,style]=(tags[i]||'weekly/bold').split('/');starter.design.promotion=starter.design.promotion||promotion;starter.promotion=starter.design.promotion;starter.style=style;});
+  root.ShopDeskTemplates={design,validate,create,draft,starters,promotions,styles};
 })(typeof window!=='undefined'?window:globalThis);

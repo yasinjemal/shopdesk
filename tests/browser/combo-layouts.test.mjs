@@ -1,13 +1,13 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 test('combo frames and product labels stay bounded across every size and crowded grouping',async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chrome'});const page=await browser.newPage();await page.goto(app.url,{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    browser=await launch();const page=await browser.newPage();await page.goto(app.url+'#promotion',{timeout:30000});await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     const result=await page.evaluate(async()=>{
       await document.fonts.ready;
       const makePhoto=(name,colour)=>{const c=document.createElement('canvas');c.width=180;c.height=260;const g=c.getContext('2d');g.fillStyle='#f5e4b7';g.fillRect(25,8,130,240);g.fillStyle=colour;g.fillRect(25,74,130,140);g.fillStyle='white';g.font='bold 24px sans-serif';g.fillText('MARKET',36,122);g.font='20px sans-serif';g.fillText(name,38,164);return c;};

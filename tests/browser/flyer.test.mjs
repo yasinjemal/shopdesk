@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { chromium } from 'playwright';
+import {launch} from './launch.mjs';
 
 import { startApp } from '../../scripts/local-server.mjs';
 
@@ -9,11 +9,11 @@ for (const width of [320, 390, 1280]) test(`flyer controls work and persist at $
   const app = await startApp();
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, ...(process.env.SHOPDESK_BROWSER_CHANNEL ? { channel: process.env.SHOPDESK_BROWSER_CHANNEL } : {}) });
+    browser = await launch();
     const page = await browser.newPage({ viewport: { width, height: 844 }, isMobile: width < 700, hasTouch: width < 700 });
     page.setDefaultTimeout(8000);
     const errors = []; page.on('pageerror', error => errors.push(error.message));
-    await page.goto(app.url,{timeout:30000});
+    await page.goto(app.url+'#promotion',{timeout:30000});
     await page.waitForFunction(() => !document.querySelector('#promo-fields').disabled);
     const click = selector => width < 700 ? page.locator(selector).tap() : page.locator(selector).click();
     await click('#tab-content');
@@ -100,11 +100,11 @@ test('workspace load failure is visible and retry restores product controls', as
   const app = await startApp();
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, ...(process.env.SHOPDESK_BROWSER_CHANNEL ? { channel: process.env.SHOPDESK_BROWSER_CHANNEL } : {}) });
+    browser = await launch();
     const page = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     page.setDefaultTimeout(8000);
     await page.route('**/api/studio', route => route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ error: 'Test connection unavailable. Try again.' }) }), { times: 1 });
-    await page.goto(app.url,{timeout:30000});
+    await page.goto(app.url+'#promotion',{timeout:30000});
     await page.locator('#workspace-error').waitFor({ state: 'visible' });
     assert.match(await page.locator('#workspace-error').textContent(), /Test connection unavailable/);
     assert.equal(await page.locator('#open-bulk').isDisabled(), true);

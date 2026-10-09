@@ -39,6 +39,6 @@ export async function startApp(port = 0) {
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const app = await startApp(4173);
-  console.log('ShopDesk local preview: '+app.url+' — isolated test account; data resets when stopped.');
+  console.log('Handbill local preview: '+app.url+' — isolated test account; data resets when stopped.');
   for (const signal of ['SIGINT','SIGTERM']) process.once(signal, async () => { await app.close(); process.exit(0); });
 }

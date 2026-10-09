@@ -1,15 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 for(const width of [320,1280])test(`retail designs, multi-buy totals and promotion dates work at ${width}px`,async()=>{
  const app=await startApp();let browser;
  try{
-  browser=await chromium.launch({channel:process.env.SHOPDESK_BROWSER_CHANNEL||'chromium',headless:true});
+  browser=await launch();
   const page=await browser.newPage({viewport:{width,height:844},isMobile:width<700,hasTouch:width<700}),errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(10000);
   const click=selector=>width<700?page.locator(selector).tap():page.locator(selector).click();
-  await page.goto(app.url);await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+  await page.goto(app.url+'#promotion');await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
   await click('#tab-content');await click('#open-bulk');await page.locator('#bulk-source').fill('Rice, 2 kg, R40\nBeans, 410 g, R25\nMilk, 1 litre, R18');await click('#review-bulk');await click('#apply-bulk');await page.waitForFunction(()=>!document.querySelector('#bulk-dialog').open);
   await click('.offer-options > summary >> nth=0');await page.locator('.deal-quantity').first().selectOption('2');
   assert.match(await page.locator('.item-price').first().textContent(),/^2 for /);

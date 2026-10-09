@@ -1,19 +1,19 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {chromium} from 'playwright';
+import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
 for(const width of [320,390,1280])test(`new designs, colour lock, ordering and undo work at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,...(process.env.SHOPDESK_BROWSER_CHANNEL?{channel:process.env.SHOPDESK_BROWSER_CHANNEL}:{})});
+    browser=await launch();
     const page=await browser.newPage({viewport:{width,height:844},isMobile:width<700,hasTouch:width<700});
     page.setDefaultTimeout(10000);const errors=[];page.on('pageerror',e=>errors.push(e.message));
-    await page.goto(app.url);await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
+    await page.goto(app.url+'#promotion');await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     await page.evaluate(()=>document.fonts.ready);
     const click=selector=>width<700?page.locator(selector).tap():page.locator(selector).click();
-    assert.equal(await page.locator('[data-template]').count(),47);
-    assert.equal(await page.locator('[data-colour]').count(),27);
+    assert.equal(await page.locator('[data-template]').count(),55);
+    assert.equal(await page.locator('[data-colour]').count(),30);
     let previous=await page.locator('#promo-canvas').evaluate(el=>el.toDataURL());
     for(const template of ['sunburst','botanical','blueprint','scrapbook','candy','mono']){
       await click(`[data-template="${template}"]`);
@@ -79,8 +79,8 @@ for(const width of [320,390,1280])test(`new designs, colour lock, ordering and u
 test('new palettes change the artwork in older designs and every flyer purpose',async()=>{
   const app=await startApp();let browser;
   try{
-    browser=await chromium.launch({headless:true,...(process.env.SHOPDESK_BROWSER_CHANNEL?{channel:process.env.SHOPDESK_BROWSER_CHANNEL}:{})});
-    const page=await browser.newPage();await page.goto(app.url);await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);await page.evaluate(()=>document.fonts.ready);
+    browser=await launch();
+    const page=await browser.newPage();await page.goto(app.url+'#promotion');await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);await page.evaluate(()=>document.fonts.ready);
     for(const template of ['retail','bold','market','boutique','menu','studio']){
       await page.locator(`[data-template="${template}"]`).click();await page.locator('[data-colour="sage"]').click();
       const before=await page.locator('#promo-canvas').evaluate(c=>c.toDataURL());await page.locator('[data-colour="aqua"]').click();
