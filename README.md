@@ -100,9 +100,19 @@ Sources used for the price hierarchy, pack-size, date and contact conventions in
 
 ## Screenshots and verification
 
-`docs/catalogue-research.md` records the catalogue study. `docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs, a sheet of the four leaflet designs, two finish sheets (textures, shadows, badges and custom colours applied across design families), the Customise panel at 320 px and 1280 px, and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
+`docs/catalogue-research.md` records the catalogue study. `docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs, a sheet of the four leaflet designs, two finish sheets (textures, shadows, badges and custom colours applied across design families), the Customise panel at 320 px and 1280 px, the phone editor with its floating live flyer and the phone preview dialog, and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
 
 Verified in this environment: 62 unit tests and 35 browser checks pass; the production build completes; standard, 4K (3,840 px long edge), A4 (2,480 × 3,508) and A5 PDF (419.5 × 595.3 pt) exports have the expected dimensions; a crowded 20-product, six-basket combo flyer exports at 4K; and a schemaVersion 1 workspace saved through the old API opens, upgrades and exports.
+
+## Built for phones first
+
+Most shop owners work from a phone, so the editor is arranged for one thumb:
+
+- The first screen reaches the work: on phones the page introductions and the gallery's step strip are hidden, so templates and the step bar appear immediately.
+- The four-step bar sticks to the top of the screen while the long offers form scrolls.
+- A floating **See flyer** thumbnail shows the live flyer from any step. Tapping it opens the full preview with a download button and a note on anything still missing, so nobody scrolls to the bottom to check a change.
+- **Share to WhatsApp & more** uses the phone's own share sheet to send the exported PNG, with the offer text as the message, wherever the browser can share files. Elsewhere the button stays hidden and the download works as before.
+- Every control keeps a 44 px touch target, prices open the decimal keypad, and the checks run at 320 px and 390 px as well as desktop.
 
 ## Features kept from ShopDesk
 

@@ -105,11 +105,29 @@
     $('review-details').hidden=$('promo-error').hidden||$('promo-fields').disabled;
     $('step-download').classList.toggle('is-ready',$('promo-error').hidden&&!$('promo-fields').disabled);
     if($('preview-dialog').open)copyPreview();
+    $('dialog-download').disabled=$('download-promo').disabled;$('dialog-share').hidden=$('share-promo').hidden;$('dialog-share').disabled=$('share-promo').disabled;
+    $('dialog-preview-note').hidden=$('promo-error').hidden;$('dialog-preview-note').textContent=$('promo-error').hidden?'':'Before downloading: '+$('promo-error').textContent;
+    paintPeek();updatePeek();
   }
   function copyPreview(){
     const source=$('promo-canvas'),canvas=$('expanded-canvas');canvas.width=source.width;canvas.height=source.height;canvas.getContext('2d').drawImage(source,0,0);
   }
   $('expand-preview').addEventListener('click',()=>{copyPreview();$('preview-dialog').showModal();});
+  // Phones: a floating thumbnail of the live flyer stays in reach while editing and opens the
+  // full preview with download and share, so nobody scrolls to the bottom to see a change.
+  const phone=window.matchMedia('(max-width: 900px)');let previewInView=false;
+  function peekVisible(){return phone.matches&&!$('page-promotion').hidden&&!previewInView&&!$('promo-fields').disabled;}
+  function updatePeek(){$('peek-preview').hidden=!peekVisible();}
+  function paintPeek(){
+    const source=$('promo-canvas'),canvas=$('peek-canvas');if(!source.width||!source.height)return;
+    const ctx=canvas.getContext('2d'),scale=Math.min(canvas.width/source.width,canvas.height/source.height),w=source.width*scale,h=source.height*scale;
+    ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(source,(canvas.width-w)/2,(canvas.height-h)/2,w,h);
+  }
+  if('IntersectionObserver' in window)new IntersectionObserver(entries=>{previewInView=entries.some(e=>e.isIntersecting);updatePeek();},{threshold:.15}).observe($('editor-preview'));
+  phone.addEventListener('change',updatePeek);window.addEventListener('shopdesk:page',updatePeek);
+  $('peek-preview').addEventListener('click',()=>{copyPreview();$('preview-dialog').showModal();});
+  $('dialog-download').addEventListener('click',()=>{$('preview-dialog').close();$('download-promo').click();});
+  $('dialog-share').addEventListener('click',()=>{$('preview-dialog').close();$('share-promo').click();});
   $('close-preview').addEventListener('click',()=>$('preview-dialog').close());
   $('review-details').addEventListener('click',()=>{
     const message=$('promo-error').textContent;

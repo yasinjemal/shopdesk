@@ -571,6 +571,7 @@
     renderDesigner();const d=dataForPoster(),statusFormat=d.format==='status',outputSize=ShopDeskPoster.outputSize(d.format,d.exportQuality),print=!!outputSize.mm;
     let valid=false;
     try{validatePoster();valid=true;$('promo-error').hidden=true;$('download-promo').disabled=exportBusy||packBusy;$('copy-promo').disabled=false;}catch(e){$('promo-error').textContent=e.message;$('promo-error').hidden=!ready;$('download-promo').disabled=true;$('copy-promo').disabled=true;}
+    $('share-promo').disabled=$('download-promo').disabled;
     for(const id of ['create-pack','create-pack-bottom'])$(id).disabled=!valid||packBusy||exportBusy;
     $('download-print').disabled=!valid||exportBusy||packBusy;$('download-print').hidden=!print;
     const cataloguePages=print&&!comboMode()&&!announcement()?Math.ceil(d.items.length/12):1;
@@ -609,6 +610,21 @@
     finally{exportBusy=false;draw();}
   }
   $('download-promo').addEventListener('click',()=>downloadFlyer('png'));
+  // Phones share straight to WhatsApp and other apps through the system share sheet when the
+  // browser can share files; otherwise the button stays hidden and the download works as before.
+  function canShareFiles(){try{return typeof navigator.canShare==='function'&&navigator.canShare({files:[new File([new Uint8Array(8)],'handbill.png',{type:'image/png'})]});}catch{return false;}}
+  $('share-promo').hidden=!canShareFiles();
+  async function shareFlyer(){
+    if(exportBusy||packBusy)return;
+    try{
+      const d=validatePoster();exportBusy=true;draw();await document.fonts?.ready;
+      const blob=await exportImage(d,'png',null),file=new File([blob],'handbill-'+d.format+'-'+iso()+'.png',{type:'image/png'});
+      await navigator.share({files:[file],title:d.headline||'Our specials',text:ShopDeskPack.caption(d)});
+      toast('Shared. Your flyer is on its way.');
+    }catch(e){if(e?.name!=='AbortError')toast(e.message||'Sharing did not work here. Download the flyer and share the file instead.');}
+    finally{exportBusy=false;draw();}
+  }
+  $('share-promo').addEventListener('click',shareFlyer);
   $('download-print').addEventListener('click',()=>downloadFlyer('pdf'));
   $('export-quality').addEventListener('change',changed);$('print-pages').addEventListener('change',changed);
   $('copy-promo').addEventListener('click',async()=>{try{const content=ShopDeskPack.caption(validatePoster());try{await navigator.clipboard.writeText(content);toast('Offer text copied. Paste it into your customer message.');}catch{download(new Blob([content],{type:'text/plain;charset=utf-8'}),'handbill-offer.txt');toast('Offer text downloaded.');}}catch(e){toast(e.message);}});
