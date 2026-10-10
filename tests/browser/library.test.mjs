@@ -17,7 +17,7 @@ for(const width of [320,1280])test(`the template gallery opens first, filters st
     const grocery=await page.evaluate(()=>ShopDeskTemplates.starters.filter(t=>t.design.business==='grocery').length);
     assert.equal(await page.locator('.library-card').count(),grocery);
     await page.locator('#library-promotion').selectOption('butchery');
-    const butchery=await page.locator('.library-card').evaluateAll(cards=>cards.map(c=>c.dataset.design));assert.ok(butchery.length>=1&&butchery.every(t=>t==='butcher'),JSON.stringify(butchery));
+    const butchery=await page.locator('.library-card').evaluateAll(cards=>cards.map(c=>c.dataset.design));assert.ok(butchery.length>=1&&butchery.every(t=>['butcher','premiumdeli'].includes(t)),JSON.stringify(butchery));
     await page.locator('#library-promotion').selectOption('');await page.locator('#library-format').selectOption('status');
     assert.ok(await page.locator('.library-card').count()>=2);assert.ok((await page.locator('.library-meta').first().textContent()).includes('Status'));
     await click('#library-clear');

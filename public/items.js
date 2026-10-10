@@ -1,6 +1,6 @@
 (function(root){
   'use strict';
-  const optional=['photoScale','photoX','photoY','featured','dealQuantity','combo','quantity','wasPrice','section','icon','caseQuantity','source'];
+  const optional=['photoScale','photoX','photoY','featured','dealQuantity','combo','quantity','wasPrice','section','icon','caseQuantity','source','badge'];
   function copy(item,includeFeature=true){
     const next={name:item.name||'',size:item.size||'',price:item.price??'',photo:item.photo||''};
     for(const key of optional)if(item[key]!==undefined&&(includeFeature||!['featured','combo','quantity'].includes(key))){if(key==='source'&&item[key]!==null&&(typeof item[key]!=='object'||!item[key].provider))continue;next[key]=key==='source'&&item[key]?{...item[key]}:item[key];}
@@ -56,6 +56,7 @@
     if(item.section!==undefined&&item.section.length>24)return 'Shorten the section label to 24 characters.';
     if(item.icon!==undefined&&item.icon!==''&&!/^[a-z][a-z0-9-]{0,31}$/.test(item.icon))return 'Choose a valid illustration.';
     if(item.caseQuantity!==undefined&&!(Number.isInteger(item.caseQuantity)&&item.caseQuantity>=2&&item.caseQuantity<=999))return 'Choose a case quantity from 2 to 999.';
+    if(item.badge!==undefined&&(typeof item.badge!=='string'||item.badge.length>14))return 'Shorten the badge to 14 characters.';
     if(item.name.length>50)return 'Shorten the name to 50 characters.';
     if(item.size.length>25)return 'Shorten the pack or details to 25 characters.';
     if(!price(item.price))return 'Enter a price above R0, up to R1,000,000, with at most two decimal places.';

@@ -45,12 +45,14 @@ for(const width of [320,1280])test(`products are added in one tap with sizes, il
     // 5. Illustrations draw on the flyer and can be changed or removed; a photo always wins.
     const withIcons=await page.locator('#promo-canvas').evaluate(c=>c.toDataURL());
     const firstCard=page.locator('#promo-items > details[data-index="0"]');await page.evaluate(()=>{document.querySelector('#promo-items > details[data-index="0"]').open=true;});
-    await firstCard.getByRole('button',{name:'Choose an illustration'}).click();
-    await page.locator('#illustration-dialog').waitFor();await page.getByRole('button',{name:'potato',exact:true}).click();
-    state=await items();assert.equal(state[0].icon,'potato');
+    // The first sample item is recognised, so a suggested illustration is already shown; it can still be changed or removed.
+    assert.equal(await firstCard.locator('.photo-thumb img').getAttribute('alt'),'Suggested illustration');
+    await firstCard.locator('.choose-illustration').click();
+    await page.locator('#illustration-dialog').waitFor();await page.getByRole('button',{name:'bottle',exact:true}).click();
+    state=await items();assert.equal(state[0].icon,'bottle');
     const changed=await page.locator('#promo-canvas').evaluate(c=>c.toDataURL());assert.notEqual(changed,withIcons);
     await firstCard.getByRole('button',{name:'Change illustration'}).click();await click('#remove-illustration');
-    state=await items();assert.equal(state[0].icon,'');
+    state=await items();assert.equal(state[0].icon,'');assert.equal(await firstCard.locator('.photo-thumb').textContent(),'Your photo');assert.equal(await firstCard.locator('.choose-illustration').textContent(),'Choose an illustration');
     const photo=await page.evaluate(()=>{const c=document.createElement('canvas');c.width=300;c.height=300;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,300,300);x.fillStyle='#1b7';x.fillRect(40,40,220,220);return c.toDataURL('image/png').split(',')[1];});
     await page.locator('[aria-label="Choose photo for item 2"]').setInputFiles({name:'maize.png',mimeType:'image/png',buffer:Buffer.from(photo,'base64')});
     await page.waitForFunction(()=>ShopDeskPromotion.itemState().items[1].photo);

@@ -28,10 +28,31 @@ The project bar keeps businesses and saved flyers together; **My flyers** opens 
 
 ## Flyer designs
 
-55 designs, 30 palettes, four typography settings and four price-label settings, with optional previous prices and department tags on every design. All design identifiers are unchanged; the eight grocery designs below are additions.
+59 designs, 33 palettes, four typography settings and four price-label settings, with optional previous prices, department tags and badges on every design. All design identifiers are unchanged; the twelve grocery designs below are additions.
+
+### Customise any design
+
+Every design accepts the same finishing controls from the **Customise colours, badges & finish** panel in step 1, so a shop can make a template its own without leaving the four-step flow. Each setting is an additive field on the saved draft; flyers saved before these controls existed render exactly as they did.
+
+| Control | Choices | What it does |
+| --- | --- | --- |
+| Background | Design default, depth & gradient, dotted texture, diagonal stripes, paper grain | Dresses the page and every full-width band of the design |
+| Offer cards | Design default, lifted with shadow, outlined in brand colour | Painted after the design, outside each card, so card artwork is untouched |
+| Photo shape | Design default, rounded corners, circle | Clips product photos and illustrations; logos and hero photos are never clipped |
+| Price size | Standard, large, huge | Scales the price box in every card family; names and photos make room |
+| Headline | As typed, ALL CAPITALS | Case only; the wording is never rewritten |
+| Badge style | Starburst sticker, ribbon, rounded pill, none | How offer badges are drawn, straddling the card corner like a leaflet sticker |
+| Automatic “SAVE R…” badges | On or off | Only on offers with a genuine previous price; the amount is the two prices subtracted |
+| Your own brand colours | Three colour pickers, seeded from the chosen palette | Replace the palette's main, accent and background colours for any design |
+
+Each offer also takes its own badge (up to 14 characters, with presets such as NEW, BEST BUY and MULTI-BUY). Offers that never had an illustration chosen borrow the catalogue's illustration for their product name, so blank photo boxes no longer appear; removing an illustration is remembered. New projects created from starters open with depth, shadows, large prices and savings badges switched on; shared templates keep their author's exact finishes and colours, which are part of the design and never private.
 
 | Design | Composition | Image treatment | Price label system |
 | --- | --- | --- | --- |
+| Supermarket Leaflet | Red masthead with a yellow slash carrying the campaign words, dense white cards | Large product photos at the top of every card | Yellow price flash across the card foot with red numerals and cents |
+| Mega Deal | Black page, hazard stripes in the masthead corner, heavy capitals | Photos framed by thick yellow rules | Black price plate with a yellow edge and yellow numerals |
+| Fresh Market | Green masthead with a curved foot and leaf shapes | Round photo stages on white cards | Rounded green tag with white numerals |
+| Premium Deli | Navy page, gold hairlines, serif headings | Square photos with a gold hairline frame | Gold numerals over a short gold rule |
 | Weekend Burst | Starburst heading, rounded cards, horizontal cards when wide | Full-card product photos | Round brand badge with an accent ring (pill when dense) |
 | Butcher’s Block | Striped awning masthead, dark board, kraft panels | Square framed photo windows | White price tag with an accent rule, pack band in brand colour |
 | Bakery Board | Chalkboard with dashed chalk frames, serif type | Oval photo windows | Soft accent price pill, centred text |
@@ -79,7 +100,7 @@ Sources used for the price hierarchy, pack-size, date and contact conventions in
 
 ## Screenshots and verification
 
-`docs/catalogue-research.md` records the catalogue study. `docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
+`docs/catalogue-research.md` records the catalogue study. `docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs, a sheet of the four leaflet designs, two finish sheets (textures, shadows, badges and custom colours applied across design families), the Customise panel at 320 px and 1280 px, and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
 
 Verified in this environment: 62 unit tests and 35 browser checks pass; the production build completes; standard, 4K (3,840 px long edge), A4 (2,480 × 3,508) and A5 PDF (419.5 × 595.3 pt) exports have the expected dimensions; a crowded 20-product, six-basket combo flyer exports at 4K; and a schemaVersion 1 workspace saved through the old API opens, upgrades and exports.
 
@@ -121,7 +142,7 @@ The build creates `dist/server/index.js` with embedded frontend assets, plus hos
 | Path | Purpose |
 | --- | --- |
 | `public/index.html`, `styles.css` | Interface shell: template gallery, four-step editor, dialogs |
-| `public/poster.js` | Canvas renderer for all 55 designs, shapes and exports |
+| `public/poster.js` | Canvas renderer for all 59 designs, the finish engine (backdrops, card shadows, photo shapes, price size, badges, brand colours), shapes and exports |
 | `public/templates.js` | Starter templates, promotion types, allowlisted sharing format |
 | `public/samples.js` | Example products used only for previews |
 | `public/products.js`, `illustrations.js`, `finder.js` | Product catalogue and search, original illustrations, the Find product & photo dialog (barcode, online search, voice entry) |

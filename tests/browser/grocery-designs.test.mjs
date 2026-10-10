@@ -4,7 +4,7 @@ import {mkdir,readFile} from 'node:fs/promises';
 import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
-const styles=['weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale'];
+const styles=['weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale','leaflet','megadeal','freshmarket','premiumdeli'];
 for(const width of [320,1280])test(`grocery designs respond, save, export and keep photos at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
@@ -32,7 +32,7 @@ for(const width of [320,1280])test(`grocery designs respond, save, export and ke
     }
     assert.equal(new Set(images).size,styles.length);
     await page.reload();await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
-    assert.equal(await page.locator('#poster-template').inputValue(),'tagsale');assert.deepEqual(await page.evaluate(()=>ShopDeskPromotion.itemState().items),before);
+    assert.equal(await page.locator('#poster-template').inputValue(),styles.at(-1));assert.deepEqual(await page.evaluate(()=>ShopDeskPromotion.itemState().items),before);
     assert.equal(await page.locator('#flyer-promotion').inputValue(),'weekend');
     // A coordinated look sets palette, typeface and price labels together and stays editable.
     await click('[data-look="market"]');

@@ -46,7 +46,15 @@
   function activeCount(){return Math.min(selectedCount,capacity());}
   function activeItems(){return items.slice(0,activeCount());}
   function pinCombos(){if(comboMode())items.forEach((item,index)=>item.combo=ShopDeskCombos.groupOf(item,index,combos.length));}
-  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{...(combosSaved||comboMode()?{combos:structuredClone(combos)}:{}),...($('logo-size').value==='compact'?{logoSize:'compact'}:{}),...($('flyer-promotion').value?{promotion:$('flyer-promotion').value}:{}),exportQuality:$('export-quality').value,...($('print-pages').value==='catalogue'?{printPages:'catalogue'}:{}),keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
+  // Finishes are saved only when they differ from the design default, so a flyer that never used them is stored exactly as before.
+  function finishSnapshot(){
+    const out={};
+    for(const [id,key,fallback] of [['backdrop','backdrop','design'],['card-style','cardStyle','design'],['photo-shape','photoShape','design'],['headline-case','headlineCase','design'],['price-size','priceSize','standard'],['badge-style','badgeStyle','burst']])if($(id).value!==fallback)out[key]=$(id).value;
+    if($('auto-save-badge').checked)out.autoSave=true;
+    if($('use-custom-colours').checked)out.colours={brand:$('colour-brand').value,accent:$('colour-accent').value,paper:$('colour-paper').value};
+    return out;
+  }
+  function snapshot(){return {shop:{name:$('shop-name').value,phone:$('promo-phone').value,location:$('promo-location').value,logo},products:products.map(p=>({...p})),draft:{...(combosSaved||comboMode()?{combos:structuredClone(combos)}:{}),...($('logo-size').value==='compact'?{logoSize:'compact'}:{}),...($('flyer-promotion').value?{promotion:$('flyer-promotion').value}:{}),exportQuality:$('export-quality').value,...($('print-pages').value==='catalogue'?{printPages:'catalogue'}:{}),keepColours:$('keep-colours').checked,typeface:$('poster-typeface').value,priceStyle:$('price-style').value,...finishSnapshot(),itemCount:selectedCount,purpose:$('flyer-purpose').value,details:$('promo-details').value,eventDate:$('event-date').value,eventTime:$('event-time').value,venue:$('event-venue').value,heroPhoto,business:$('business-type').value,eyebrow:$('promo-eyebrow').value,cta:$('promo-cta').value,terms:$('promo-terms').value,showDate:$('show-date').checked,headline:$('promo-headline').value,date:$('promo-date').value,startDate:$('promo-start-date').value,theme:$('promo-theme').value,template:$('poster-template').value,trimPhotos:$('trim-photos').checked,cleanNames:$('clean-names').checked,format:document.querySelector('[name="poster-format"]:checked').value,items:items.map(item=>ShopDeskItems.copy(item))}};}
   function capture(){if(studioState)studioState=ShopDeskStudio.capture(studioState,snapshot(),$('project-name').value);}
   function changed(){if(!ready)return;if(comboMode())combosSaved=true;capture();renderDesigner();dirty=true;change++;if(!blocked){status('Unsaved changes');clearTimeout(saveTimer);saveTimer=setTimeout(save,900);}draw();}
   async function save(){
@@ -59,6 +67,9 @@
   function applyWorkspace(data,title){
     lastRemoval=null;$('logo-size').value=data.draft.logoSize||'prominent';$('export-quality').value=data.draft.exportQuality||'standard';$('print-pages').value=data.draft.printPages||'single';const d=data.draft,p=ShopDeskBusiness.get(d.business);$('keep-colours').checked=d.keepColours??false;
     $('poster-typeface').value=d.typeface||'design';$('price-style').value=d.priceStyle||'design';
+    for(const [id,key,fallback] of [['backdrop','backdrop','design'],['card-style','cardStyle','design'],['photo-shape','photoShape','design'],['headline-case','headlineCase','design'],['price-size','priceSize','standard'],['badge-style','badgeStyle','burst']]){$(id).value=d[key]||fallback;if($(id).value!==(d[key]||fallback))$(id).value=fallback;}
+    $('auto-save-badge').checked=d.autoSave===true;const colours=ShopDeskPoster.customColours(d.colours);$('use-custom-colours').checked=!!colours;$('colour-inputs').hidden=!colours;
+    if(colours){$('colour-brand').value=colours.brand;$('colour-accent').value=colours.accent;$('colour-paper').value=colours.paper;}else seedColours(d.theme);
     $('project-name').value=title;$('business-type').value=d.business||'grocery';$('promo-eyebrow').value=d.eyebrow??p.eyebrow;$('promo-cta').value=d.cta??p.cta;$('promo-terms').value=d.terms??p.terms;$('show-date').checked=d.showDate??true;
     $('shop-name').value=data.shop.name;$('promo-phone').value=data.shop.phone;$('promo-location').value=data.shop.location;logo=data.shop.logo||'';
     $('promo-headline').value=d.headline;$('promo-date').value=d.date;$('promo-start-date').value=d.startDate||'';$('promo-theme').value=d.theme;$('poster-template').value=d.template||'simple';$('trim-photos').checked=d.trimPhotos??false;$('clean-names').checked=d.cleanNames??false;
@@ -212,15 +223,16 @@
           const selected=!!item.featured;for(const other of items)delete other.featured;if(!selected)item.featured=true;renderItems();changed();
         });feature.setAttribute('aria-pressed',String(!!item.featured));itemActions.append(feature);
       }
+      const autoIcon=!item.photo&&item.icon===undefined?(ShopDeskProducts.identify(item.name||'')?.icon||''):'';
       const photoRow=document.createElement('div');photoRow.className='photo-row';const thumb=document.createElement('div');thumb.className='photo-thumb';
       if(item.photo){const img=document.createElement('img');img.alt=item.name||'Offer photo';setPhotoThumb(img,item.photo);img.addEventListener('error',()=>{img.hidden=true;thumb.textContent='Photo unavailable';});thumb.append(img);}
-      else if(item.icon){const img=document.createElement('img');img.alt='Illustration';img.src=ShopDeskIllustrations.dataURL(item.icon,152);thumb.append(img);thumb.classList.add('is-illustration');}
+      else if(item.icon||autoIcon){const img=document.createElement('img');img.alt=item.icon?'Illustration':'Suggested illustration';img.src=ShopDeskIllustrations.dataURL(item.icon||autoIcon,152);thumb.append(img);thumb.classList.add('is-illustration');if(!item.icon)thumb.title='Suggested from the product name. Choose another or remove it below.';}
       else{thumb.textContent='Your photo';}
       const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add photo'));
       const file=document.createElement('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.setAttribute('aria-label','Choose photo for item '+(index+1));file.addEventListener('change',()=>{if(file.files[0])uploadPhoto(item,file.files[0],uploadLabel,file);});uploadLabel.append(file);photoActions.append(uploadLabel);
       const hint=document.createElement('span');hint.className='field-help';hint.textContent='JPG, PNG or WebP · full image kept';photoActions.append(hint);
       if(item.photo){photoActions.append(button('Adjust size & position','text-button',()=>window.dispatchEvent(new CustomEvent('shopdesk:adjust-photo',{detail:{index}}))));photoActions.append(button('Remove photo','text-button',()=>{item.photo='';for(const key of ['photoScale','photoX','photoY','source'])delete item[key];renderItems();changed();}));}
-      else photoActions.append(button(item.icon?'Change illustration':'Choose an illustration','text-button choose-illustration',()=>openIllustrations(item)));
+      else photoActions.append(button(item.icon||autoIcon?'Change illustration':'Choose an illustration','text-button choose-illustration',()=>openIllustrations(item)));
       photoActions.append(button('Find product & photo','text-button find-product',()=>window.dispatchEvent(new CustomEvent('shopdesk:find-product',{detail:{index,query:item.name}}))));
       photoRow.append(thumb,photoActions);const name=field(profile().item+' name',item.name,'text',v=>item.name=v,50);name.classList.add('full');const row=document.createElement('div');row.className='field-row';
       if(!inCombo||true)attachSuggestions(name.querySelector('input'),{placeholder:'Start typing, e.g. maize meal',onPick(product){
@@ -239,8 +251,8 @@
         combos.forEach((c,i)=>{const option=document.createElement('option');option.value=String(i);option.textContent='Combo '+(i+1)+' · '+c.name;select.append(option);});select.value=String(groupIndex);
         select.addEventListener('change',()=>{pinCombos();item.combo=Number(select.value);activeCombo=item.combo;renderItems();changed();focusItem(index,'.combo-assignment');toast((item.name||'Product')+' moved to '+combos[activeCombo].name+'.');});assignment.append(select);row.append(assignment);
       }else row.append(field('Price (R)',item.price,'number',v=>item.price=v));
-      const dealInputType='number';const deal=document.createElement('details');deal.className='offer-options';deal.open=!!item.dealQuantity||!!item.wasPrice||!!item.section;
-      const dealSummary=document.createElement('summary');dealSummary.textContent='Multi-buy, previous price & section';
+      const dealInputType='number';const deal=document.createElement('details');deal.className='offer-options';deal.open=!!item.dealQuantity||!!item.wasPrice||!!item.section||!!item.badge;
+      const dealSummary=document.createElement('summary');dealSummary.textContent='Multi-buy, previous price, badge & section';
       const dealLabel=document.createElement('label');dealLabel.className='field';dealLabel.append(document.createTextNode('Price covers'));
       const quantity=document.createElement('select');quantity.className='deal-quantity';
       for(let count=1;count<=Math.max(24,item.dealQuantity||1);count++){const option=document.createElement('option');option.value=String(count);option.textContent=count===1?'One item · normal price':count+' items for this price';quantity.append(option);}
@@ -251,7 +263,9 @@
       const wasHelp=document.createElement('p');wasHelp.className='field-help';wasHelp.textContent='Shown struck through with the saving worked out from your two prices. Leave blank unless the previous price is genuine.';
       const sectionField=field('Section label (optional)',item.section||'',dealInputType==='number'?'text':'text',v=>{if(!v.trim())delete item.section;else item.section=v;},24);sectionField.querySelector('input').setAttribute('list','section-labels');sectionField.querySelector('input').placeholder='e.g. Butchery';
       const sectionHelp=document.createElement('p');sectionHelp.className='field-help';sectionHelp.textContent='A small department tag on this card, such as Fresh produce or Household.';
-      deal.append(dealSummary,dealLabel,dealHelp,wasField,wasHelp,sectionField,sectionHelp);
+      const badgeField=field('Badge (optional)',item.badge||'','text',v=>{if(!v.trim())delete item.badge;else item.badge=v;},14);badgeField.querySelector('input').setAttribute('list','badge-presets');badgeField.querySelector('input').placeholder='e.g. NEW or BEST BUY';
+      const badgeHelp=document.createElement('p');badgeHelp.className='field-help';badgeHelp.textContent='A sticker on this card in the badge style chosen under Design. Up to 14 characters; leave blank for none.';
+      deal.append(dealSummary,dealLabel,dealHelp,wasField,wasHelp,badgeField,badgeHelp,sectionField,sectionHelp);
       const saveProduct=button('Save to my items','text-button save-product',()=>{
         if(!item.name.trim()||item.price===''||Number(item.price)<=0||!Number.isFinite(Number(item.price))){toast('Enter a name and a price above zero first.');return;}
         const found=products.find(p=>p.name.trim().toLowerCase()===item.name.trim().toLowerCase()&&p.size.trim().toLowerCase()===item.size.trim().toLowerCase());
@@ -655,7 +669,7 @@
     $('remove-illustration').hidden=!item.icon;$('illustration-dialog').showModal();
   }
   $('close-illustration').addEventListener('click',()=>$('illustration-dialog').close());
-  $('remove-illustration').addEventListener('click',()=>{if(illustrationItem){delete illustrationItem.icon;$('illustration-dialog').close();renderItems();changed();}});
+  $('remove-illustration').addEventListener('click',()=>{if(illustrationItem){illustrationItem.icon='';$('illustration-dialog').close();renderItems();changed();}});
   attachSuggestions($('quick-add-input'),{onPick(product){const added=quickAdd(product);if(added)$('quick-add-input').value='';}});
   function quickAddTyped(){
     const text=$('quick-add-input').value.trim();if(!text)return;
@@ -667,6 +681,10 @@
   $('quick-add-button').addEventListener('click',quickAddTyped);
   $('quick-add-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.defaultPrevented){event.preventDefault();quickAddTyped();}});
   // Find product & photo: state changes requested by the finder dialog.
+  // Brand colours start from whichever palette is chosen, so the three pickers never open on arbitrary values.
+  function seedColours(theme){const [brand,accent,paper]=ShopDeskPoster.themes[theme]||ShopDeskPoster.themes.red;$('colour-brand').value=brand;$('colour-accent').value=accent;$('colour-paper').value=paper;}
+  $('use-custom-colours').addEventListener('change',()=>{$('colour-inputs').hidden=!$('use-custom-colours').checked;});
+  $('colours-from-palette').addEventListener('click',()=>{seedColours($('promo-theme').value);changed();});
   function catalogueContext(){return {...searchContext(),context:batchContext(),comboMode:comboMode(),activeCombo,comboName:comboMode()?(combos[activeCombo]?.name||'Combo '+(activeCombo+1)):'',items:activeItems().map((item,index)=>({index,name:item.name,size:item.size,photo:item.photo,featured:!!item.featured,quantity:item.quantity||1}))};}
   async function searchOnline(params){
     if(localMode)throw new Error('Online search needs the hosted version of Handbill. Local search and manual entry still work.');

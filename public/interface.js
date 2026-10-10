@@ -123,6 +123,7 @@
   });
   $('reset-design-finishes').addEventListener('click',()=>{
     $('keep-colours').checked=false;$('poster-typeface').value='design';$('price-style').value='design';$('promo-theme').value=seeds[$('poster-template').value]||'green';
+    for(const [id,value] of [['backdrop','design'],['card-style','design'],['photo-shape','design'],['headline-case','design'],['price-size','standard'],['badge-style','burst']])$(id).value=value;$('auto-save-badge').checked=false;$('use-custom-colours').checked=false;$('colour-inputs').hidden=true;
     $('promo-theme').dispatchEvent(new Event('change',{bubbles:true}));
   });
   $('client-drawer').open=!window.matchMedia('(max-width: 900px)').matches;

@@ -19,7 +19,8 @@ function item(value) {
   if(value.featured!==undefined){if(typeof value.featured!=='boolean')throw fail('Choose a valid featured offer.');styling.featured=value.featured;}
   if(value.wasPrice!==undefined){const was=text(value.wasPrice,20,'the previous price');if(was!==''&&(!Number.isFinite(Number(was))||Number(was)<0||Number(was)>1000000))throw fail('Previous prices must be between R0 and R1,000,000.');if(was!=='')styling.wasPrice=was;}
   if(value.section!==undefined){const section=text(value.section,24,'the section label');if(section)styling.section=section;}
-  if(value.icon!==undefined){const icon=text(value.icon,32,'the illustration');if(icon&&!/^[a-z][a-z0-9-]{0,31}$/.test(icon))throw fail('Choose a valid illustration.');if(icon)styling.icon=icon;}
+  if(value.icon!==undefined){const icon=text(value.icon,32,'the illustration');if(icon&&!/^[a-z][a-z0-9-]{0,31}$/.test(icon))throw fail('Choose a valid illustration.');styling.icon=icon;}
+  if(value.badge!==undefined){const badge=text(value.badge,14,'the offer badge');if(badge)styling.badge=badge;}
   if(value.caseQuantity!==undefined){if(!Number.isInteger(value.caseQuantity)||value.caseQuantity<2||value.caseQuantity>999)throw fail('Choose a case quantity from 2 to 999.');styling.caseQuantity=value.caseQuantity;}
   if(value.source!==undefined&&value.source!==null){styling.source=photoSource(value.source);}
   return { name:text(value.name,50,'the product name'),size:text(value.size,25,'the pack size'),price,photo,...styling };
@@ -29,7 +30,7 @@ export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
   const template = d.template ?? 'simple';
-  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt','weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale'].includes(template)) throw fail('Choose a poster template.');
+  if (!['simple','retail','bold','market','boutique','menu','studio','super','ribbon','signature','pop','editorial','noir','warehouse','atelier','street','sunburst','botanical','blueprint','scrapbook','candy','mono','wholesale','mosaic','fresh','parade','shelf','paper','arc','ticket','terrace','combo-board','combo-ticket','combo-fresh','gazette','harvest','ledger','midnight','diagonal','circular','frontpage','aisle','price-blocks','fresh-cut','split-banner','combo-circular','combo-receipt','weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale','leaflet','megadeal','freshmarket','premiumdeli'].includes(template)) throw fail('Choose a poster template.');
   const maxItems = d.purpose==='combos'?20:template === 'simple' ? 3 : 25;
   const finishing={};
   if(d.combos!==undefined){
@@ -38,8 +39,14 @@ export function validateWorkspace(data) {
     if(d.items?.some(i=>i.combo!==undefined&&i.combo>=d.combos.length))throw fail('Choose an existing combo for each product.');
   }
 
-  for(const [key,values] of [['logoSize',['compact','prominent']],['exportQuality',['standard','4k']],['printPages',['single','catalogue']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']]])if(d[key]!==undefined){
+  for(const [key,values] of [['logoSize',['compact','prominent']],['exportQuality',['standard','4k']],['printPages',['single','catalogue']],['typeface',['design','modern','elegant','geometric']],['priceStyle',['design','solid','outline','pill']],['backdrop',['design','gradient','dots','stripes','paper']],['cardStyle',['design','shadow','outline']],['photoShape',['design','rounded','circle']],['headlineCase',['design','upper']],['priceSize',['standard','large','huge']],['badgeStyle',['burst','ribbon','pill','none']]])if(d[key]!==undefined){
     if(!values.includes(d[key]))throw fail('Choose a valid design finish.');finishing[key]=d[key];
+  }
+  if(d.autoSave!==undefined){if(typeof d.autoSave!=='boolean')throw fail('Choose valid flyer options.');finishing.autoSave=d.autoSave;}
+  if(d.colours!==undefined&&d.colours!==null){
+    if(!d.colours||typeof d.colours!=='object')throw fail('Check your brand colours.');const colours={};
+    for(const key of ['brand','accent','paper']){const value=String(d.colours[key]??'').trim().toLowerCase();if(!/^#[0-9a-f]{6}$/.test(value))throw fail('Choose three brand colours as six-digit hex values.');colours[key]=value;}
+    finishing.colours=colours;
   }
   if(d.itemCount!==undefined){
     if(!Number.isInteger(d.itemCount)||d.itemCount<1||d.itemCount>25||!Array.isArray(d.items)||d.itemCount>d.items.length)throw fail('Choose between 1 and 25 items.');
@@ -53,7 +60,7 @@ export function validateWorkspace(data) {
   for(const key of ['trimPhotos','cleanNames','showDate','keepColours'])if(d[key]!==undefined){if(typeof d[key]!=='boolean')throw fail('Choose valid flyer options.');finishing[key]=d[key];}
   if(d.business!==undefined){if(!['grocery','fashion','food','beauty','services','general'].includes(d.business))throw fail('Choose a business type.');finishing.business=d.business;}
   for(const [key,max] of [['eyebrow',28],['cta',40],['terms',80]])if(d[key]!==undefined)finishing[key]=text(d[key],max,'the poster wording');
-  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa','tomato','kraft','mint'].includes(d.theme) || !['poster','status','square','landscape','a4','a5'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
+  if (!Array.isArray(d.items) || d.items.length < 1 || d.items.length > 25 || (d.purpose==='spotlight'?1:(d.itemCount??d.items.length)) > maxItems || !['green','blue','orange','red','plum','charcoal','teal','gold','berry','violet','cobalt','coral','coffee','sage','terracotta','lavender','peach','lemon','aqua','burgundy','slate','tangerine','petrol','raspberry','olive','indigo','cocoa','tomato','kraft','mint','jet','leaf','noirgold'].includes(d.theme) || !['poster','status','square','landscape','a4','a5'].includes(d.format)) throw fail('Choose a valid layout. Flyers hold up to 25 visible items; simple posters hold up to 3.');
   if(d.items.filter(i=>i?.featured===true).length>1)throw fail('Choose only one featured offer per flyer.');
   const logo = data.shop.logo == null ? '' : text(data.shop.logo,36,'the shop logo');
   if (logo && !/^[0-9a-f-]{36}$/.test(logo)) throw fail('Invalid shop logo.');

@@ -9,7 +9,7 @@ import '../public/templates.js';
 import '../public/pack.js';
 import {validateWorkspace,validateStudio} from '../worker/index.js';
 
-const styles=['weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale'];
+const styles=['weekend','butcher','bakery','household','bigprice','cashcarry','crate','tagsale','leaflet','megadeal','freshmarket','premiumdeli'];
 test('grocery designs and promotion types survive save, duplicate, sharing and promotion packs',()=>{
   assert.equal(ShopDeskPoster.brandName,'Handbill');
   for(const template of styles){
