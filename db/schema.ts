@@ -13,7 +13,10 @@ export const photos = sqliteTable('product_photos', {
   mime: text('mime').notNull(),
   bytes: integer('bytes').notNull(),
   createdAt: text('created_at').notNull(),
-}, table => [index('idx_product_photos_owner').on(table.owner)]);
+  // Catalogue photos: where the picture came from and the credit it carries.
+  sourceKey: text('source_key'),
+  credit: text('credit'),
+}, table => [index('idx_product_photos_owner').on(table.owner), index('idx_product_photos_source').on(table.owner, table.sourceKey)]);
 
 export const templates = sqliteTable('shared_templates', {
   id: text('id').primaryKey(),

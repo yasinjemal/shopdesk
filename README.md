@@ -52,7 +52,7 @@ Promotion types are an optional `draft.promotion` value (additive, no migration)
 - **A built-in product catalogue** of 257 common products for grocery, wholesale, takeaway, bakery, salon, fashion, hardware and service businesses, each with its common pack sizes, department and the words people actually type (synonyms, spelling slips, local names such as "mielie meal" or "kota"). No prices and no brands are built in.
 - **Suggestions as you type**, in the quick-add bar and in every product name field. Typing "maize" shows Maize meal with size chips; typing "chicken braai pack 5kg R89.99" fills name, size and price in one go. The person's own saved items, recent picks, last sizes and last prices rank first. Anything not in the list is kept exactly as typed.
 - **103 original illustrations**, drawn in code and coloured to match the design, so an offer looks finished before a photo exists. A real photo always replaces the illustration. Pasted lists pick up illustrations and departments automatically.
-- **Barcode lookup** through Open Food Facts for names and pack sizes only (camera scanning where the browser supports it, typed barcodes everywhere), with attribution. Photos are never taken from it.
+- **Find product & photo** (`docs/product-catalogue.md`): one dialog that searches the person's private saved products and the built-in list instantly, and Open Food Facts only when “Search online” is pressed (by name or by check-digit-validated barcode). It shows image, name, brand and pack together, respects exact pack sizes (5 kg never stands in for 10 kg), asks for the shop's own selling price, optionally includes the public product photo with its CC BY-SA credit stored in file metadata rather than on the flyer, remembers the product privately for the business, and offers an optional wholesale case quantity. Replacing an offer keeps its combo, quantity and featured state. Nothing is ever scraped from Google or retailer sites, no prices or sizes are invented, and the browser never talks to the provider directly.
 - **Voice entry** where the browser offers speech recognition; the words go through the same parser as typing.
 
 ### Leaflet conventions (catalogue study)
@@ -110,7 +110,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Set `SHOPDESK_BROWSER_CHANNEL=chrome` to use an installed Google Chrome, or `SHOPDESK_BROWSER_EXECUTABLE=/path/to/chromium` to point at an existing Chromium build when the Playwright download is unavailable. The checks cover 320 px and 390 px touch layouts and a 1280 px desktop: the template gallery and its filters, template reuse and sharing between accounts, pasted lists, saved products, featured offers, photo upload and framing, every design family including the grocery designs, coordinated looks, PNG/PDF/ZIP downloads, persistence after reload, combo editing, saved-flyer search, new editions and recovery after a loading failure.
+Set `SHOPDESK_BROWSER_CHANNEL=chrome` to use an installed Google Chrome, or `SHOPDESK_BROWSER_EXECUTABLE=/path/to/chromium` to point at an existing Chromium build when the Playwright download is unavailable. The checks cover 320 px and 390 px touch layouts and a 1280 px desktop: the template gallery and its filters, template reuse and sharing between accounts, pasted lists, saved products, featured offers, photo upload and framing, every design family including the grocery designs, coordinated looks, PNG/PDF/ZIP downloads, persistence after reload, combo editing, saved-flyer search, new editions, recovery after a loading failure, and the Find product & photo flow with a stubbed provider (local-first search, explicit online search, exact packs, photo credits in PNG, PDF and pack files, replacement, combos and failure recovery).
 
 `npm run dev` starts an isolated local preview at `http://127.0.0.1:4173` with an in-memory database and photo store. Its test identity header is strictly a local testing facility, never production authentication. Opening `public/index.html` directly does not provide the backend needed for saving or uploads.
 
@@ -124,13 +124,13 @@ The build creates `dist/server/index.js` with embedded frontend assets, plus hos
 | `public/poster.js` | Canvas renderer for all 55 designs, shapes and exports |
 | `public/templates.js` | Starter templates, promotion types, allowlisted sharing format |
 | `public/samples.js` | Example products used only for previews |
-| `public/products.js`, `illustrations.js`, `scan.js` | Product catalogue and search, original illustrations, barcode and voice entry |
+| `public/products.js`, `illustrations.js`, `finder.js` | Product catalogue and search, original illustrations, the Find product & photo dialog (barcode, online search, voice entry) |
 | `public/words.js`, `wording.js` | Crafted wording by business and promotion type |
 | `public/library.js` | Template gallery page and sharing |
 | `public/promotion.js`, `items.js`, `combos.js`, `batch.js` | Editor, product tools and combo board |
 | `public/projects.js`, `project-gallery.js`, `studio.js` | Saved flyers, editions and workspace records |
 | `public/output.js`, `pack.js`, `photos.js` | PNG/PDF exports, promotion packs, photo preparation |
-| `worker/index.js` | Worker request handler, account-scoped workspace API, image storage API |
+| `worker/index.js` | Worker request handler, account-scoped workspace API, image storage API, catalogue search and provider photo retrieval |
 | `db/schema.ts`, `drizzle/` | Database schema and additive migrations |
 | `scripts/build.mjs`, `scripts/local-server.mjs` | Production build and isolated local preview |
 | `tests/` | Unit tests and Playwright browser checks |
@@ -150,3 +150,4 @@ This repository contains the application source, tests, migrations and these not
 - Example previews in the gallery use sample products and prices so the result is clear; Handbill never invents prices, discounts, delivery, stock availability or other claims for a real flyer.
 - Shared community templates are not tagged by visual style, so the style filter applies to ready-made templates only.
 - Browser checks are emulations. Physical devices and the signed-in production deployment still need separate verification.
+- Online product search depends on Open Food Facts, whose South African coverage is partial; local search and manual entry always work. See `docs/product-catalogue.md` for the full list of catalogue limitations.

@@ -4,6 +4,14 @@ import {readFile} from 'node:fs/promises';
 import {launch} from './launch.mjs';
 import {startApp} from '../../scripts/local-server.mjs';
 
+// The open product database is answered here, in the process that runs the Worker: names and sizes only, never photos.
+const realFetch=globalThis.fetch;
+globalThis.fetch=async(url,init)=>{
+  const u=new URL(String(url));if(u.hostname!=='world.openfoodfacts.org')return realFetch(url,init);
+  const code=u.pathname.match(/product\/(\d+)/)?.[1];
+  return new Response(JSON.stringify(code==='6001069000158'?{status:1,product:{code,product_name:'Super Maize Meal',quantity:'12.5 kg',brands:'Ace, Example'}}:{status:0}),{headers:{'Content-Type':'application/json'}});
+};
+
 for(const width of [320,1280])test(`products are added in one tap with sizes, illustrations, barcodes and pasted lists at ${width}px`,async()=>{
   const app=await startApp();let browser;
   try{
@@ -11,11 +19,6 @@ for(const width of [320,1280])test(`products are added in one tap with sizes, il
     const page=await browser.newPage({viewport:{width,height:900},isMobile:width<700,hasTouch:width<700}),errors=[];
     page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);
     const click=s=>width<700?page.locator(s).tap():page.locator(s).click();
-    // The open product database is mocked: names and sizes only, never photos.
-    await page.route('https://world.openfoodfacts.org/**',route=>{
-      const code=route.request().url().match(/product\/(\d+)/)?.[1];
-      route.fulfill({json:code==='6001069000158'?{status:1,product:{product_name:'Super Maize Meal',quantity:'12.5 kg',brands:'Ace, Example'}}:{status:0}});
-    });
     await page.goto(app.url+'#promotion');await page.waitForFunction(()=>!document.querySelector('#promo-fields').disabled);
     await click('#tab-content');
     const items=()=>page.evaluate(()=>ShopDeskPromotion.itemState().items.map(i=>({name:i.name,size:i.size,price:i.price,icon:i.icon||'',section:i.section||'',photo:i.photo})));
@@ -52,14 +55,16 @@ for(const width of [320,1280])test(`products are added in one tap with sizes, il
     await page.locator('[aria-label="Choose photo for item 2"]').setInputFiles({name:'maize.png',mimeType:'image/png',buffer:Buffer.from(photo,'base64')});
     await page.waitForFunction(()=>ShopDeskPromotion.itemState().items[1].photo);
     state=await items();assert.equal(state[1].icon,'sack');assert.ok(state[1].photo);
-    // 6. Barcode lookup fills the name and size; unknown codes fall back to typing.
-    await click('#quick-add-scan');await page.locator('#scan-dialog').waitFor();
-    await page.locator('#scan-code').fill('6001069000158');await page.locator('#scan-form button').click();
-    await page.locator('#scan-result').waitFor();assert.equal(await page.locator('#scan-name').textContent(),'Ace Super Maize Meal');assert.equal(await page.locator('#scan-size').textContent(),'12.5 kg');
-    await click('#scan-use');await page.waitForFunction(()=>!document.querySelector('#scan-dialog').open);
+    // 6. Barcode lookup through the finder fills the name and size; unknown codes fall back to typing.
+    await click('#quick-add-find');await page.locator('#finder-dialog[open]').waitFor();
+    await page.locator('#finder-query').fill('6001069000158');await click('#finder-search-online');
+    await page.getByText('Ace Super Maize Meal').waitFor();await page.locator('.finder-result-name',{hasText:'Ace Super Maize Meal'}).click();
+    assert.equal(await page.locator('#finder-detail-title').textContent(),'Ace Super Maize Meal');assert.equal(await page.locator('#finder-size').inputValue(),'12.5 kg');
+    assert.equal(await page.locator('#finder-photo-line').isHidden(),true,'no photo offered when the record has none');
+    await click('#finder-add');await page.waitForFunction(()=>!document.querySelector('#finder-dialog').open);
     state=await items();assert.deepEqual(state[4],{name:'Ace Super Maize Meal',size:'12.5 kg',price:'',icon:'sack',section:'Pantry',photo:''});
-    await click('#quick-add-scan');await page.locator('#scan-code').fill('6009999999999');await page.locator('#scan-form button').click();
-    await page.waitForFunction(()=>document.querySelector('#scan-status').textContent.includes('not in the open database'));await click('#close-scan');
+    await click('#quick-add-find');await page.locator('#finder-query').fill('6009999999993');await click('#finder-search-online');
+    await page.waitForFunction(()=>document.querySelector('#finder-status').textContent.includes('Nothing found online'));await click('#close-finder');
     // 7. Pasted lists pick up illustrations and departments without changing text.
     await click('#open-bulk');await page.locator('#bulk-source').fill('Washing powder, 2 kg, R69.99\nMystery item, 1 each, R5');await click('#review-bulk');await click('#apply-bulk');
     await page.waitForFunction(()=>!document.querySelector('#bulk-dialog').open);

@@ -15,6 +15,13 @@
       "when": 1789594348580,
       "tag": "0001_reflective_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791593560867,
+      "tag": "0002_blue_rick_jones",
+      "breakpoints": true
     }
   ]
 }

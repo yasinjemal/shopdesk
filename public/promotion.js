@@ -219,12 +219,13 @@
       const photoActions=document.createElement('div');photoActions.className='photo-actions';const uploadLabel=document.createElement('label');uploadLabel.className='photo-upload';uploadLabel.append(document.createTextNode(item.photo?'Change photo':'Add photo'));
       const file=document.createElement('input');file.type='file';file.accept='image/jpeg,image/png,image/webp';file.setAttribute('aria-label','Choose photo for item '+(index+1));file.addEventListener('change',()=>{if(file.files[0])uploadPhoto(item,file.files[0],uploadLabel,file);});uploadLabel.append(file);photoActions.append(uploadLabel);
       const hint=document.createElement('span');hint.className='field-help';hint.textContent='JPG, PNG or WebP · full image kept';photoActions.append(hint);
-      if(item.photo){photoActions.append(button('Adjust size & position','text-button',()=>window.dispatchEvent(new CustomEvent('shopdesk:adjust-photo',{detail:{index}}))));photoActions.append(button('Remove photo','text-button',()=>{item.photo='';for(const key of ['photoScale','photoX','photoY'])delete item[key];renderItems();changed();}));}
+      if(item.photo){photoActions.append(button('Adjust size & position','text-button',()=>window.dispatchEvent(new CustomEvent('shopdesk:adjust-photo',{detail:{index}}))));photoActions.append(button('Remove photo','text-button',()=>{item.photo='';for(const key of ['photoScale','photoX','photoY','source'])delete item[key];renderItems();changed();}));}
       else photoActions.append(button(item.icon?'Change illustration':'Choose an illustration','text-button choose-illustration',()=>openIllustrations(item)));
+      photoActions.append(button('Find product & photo','text-button find-product',()=>window.dispatchEvent(new CustomEvent('shopdesk:find-product',{detail:{index,query:item.name}}))));
       photoRow.append(thumb,photoActions);const name=field(profile().item+' name',item.name,'text',v=>item.name=v,50);name.classList.add('full');const row=document.createElement('div');row.className='field-row';
       if(!inCombo||true)attachSuggestions(name.querySelector('input'),{placeholder:'Start typing, e.g. maize meal',onPick(product){
         item.name=product.name;if(product.size)item.size=product.size;if(product.section&&!item.section)item.section=product.section;if(product.icon&&!item.photo)item.icon=product.icon;
-        if(product.photo&&!item.photo)item.photo=product.photo;if(product.price&&(!item.price||Number(item.price)<=0))item.price=product.price;
+        if(product.photo&&!item.photo){item.photo=product.photo;if(product.source)item.source={...product.source};}if(product.price&&(!item.price||Number(item.price)<=0))item.price=product.price;
         renderItems();changed();preloadPhotos().then(draw);setTimeout(()=>focusItem(index,item.size?(item.price?'input[type="text"]':'input[type="number"]'):'.field-row input[type="text"]'),0);
       }});
       const sizeField=field(profile().size,item.size,'text',v=>item.size=v,25);sizeField.querySelector('input').placeholder=profile().example;sizeField.querySelector('input').addEventListener('blur',e=>{item.size=normalSize(item.size);e.target.value=item.size;changed();});
@@ -489,7 +490,7 @@
   async function uploadPhoto(item,file,label,input){
     const old=label.firstChild.textContent;input.disabled=true;label.firstChild.textContent='Adding photo…';pendingPhotos++;draw();
     try{const blob=await imageBlob(file);const result=await api('/api/photos',{method:'POST',headers:{'Content-Type':blob.type},body:blob});
-      if(!items.includes(item))return;item.photo=result.id;for(const key of ['photoScale','photoX','photoY'])delete item[key];renderItems();changed();await loadImage(result.id);toast('Photo added. It will be kept with your saved product.');
+      if(!items.includes(item))return;item.photo=result.id;for(const key of ['photoScale','photoX','photoY','source'])delete item[key];renderItems();changed();await loadImage(result.id);toast('Photo added. It will be kept with your saved product.');
     }catch(e){toast(e.message||'Could not add this photo. Please try another image.');}
     finally{pendingPhotos--;input.disabled=false;label.firstChild.textContent=old;draw();if(dirty&&!blocked){clearTimeout(saveTimer);saveTimer=setTimeout(save,100);}}
   }
@@ -573,7 +574,7 @@
     $('promo-review').hidden=!warnings.length;$('promo-review').textContent=warnings.join(' ');
     const spaces=ShopDeskItems.room(items,activeCount(),capacity());
     $('batch-room').textContent=spaces+' '+(spaces===1?'space':'spaces')+' available for added items. Empty cards are filled first.'+(comboMode()?' New products go into '+combos[activeCombo].name+'.':'');
-    for(const id of ['open-bulk','open-saved-grid','quick-add-input','quick-add-button','quick-add-scan'])$(id).disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||exportBusy||packBusy;
+    for(const id of ['open-bulk','open-saved-grid','quick-add-input','quick-add-button','quick-add-find'])$(id).disabled=!ready||loadingWorkspace||pendingPhotos>0||blocked||exportBusy||packBusy;
     $('feature-explainer').hidden=d.purpose!=='offers'||d.template==='simple';
     $('format-caption').textContent=ShopDeskPoster.formats[d.format].label;
     $('download-hint').textContent=outputSize.width+' × '+outputSize.height+' PNG'+(print?' · '+d.format.toUpperCase()+' PDF at 300 dpi'+(catalogue?' · '+cataloguePages+' pages':'')+'. Print at Actual size (100%).':' · '+(d.exportQuality==='4k'?'4K long edge.':'Ready to share.'));
@@ -665,7 +666,39 @@
   }
   $('quick-add-button').addEventListener('click',quickAddTyped);
   $('quick-add-input').addEventListener('keydown',event=>{if(event.key==='Enter'&&!event.defaultPrevented){event.preventDefault();quickAddTyped();}});
-  window.ShopDeskPromotion={draw,quickAdd,addProduct(product){if(!ready){toast('Wait for your saved workspace to load.');return false;}if(announcement()){toast('Choose an offers flyer to add products.');return false;}if(!insertProduct({...product,photo:''})){toast('Increase your product count or clear an item to make room.');return false;}return true;}};
+  // Find product & photo: state changes requested by the finder dialog.
+  function catalogueContext(){return {...searchContext(),context:batchContext(),comboMode:comboMode(),activeCombo,comboName:comboMode()?(combos[activeCombo]?.name||'Combo '+(activeCombo+1)):'',items:activeItems().map((item,index)=>({index,name:item.name,size:item.size,photo:item.photo,featured:!!item.featured,quantity:item.quantity||1}))};}
+  async function searchOnline(params){
+    if(localMode)throw new Error('Online search needs the hosted version of Handbill. Local search and manual entry still work.');
+    return api('/api/catalogue/search?'+new URLSearchParams(params));
+  }
+  async function providerPhoto(source){
+    if(localMode)throw new Error('Provider photos need the hosted version of Handbill. You can still add the product without a photo.');
+    const result=await api('/api/catalogue/photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({source})});
+    await loadImage(result.id);return result;
+  }
+  function addCatalogueProduct(product,{replaceIndex=-1,remember=false,context}={}){
+    assertEditable(context??batchContext());
+    const value=ShopDeskItems.copy({name:product.name||'',size:product.size||'',price:product.price||'',photo:product.photo||'',...(product.icon&&!product.photo?{icon:product.icon}:{}),...(product.section?{section:product.section}:{}),...(product.photo&&product.source?{source:product.source}:{}),...(product.caseQuantity?{caseQuantity:product.caseQuantity}:{}),...(product.wasPrice?{wasPrice:product.wasPrice}:{})},false);
+    let index;
+    if(replaceIndex>=0){
+      const current=activeItems()[replaceIndex];if(!current)throw new Error('That offer is no longer on the flyer. Add the product as a new offer instead.');
+      if(comboMode())pinCombos();
+      // Replacing keeps the offer's place in the flyer: its basket, pack count, featured state and multi-buy quantity.
+      const keep={...(current.featured?{featured:true}:{}),...(current.combo!==undefined?{combo:current.combo}:{}),...(current.quantity?{quantity:current.quantity}:{}),...(current.dealQuantity?{dealQuantity:current.dealQuantity}:{})};
+      items[replaceIndex]={...value,...keep};index=replaceIndex;renderItems();changed();
+    }else{
+      const position=insertProduct(value);if(!position)throw new Error('Increase your product count or clear an item to make room.');index=position-1;
+    }
+    if(remember&&value.name.trim()){
+      const found=products.find(p=>p.name.trim().toLowerCase()===value.name.trim().toLowerCase()&&p.size.trim().toLowerCase()===value.size.trim().toLowerCase());
+      if(found||products.length<100){const saved={id:found?.id||crypto.randomUUID(),...ShopDeskItems.copy(value,false)};if(found)products[products.indexOf(found)]=saved;else products.push(saved);renderSaved();}
+    }
+    rememberProduct(value.name);changed();preloadPhotos().then(draw);
+    setTimeout(()=>focusItem(index,value.price?'input[type="text"]':'input[type="number"]'),0);
+    return index;
+  }
+  window.ShopDeskPromotion={draw,quickAdd,catalogueContext,searchOnline,providerPhoto,addCatalogueProduct,addProduct(product){if(!ready){toast('Wait for your saved workspace to load.');return false;}if(announcement()){toast('Choose an offers flyer to add products.');return false;}if(!insertProduct({...product,photo:''})){toast('Increase your product count or clear an item to make room.');return false;}return true;}};
   function batchContext(){return studioState?studioState.activeClientId+':'+studioState.activeProjectId:'';}
   function assertEditable(context){if(!ready||loadingWorkspace||pendingPhotos||blocked||exportBusy||packBusy)throw new Error('Wait for the project to finish loading, saving photos or creating downloads.');if(context!==batchContext())throw new Error('The active project changed. Close this window and reopen it.');}
   Object.assign(window.ShopDeskPromotion,{

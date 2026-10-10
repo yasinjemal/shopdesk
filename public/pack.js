@@ -40,7 +40,8 @@
       return (item.section?item.section+': ':'')+name+(item.size?' · '+item.size:'')+' — '+(item.dealQuantity?item.dealQuantity+' for ':'')+money(item.price)+was;
     });
     const copy=root.ShopDeskBusiness.copy(data);
-    return [data.shop,data.headline,'',...rows,...(data.purpose&&data.purpose!=='offers'&&data.details?[data.details]:[]),'',...[copy.date,copy.location,copy.contact,copy.terms].filter(Boolean)].join('\n');
+    const credits=root.ShopDeskOutput?.credits?root.ShopDeskOutput.credits(data):[];
+    return [data.shop,data.headline,'',...rows,...(data.purpose&&data.purpose!=='offers'&&data.details?[data.details]:[]),'',...[copy.date,copy.location,copy.contact,copy.terms].filter(Boolean),...(credits.length?['','Photo credits:',...credits]:[])].join('\n');
   }
   const table=Uint32Array.from({length:256},(_,n)=>{let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;return c>>>0;});
   function crc32(bytes){let crc=0xffffffff;for(const b of bytes)crc=table[(crc^b)&255]^(crc>>>8);return (crc^0xffffffff)>>>0;}

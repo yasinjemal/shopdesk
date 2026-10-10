@@ -181,6 +181,8 @@
     priceStyle=data.priceStyle||'design';priceBrand=(themes[data.theme]||themes.green)[0];
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
+    // Wholesale cases: the price shown is for the whole case, and the pack label says so.
+    if(data.items.some(i=>i.caseQuantity))data={...data,items:data.items.map(i=>!i.caseQuantity?i:{...i,size:/^\d+\s*[x×]/.test(i.size||'')?i.size:'Case of '+i.caseQuantity+(i.size?' × '+i.size:'')})};
     // An offer without a photo but with an illustration draws that illustration in the design's colours.
     if(data.items.some(i=>!i.photo&&i.icon)){
       const [brand,accent]=themes[data.theme]||themes.green,lookup=new Map(images);

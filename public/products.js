@@ -296,13 +296,15 @@
     for(let i=1;i<=a.length;i++){let best=Infinity;for(let j=1;j<=b.length;j++){const cost=a[i-1]===b[j-1]?0:1;let v=Math.min(rows[i-1][j]+1,rows[i][j-1]+1,rows[i-1][j-1]+cost);if(i>1&&j>1&&a[i-1]===b[j-2]&&a[i-2]===b[j-1])v=Math.min(v,rows[i-2][j-2]+1);rows[i][j]=v;best=Math.min(best,v);}if(best>max)return max+1;}
     return rows[a.length][b.length];
   }
-  const fuzzyBudget=word=>word.length>=8?2:word.length>=5?1:0;
+  // One slip is forgiven from four letters, two from eight. Short words must
+  // also keep their first letter so "rice" never drifts to "ice".
+  const fuzzyBudget=word=>word.length>=8?2:word.length>=4?1:0;
   function tokenScore(queryWord,word){
     if(word===queryWord)return 1;
     if(word.startsWith(queryWord))return .9-Math.min(.2,(word.length-queryWord.length)*.02);
     const budget=fuzzyBudget(queryWord);
-    if(budget&&distance(queryWord,word,budget)<=budget)return .6;
-    if(queryWord.length>=3&&word.includes(queryWord))return .5;
+    if(budget&&(queryWord.length>=6||word[0]===queryWord[0])&&word.length>=4&&distance(queryWord,word,budget)<=budget)return .6;
+    if(queryWord.length>=4&&word.includes(queryWord))return .5;
     return 0;
   }
   // Pull a pack size and a price out of what was typed: "maize meal 12.5kg 119.99".
@@ -312,6 +314,14 @@
       const w=words[i],next=words[i+1]||'';
       const money=w.match(/^r?(\d+(?:[.,]\d{1,2})?)$/);
       if(/^r\d/.test(w)||(money&&i===words.length-1&&words.length>1&&/[.,]\d{2}$/.test(w))){price=money[1].replace(',','.');continue;}
+      // Case packs: "6x1l", "12 x 1 L", "24 × 330ml".
+      const casePack=w.match(/^(\d+)[x×](\d+(?:[.,]\d+)?)(kg|g|ml|l)$/);
+      if(casePack){size=casePack[1]+' × '+casePack[2].replace(',','.')+' '+(casePack[3]==='l'?'L':casePack[3]);continue;}
+      if(/^\d+$/.test(w)&&/^[x×]$/.test(next)){
+        const a=words[i+2]||'',b=words[i+3]||'',joined=a.match(/^(\d+(?:[.,]\d+)?)(kg|g|ml|l)$/);
+        if(joined){size=w+' × '+joined[1].replace(',','.')+' '+(joined[2]==='l'?'L':joined[2]);i+=2;continue;}
+        if(/^\d+(?:[.,]\d+)?$/.test(a)&&/^(kg|g|ml|l)$/.test(b)){size=w+' × '+a.replace(',','.')+' '+(b==='l'?'L':b);i+=3;continue;}
+      }
       if(/^\d+(?:[.,]\d+)?(?:kg|g|ml|l|mb|gb|s|pk|x|m|mm|cm|v)$/.test(w)){size=w.replace(/^(\d+(?:[.,]\d+)?)([a-z]+)$/,(m,n,u)=>n+' '+({kg:'kg',g:'g',ml:'ml',l:'L',mb:'MB',gb:'GB',s:'s',pk:'pack',x:'×',m:'m',mm:'mm',cm:'cm',v:'V'})[u]);continue;}
       if(/^\d+(?:[.,]\d+)?$/.test(w)&&UNIT.test(w+' '+next)&&!/^x$/.test(next)){size=w+' '+(({l:'L',pk:'pack',mb:'MB',gb:'GB',v:'V'})[next]||next);i++;continue;}
       if(/^(per|each|serves|size|whole|half|quarter)$/.test(w)){const rest=words.slice(i).join(' ');size=rest.charAt(0).toUpperCase()+rest.slice(1);break;}
@@ -323,8 +333,8 @@
     return {query:keep.join(' '),size,price,name:name.length?name.charAt(0).toUpperCase()+name.slice(1):''};
   }
   function matchSize(entry,size){
-    if(!size)return '';const want=normalise(size).replace(/\s+/g,'');
-    return entry.sizes.find(s=>normalise(s).replace(/\s+/g,'')===want)||'';
+    if(!size)return '';
+    return entry.sizes.find(s=>sameSize(s,size))||'';
   }
   // Rank catalogue entries and the person's own saved products for a query.
   // context: {business, section, saved:[{name,size,price,photo,...}], recent:[names]}
@@ -346,14 +356,23 @@
       }
       return {value:best,exact,viaSize};
     };
+    const wanted=parsed.size&&parseSize(parsed.size);
     for(const entry of catalogue){
       const {value,exact,viaSize}=score(entry.name,entry.synonyms,entry.sizes);if(!value)continue;
-      let boost=0;
+      // Never offer a 5 kg pack to someone who asked for 10 kg. A product family
+      // whose listed sizes do not include the typed size is offered only in the
+      // typed size; entries without measurable sizes drop out.
+      let customSize=false;
+      if(wanted){
+        if(!entry.sizes.some(s=>parseSize(s)))continue;
+        if(!entry.sizes.some(s=>sameSize(s,parsed.size)))customSize=true;
+      }
+      let boost=customSize?-.2:0;
       if(context.business&&entry.business===context.business)boost+=.12;else if(context.business&&context.business!=='general'&&entry.business!=='grocery'&&entry.business!==context.business)boost-=.15;
       if(context.section&&normalise(entry.section)===normalise(context.section))boost+=.08;
       if(recent.has(normalise(entry.name)))boost+=.1-Math.min(.08,recent.get(normalise(entry.name))*.01);
       const own=savedByName.get(normalise(entry.name))||[];
-      scored.push({kind:'catalogue',entry,score:value+boost+(own.length?.05:0),exact,size:matchSize(entry,parsed.size)||viaSize,saved:own});
+      scored.push({kind:'catalogue',entry,score:value+boost+(own.length?.05:0),exact,size:matchSize(entry,parsed.size)||viaSize,saved:own,customSize});
     }
     for(const [key,products] of savedByName){
       if(catalogue.some(entry=>normalise(entry.name)===key))continue;
@@ -362,7 +381,7 @@
     }
     scored.sort((a,b)=>b.score-a.score||a.entry.name.localeCompare(b.entry.name));
     const results=scored.slice(0,limit).map(r=>({
-      id:r.entry.id,name:r.entry.name,section:r.entry.section,icon:r.entry.icon,sizes:orderSizes(r.entry.sizes,r.saved,r.size),own:r.saved.map(p=>({size:p.size,price:p.price,photo:p.photo||'',id:p.id})),kind:r.kind,score:Math.round(r.score*100)/100
+      id:r.entry.id,name:r.entry.name,section:r.entry.section,icon:r.entry.icon,sizes:r.customSize?[parsed.size]:orderSizes(r.entry.sizes,r.saved,r.size),customSize:!!r.customSize,own:r.saved.map(p=>({size:p.size,price:p.price,photo:p.photo||'',id:p.id,source:p.source||null,icon:p.icon||''})),kind:r.kind,score:Math.round(r.score*100)/100
     }));
     return {...parsed,results,exact:results.length>0&&scored[0].exact};
   }
@@ -386,6 +405,37 @@
     const entry=identify(item.name);if(!entry)return item;
     return {...item,icon:entry.icon,...(item.section||!entry.section?{}:{section:entry.section})};
   }
+  // GTIN-8/12/13/14 check digit (mod 10, weights 3 and 1 from the right).
+  function validBarcode(value){
+    const code=String(value||'').replace(/\s+/g,'');
+    if(!/^(\d{8}|\d{12}|\d{13}|\d{14})$/.test(code))return false;
+    const digits=code.split('').map(Number),check=digits.pop();
+    const sum=digits.reverse().reduce((total,d,i)=>total+d*(i%2===0?3:1),0);
+    return (10-sum%10)%10===check;
+  }
+  // Pack sizes compare by quantity and unit, so "10kg", "10 kg" and "10 KG" are
+  // the same size and 5 kg never satisfies a request for 10 kg.
+  const unitMap={kg:['kg',1000,'g'],g:['g',1,'g'],mg:['mg',.001,'g'],l:['L',1000,'ml'],ml:['ml',1,'ml'],cl:['cl',10,'ml'],m:['m',1000,'mm'],cm:['cm',10,'mm'],mm:['mm',1,'mm'],gb:['GB',1024,'MB'],mb:['MB',1,'MB']};
+  function parseSize(text){
+    const s=normalise(text).replace(/,/g,'.');
+    const m=s.match(/^(?:(\d+)\s*[x×]\s*)?(\d+(?:\.\d+)?)\s*(kg|g|mg|l|ml|cl|m|cm|mm|gb|mb)\b(.*)$/);
+    if(!m)return null;
+    const count=Number(m[1]||1),unit=unitMap[m[3]];
+    return {count,amount:Number(m[2]),unit:unit[0],base:unit[2],baseAmount:Number(m[2])*unit[1],rest:m[4].trim()};
+  }
+  function sameSize(a,b){
+    const x=parseSize(a),y=parseSize(b);
+    if(x&&y)return x.count===y.count&&x.base===y.base&&Math.abs(x.baseAmount-y.baseAmount)<1e-6;
+    return normalise(a).replace(/\s+/g,'')===normalise(b).replace(/\s+/g,'')&&!!normalise(a);
+  }
+  // Pull a pack size out of free text such as "Sunflower Oil 2L" (used when a
+  // provider record has no quantity field); flagged so it is never mistaken for
+  // a confirmed size.
+  function sizeFromText(text){
+    const m=String(text||'').match(/(\d+\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|cl|mg)\b/i);
+    if(!m)return '';
+    const unit=m[3].toLowerCase();return (m[1]?m[1].replace(/\s*[x×]\s*/,' × '):'')+m[2].replace(',','.')+' '+(unit==='l'?'L':unit);
+  }
   const sections=[...new Set(catalogue.map(e=>e.section))];
-  root.ShopDeskProducts={catalogue,sections,search,parseQuery,identify,enrich,normalise,distance};
+  root.ShopDeskProducts={catalogue,sections,search,parseQuery,identify,enrich,normalise,distance,validBarcode,parseSize,sameSize,sizeFromText};
 })(typeof window!=='undefined'?window:globalThis);

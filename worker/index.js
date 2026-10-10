@@ -20,8 +20,11 @@ function item(value) {
   if(value.wasPrice!==undefined){const was=text(value.wasPrice,20,'the previous price');if(was!==''&&(!Number.isFinite(Number(was))||Number(was)<0||Number(was)>1000000))throw fail('Previous prices must be between R0 and R1,000,000.');if(was!=='')styling.wasPrice=was;}
   if(value.section!==undefined){const section=text(value.section,24,'the section label');if(section)styling.section=section;}
   if(value.icon!==undefined){const icon=text(value.icon,32,'the illustration');if(icon&&!/^[a-z][a-z0-9-]{0,31}$/.test(icon))throw fail('Choose a valid illustration.');if(icon)styling.icon=icon;}
+  if(value.caseQuantity!==undefined){if(!Number.isInteger(value.caseQuantity)||value.caseQuantity<2||value.caseQuantity>999)throw fail('Choose a case quantity from 2 to 999.');styling.caseQuantity=value.caseQuantity;}
+  if(value.source!==undefined&&value.source!==null){styling.source=photoSource(value.source);}
   return { name:text(value.name,50,'the product name'),size:text(value.size,25,'the pack size'),price,photo,...styling };
 }
+export {normaliseProduct,photoSource,creditText,providerImageURL,CATALOGUE};
 export function validateWorkspace(data) {
   if (!data || !data.shop || !data.draft || !Array.isArray(data.products) || data.products.length > 100) throw fail('Check your saved shop and products.');
   const d = data.draft;
@@ -74,6 +77,141 @@ export function validateStudio(data){
   const client=clients.find(c=>c.id===data.activeClientId);if(!client?.projects.some(p=>p.id===data.activeProjectId))throw fail('Choose a project belonging to this client.');
   return {schemaVersion:2,activeClientId:data.activeClientId,activeProjectId:data.activeProjectId,clients};
 }
+// ---------------------------------------------------------------------------
+// Product catalogue: names, pack sizes and photos from an approved open provider.
+// All provider traffic goes through here so the browser never talks to the
+// provider, never follows arbitrary URLs and never sees credentials.
+const CATALOGUE={
+  provider:'off',apiHost:'world.openfoodfacts.org',imageHosts:['images.openfoodfacts.org'],
+  userAgent:'Handbill/1.0 (flyer builder; https://github.com/yasinjemal/shopdesk)',
+  maxQuery:80,searchTTL:600,productTTL:3600,upstreamTimeout:8000,maxJson:400000,maxImage:1500000,
+  perOwner:[20,300000],global:[120,60000],licence:'Open Food Facts · ODbL data · photos CC BY-SA 3.0'
+};
+const upstreamCalls={owners:new Map(),global:[]};
+function allowUpstream(owner){
+  const now=Date.now(),[limit,windowMs]=CATALOGUE.perOwner,[gLimit,gWindow]=CATALOGUE.global;
+  upstreamCalls.global=upstreamCalls.global.filter(t=>now-t<gWindow);
+  const mine=(upstreamCalls.owners.get(owner)||[]).filter(t=>now-t<windowMs);
+  if(mine.length>=limit||upstreamCalls.global.length>=gLimit)return false;
+  mine.push(now);upstreamCalls.owners.set(owner,mine);upstreamCalls.global.push(now);
+  if(upstreamCalls.owners.size>5000)upstreamCalls.owners.clear();
+  return true;
+}
+export function gtinValid(value){
+  const code=String(value||'').replace(/\s+/g,'');
+  if(!/^(\d{8}|\d{12}|\d{13}|\d{14})$/.test(code))return false;
+  const digits=code.split('').map(Number),check=digits.pop();
+  return (10-digits.reverse().reduce((t,d,i)=>t+d*(i%2===0?3:1),0)%10)%10===check;
+}
+const clean=(value,max)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
+function photoSource(value){
+  if(!value||typeof value!=='object')throw fail('Check the photo credit.');
+  // Checked before any trimming so an over-long value can never pass as a shorter one.
+  const provider=clean(value.provider,16),code=String(value.code??'').replace(/\s+/g,''),language=String(value.language??'').trim().toLowerCase(),revision=String(value.revision??'').trim();
+  if(provider!==CATALOGUE.provider)throw fail('Unknown photo provider.');
+  if(!gtinValid(code))throw fail('Check the product code.');
+  if(!/^[a-z]{2,3}$/.test(language))throw fail('Check the photo language.');
+  if(!/^\d{1,6}$/.test(revision))throw fail('Check the photo revision.');
+  return {provider,code,title:clean(value.title,80),author:clean(value.author,60),language,revision,url:'https://world.openfoodfacts.org/product/'+code};
+}
+function creditText(source){return 'Photo: '+(source.author||'Open Food Facts contributors')+' via Open Food Facts, CC BY-SA 3.0, '+source.url+' (lang '+source.language+', rev '+source.revision+')';}
+function imageFolder(code){
+  if(code.length<=8)return code;const padded=code.padStart(13,'0');
+  return padded.slice(0,3)+'/'+padded.slice(3,6)+'/'+padded.slice(6,9)+'/'+padded.slice(9);
+}
+function providerImageURL(source,size=400){
+  const url=new URL('https://'+CATALOGUE.imageHosts[0]+'/images/products/'+imageFolder(source.code)+'/front_'+source.language+'.'+source.revision+'.'+size+'.jpg');
+  if(!CATALOGUE.imageHosts.includes(url.hostname)||url.protocol!=='https:')throw fail('Photo host not allowed.');
+  return url.href;
+}
+async function readBounded(response,limit){
+  const reader=response.body?.getReader();if(!reader)throw fail('The product database sent no data.',502);
+  const chunks=[];let size=0;
+  try{while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>limit){await reader.cancel();throw fail('The product database sent too much data.',502);}chunks.push(value);}}finally{reader.releaseLock();}
+  const out=new Uint8Array(size);let offset=0;for(const chunk of chunks){out.set(chunk,offset);offset+=chunk.byteLength;}return out;
+}
+async function upstream(url,limit,accept){
+  const parsed=new URL(url);
+  if(parsed.protocol!=='https:'||![CATALOGUE.apiHost,...CATALOGUE.imageHosts].includes(parsed.hostname))throw fail('Provider host not allowed.');
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),CATALOGUE.upstreamTimeout);
+  let response;
+  try{response=await fetch(url,{headers:{'User-Agent':CATALOGUE.userAgent,Accept:accept},redirect:'error',signal:controller.signal});}
+  catch(e){throw fail(e.name==='AbortError'?'The product database took too long to answer.':'The product database could not be reached.',504);}
+  finally{clearTimeout(timer);}
+  if(response.status===404)return null;
+  if(!response.ok)throw fail('The product database is unavailable right now.',502);
+  return {bytes:await readBounded(response,limit),type:response.headers.get('content-type')||''};
+}
+function normaliseProduct(p){
+  const code=clean(p?.code,14);if(!gtinValid(code))return null;
+  const brand=clean((p.brands||'').split(',')[0],30),title=clean(p.product_name_en||p.product_name,60);
+  if(!title)return null;
+  const name=clean(brand&&!title.toLowerCase().includes(brand.toLowerCase())?brand+' '+title:title,50);
+  const images=p.images&&typeof p.images==='object'?p.images:{};
+  const preferred=['front_'+clean(p.lang||p.lc||'en',3).toLowerCase(),'front_en',...Object.keys(images).filter(k=>k.startsWith('front_'))];
+  const key=preferred.find(k=>images[k]&&images[k].rev!==undefined),front=key?images[key]:null;
+  const language=key?key.slice(6):'en',revision=front?String(front.rev):'';
+  const author=clean(front&&images[String(front.imgid)]?.uploader||(Array.isArray(p.photographers)?p.photographers[0]:''),60);
+  let size=clean(p.quantity,25),sizeFromName=false;
+  if(!size){const m=name.match(/(\d+\s*[x×]\s*)?(\d+(?:[.,]\d+)?)\s*(kg|g|ml|l|cl|mg)\b/i);if(m){size=(m[1]?m[1].replace(/\s*[x×]\s*/,' × '):'')+m[2].replace(',','.')+' '+(m[3].toLowerCase()==='l'?'L':m[3].toLowerCase());sizeFromName=true;}}
+  const valid=/^[a-z]{2,3}$/.test(language)&&/^\d{1,6}$/.test(revision);
+  const source={provider:CATALOGUE.provider,code,title:name,author,language:valid?language:'en',revision:valid?revision:'',url:'https://world.openfoodfacts.org/product/'+code};
+  return {code,name,size,sizeFromName,image:valid?providerImageURL(source,200):'',language:source.language,revision:source.revision,author,updated:Number(p.last_modified_t||0)||0,source};
+}
+const FIELDS='code,product_name,product_name_en,brands,quantity,images,lang,lc,last_modified_t,photographers';
+async function cachedJSON(cacheKey,ttl,load){
+  const cache=globalThis.caches?.default,request=new Request('https://handbill.cache.invalid'+cacheKey);
+  if(cache){const hit=await cache.match(request);if(hit)return {data:await hit.json(),cached:true};}
+  const data=await load();
+  if(cache&&data)await cache.put(request,new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json','Cache-Control':'max-age='+ttl}}));
+  return {data,cached:false};
+}
+async function catalogueSearch(owner,url){
+  const code=(url.searchParams.get('code')||'').replace(/\s+/g,''),q=clean(url.searchParams.get('q'),CATALOGUE.maxQuery);
+  const attribution={provider:CATALOGUE.provider,licence:CATALOGUE.licence,url:'https://world.openfoodfacts.org'};
+  if(code){
+    if(!gtinValid(code))throw fail('That barcode does not pass its check digit. Check the digits under the barcode.');
+    const {data,cached}=await cachedJSON('/product/'+code,CATALOGUE.productTTL,async()=>{
+      if(!allowUpstream(owner))throw fail('Too many online searches in a short time. Local search still works; try again in a few minutes.',429);
+      const result=await upstream('https://'+CATALOGUE.apiHost+'/api/v2/product/'+code+'.json?fields='+FIELDS,CATALOGUE.maxJson,'application/json');
+      if(!result)return {products:[]};
+      let body;try{body=JSON.parse(new TextDecoder().decode(result.bytes));}catch{throw fail('The product database sent an unreadable answer.',502);}
+      const product=body?.status===1?normaliseProduct(body.product):null;return {products:product?[product]:[]};
+    });
+    return json({...data,query:{code},cached,attribution});
+  }
+  if(q.length<2)throw fail('Type at least two letters to search online.');
+  const {data,cached}=await cachedJSON('/search/'+encodeURIComponent(q.toLowerCase()),CATALOGUE.searchTTL,async()=>{
+    if(!allowUpstream(owner))throw fail('Too many online searches in a short time. Local search still works; try again in a few minutes.',429);
+    const params=new URLSearchParams({search_terms:q,search_simple:'1',action:'process',json:'1',page_size:'12',fields:FIELDS});
+    const result=await upstream('https://'+CATALOGUE.apiHost+'/cgi/search.pl?'+params,CATALOGUE.maxJson,'application/json');
+    if(!result)return {products:[]};
+    let body;try{body=JSON.parse(new TextDecoder().decode(result.bytes));}catch{throw fail('The product database sent an unreadable answer.',502);}
+    const products=(Array.isArray(body?.products)?body.products:[]).map(normaliseProduct).filter(Boolean).slice(0,12);
+    return {products};
+  });
+  return json({...data,query:{q},cached,attribution});
+}
+async function cataloguePhoto(owner,request,env,database){
+  if(!env.BUCKET)throw fail('Photo storage is temporarily unavailable. Please try again.',503);
+  let body;try{body=JSON.parse(new TextDecoder().decode(await readLimited(request,2000)));}catch(e){if(e.status)throw e;throw fail('Could not read this photo request.');}
+  const source=photoSource(body?.source??body),sourceKey=[source.provider,source.code,source.language,source.revision].join(':'),credit=creditText(source);
+  const existing=await database.prepare('SELECT id FROM product_photos WHERE owner = ? AND source_key = ?').bind(owner,sourceKey).first();
+  if(existing)return json({id:existing.id,credit,source,reused:true});
+  const count=await database.prepare('SELECT COUNT(*) AS count FROM product_photos WHERE owner = ?').bind(owner).first();
+  if(count.count>=250)throw fail('Your photo storage is full. Remove unused photos first.',413);
+  if(!allowUpstream(owner))throw fail('Too many photo downloads in a short time. Try again in a few minutes.',429);
+  const result=await upstream(providerImageURL(source,400),CATALOGUE.maxImage,'image/jpeg,image/png,image/webp');
+  if(!result)throw fail('This product photo is no longer available from the provider.',404);
+  const bytes=result.bytes,mime=result.type.split(';')[0].trim();
+  const signature=(offset,values)=>values.every((v,i)=>bytes[offset+i]===v);
+  const kind=bytes.length>=4&&signature(0,[255,216,255])?'image/jpeg':bytes.length>=33&&signature(0,[137,80,78,71,13,10,26,10])?'image/png':bytes.length>=20&&signature(0,[82,73,70,70])&&signature(8,[87,69,66,80])?'image/webp':'';
+  if(!kind||!['image/jpeg','image/png','image/webp'].includes(mime)||kind!==mime)throw fail('The provider photo could not be read.',502);
+  const id=crypto.randomUUID(),key='photos/'+id;
+  await env.BUCKET.put(key,bytes,{httpMetadata:{contentType:kind},customMetadata:{credit:credit.slice(0,900),source:sourceKey}});
+  try{await database.prepare('INSERT INTO product_photos (id,owner,mime,bytes,created_at,source_key,credit) VALUES (?,?,?,?,?,?,?)').bind(id,owner,kind,bytes.length,new Date().toISOString(),sourceKey,credit).run();}catch(e){await env.BUCKET.delete(key);throw e;}
+  return json({id,credit,source,reused:false},201);
+}
 async function readLimited(request, limit) {
   if (Number(request.headers.get('content-length')) > limit) throw fail('This file or form is too large.',413);
   if (!request.body) throw fail('No data was received.');
@@ -115,6 +253,8 @@ async function handleAPI(request,env,url) {
     if(!updated)throw fail('Template not found in your account.',404);
     return json({id,listed:body.listed});
   }
+  if(url.pathname==='/api/catalogue/search'&&request.method==='GET')return await catalogueSearch(owner,url);
+  if(url.pathname==='/api/catalogue/photo'&&request.method==='POST')return await cataloguePhoto(owner,request,env,database);
   const studio=url.pathname==='/api/studio',workspace=studio||url.pathname==='/api/workspace';
   if(workspace && request.method==='GET'){
     const record=await database.prepare('SELECT data, revision FROM poster_workspaces WHERE owner = ?').bind(owner).first();

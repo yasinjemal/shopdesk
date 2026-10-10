@@ -1,9 +1,9 @@
 (function(root){
   'use strict';
-  const optional=['photoScale','photoX','photoY','featured','dealQuantity','combo','quantity','wasPrice','section','icon'];
+  const optional=['photoScale','photoX','photoY','featured','dealQuantity','combo','quantity','wasPrice','section','icon','caseQuantity','source'];
   function copy(item,includeFeature=true){
     const next={name:item.name||'',size:item.size||'',price:item.price??'',photo:item.photo||''};
-    for(const key of optional)if(item[key]!==undefined&&(includeFeature||!['featured','combo','quantity'].includes(key)))next[key]=item[key];
+    for(const key of optional)if(item[key]!==undefined&&(includeFeature||!['featured','combo','quantity'].includes(key))){if(key==='source'&&item[key]!==null&&(typeof item[key]!=='object'||!item[key].provider))continue;next[key]=key==='source'&&item[key]?{...item[key]}:item[key];}
     return next;
   }
   function price(value){
@@ -31,7 +31,7 @@
       const delimiter=line.includes('\t')?'\t':line.includes('|')?'|':line.includes(';')?';':',';
       const result=split(line,delimiter),cells=result.cells;
       if(index===0&&/^(product|item|service|name|product name)$/i.test(cells[0])&&/^price(?:\s*\(r\))?$/i.test(cells.at(-1)))continue;
-      let row={name:'',size:'',price:'',photo:'',source:line};
+      let row={name:'',size:'',price:'',photo:'',line};
       if((cells.length===2||cells.length===3)&&!result.quoted&&!/(?:^|\s)R\s*\d/i.test(cells.slice(0,-1).join(' '))){
         row.name=cells[0];row.size=cells.length===3?cells[1]:'';row.price=price(cells.at(-1));
       }else{
@@ -55,6 +55,7 @@
     if(item.wasPrice!==undefined&&item.wasPrice!==''&&!price(item.wasPrice))return 'Enter a valid previous price, or leave it blank.';
     if(item.section!==undefined&&item.section.length>24)return 'Shorten the section label to 24 characters.';
     if(item.icon!==undefined&&item.icon!==''&&!/^[a-z][a-z0-9-]{0,31}$/.test(item.icon))return 'Choose a valid illustration.';
+    if(item.caseQuantity!==undefined&&!(Number.isInteger(item.caseQuantity)&&item.caseQuantity>=2&&item.caseQuantity<=999))return 'Choose a case quantity from 2 to 999.';
     if(item.name.length>50)return 'Shorten the name to 50 characters.';
     if(item.size.length>25)return 'Shorten the pack or details to 25 characters.';
     if(!price(item.price))return 'Enter a price above R0, up to R1,000,000, with at most two decimal places.';
