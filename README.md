@@ -45,6 +45,16 @@ Grocery promotion coverage: weekly specials, weekend promotions, wholesale catal
 
 Promotion types are an optional `draft.promotion` value (additive, no migration). They shape wording suggestions and gallery filters only; they never change prices or text.
 
+### Adding products in one tap
+
+`docs/product-catalogue-research.md` compares every approach considered for effortless product entry. What shipped:
+
+- **A built-in product catalogue** of 257 common products for grocery, wholesale, takeaway, bakery, salon, fashion, hardware and service businesses, each with its common pack sizes, department and the words people actually type (synonyms, spelling slips, local names such as "mielie meal" or "kota"). No prices and no brands are built in.
+- **Suggestions as you type**, in the quick-add bar and in every product name field. Typing "maize" shows Maize meal with size chips; typing "chicken braai pack 5kg R89.99" fills name, size and price in one go. The person's own saved items, recent picks, last sizes and last prices rank first. Anything not in the list is kept exactly as typed.
+- **103 original illustrations**, drawn in code and coloured to match the design, so an offer looks finished before a photo exists. A real photo always replaces the illustration. Pasted lists pick up illustrations and departments automatically.
+- **Barcode lookup** through Open Food Facts for names and pack sizes only (camera scanning where the browser supports it, typed barcodes everywhere), with attribution. Photos are never taken from it.
+- **Voice entry** where the browser offers speech recognition; the words go through the same parser as typing.
+
 ### Leaflet conventions (catalogue study)
 
 `docs/catalogue-research.md` records a study of my-catalogue.co.za, the South African catalogue aggregator, and the retail leaflets it lists. The conventions it surfaced became these features:
@@ -71,7 +81,7 @@ Sources used for the price hierarchy, pack-size, date and contact conventions in
 
 `docs/catalogue-research.md` records the catalogue study. `docs/screenshots/` holds captures from the isolated local preview at 320 px, 390 px and 1280 px: the template gallery, each editor step, the combo board with 20 products in six baskets, My flyers, the wording picker, the legacy pricing page, a sheet of the eight grocery designs and a sheet of exported files (4K combo flyer, A4 export and a flyer exported from an upgraded schemaVersion 1 workspace).
 
-Verified in this environment: 58 unit tests and 33 browser checks pass; the production build completes; standard, 4K (3,840 px long edge), A4 (2,480 × 3,508) and A5 PDF (419.5 × 595.3 pt) exports have the expected dimensions; a crowded 20-product, six-basket combo flyer exports at 4K; and a schemaVersion 1 workspace saved through the old API opens, upgrades and exports.
+Verified in this environment: 62 unit tests and 35 browser checks pass; the production build completes; standard, 4K (3,840 px long edge), A4 (2,480 × 3,508) and A5 PDF (419.5 × 595.3 pt) exports have the expected dimensions; a crowded 20-product, six-basket combo flyer exports at 4K; and a schemaVersion 1 workspace saved through the old API opens, upgrades and exports.
 
 ## Features kept from ShopDesk
 
@@ -114,6 +124,7 @@ The build creates `dist/server/index.js` with embedded frontend assets, plus hos
 | `public/poster.js` | Canvas renderer for all 55 designs, shapes and exports |
 | `public/templates.js` | Starter templates, promotion types, allowlisted sharing format |
 | `public/samples.js` | Example products used only for previews |
+| `public/products.js`, `illustrations.js`, `scan.js` | Product catalogue and search, original illustrations, barcode and voice entry |
 | `public/words.js`, `wording.js` | Crafted wording by business and promotion type |
 | `public/library.js` | Template gallery page and sharing |
 | `public/promotion.js`, `items.js`, `combos.js`, `batch.js` | Editor, product tools and combo board |

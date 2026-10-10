@@ -40,6 +40,7 @@
         const deal={};if(item.dealQuantity!==undefined){if(!Number.isInteger(item.dealQuantity)||item.dealQuantity<2||item.dealQuantity>99)throw new Error('Check the multi-buy quantity.');deal.dealQuantity=item.dealQuantity;}
         if(item.wasPrice!==undefined&&item.wasPrice!==''){const was=string(item.wasPrice,20,'the previous price');if(!Number.isFinite(Number(was))||Number(was)<0||Number(was)>1000000)throw new Error('Check the previous prices.');deal.wasPrice=was;}
         if(item.section!==undefined&&item.section!==''){deal.section=string(item.section,24,'the section label');}
+        if(item.icon!==undefined&&item.icon!==''){const icon=string(item.icon,32,'the illustration');if(!/^[a-z][a-z0-9-]{0,31}$/.test(icon))throw new Error('Check the illustration.');deal.icon=icon;}
         if(result.purpose==='combos')for(const [key,min,max] of [['combo',0,result.combos.length-1],['quantity',1,99]])if(item[key]!==undefined){if(!Number.isInteger(item[key])||item[key]<min||item[key]>max)throw new Error('Check the combo products.');deal[key]=item[key];}
         return {name:string(item.name??'',50,'the item name'),size:string(item.size??'',25,'the item details'),price,photo:'',...deal};
       });

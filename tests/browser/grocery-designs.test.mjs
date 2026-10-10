@@ -46,7 +46,7 @@ for(const width of [320,1280])test(`grocery designs respond, save, export and ke
     await page.waitForFunction(()=>!document.querySelector('#download-promo').disabled);
     // Previous price and section label: entered by the person, drawn on the flyer, kept after reload.
     await click('#tab-content');const first=page.locator('#promo-items > details').first();if(!await first.evaluate(c=>c.open))await first.locator('summary').click();
-    await first.locator('.offer-options summary').click();
+    if(!await first.locator('.offer-options').evaluate(d=>d.open))await first.locator('.offer-options summary').click();
     const plain=await page.locator('#promo-canvas').evaluate(c=>c.toDataURL());
     await first.getByLabel('Previous price (optional)').fill('109.99');await first.getByLabel('Section label (optional)').fill('Butchery');
     await page.waitForFunction(()=>document.querySelector('#save-status').textContent==='All changes saved');

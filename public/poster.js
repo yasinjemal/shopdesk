@@ -62,7 +62,7 @@
     return {...f,width:f.pixels?.[0]||Math.round(f.width*scale),height:f.pixels?.[1]||Math.round(f.height*scale)};
   }
   const formatHeight=format=>(formats[format]||formats.poster).height;
-  let renderOptions={},warningScale=1;
+  let renderOptions={},warningScale=1,drawScale=1;
   let lastCtx=null;
   function surface(canvas,height,width=1080){
     canvas.width=renderOptions.width||width;canvas.height=renderOptions.height||Math.round(height);
@@ -72,7 +72,7 @@
     const scale=Math.min((canvas.width-2*margin)/width,(canvas.height-2*margin)/height);
     const x=(canvas.width-width*scale)/2,y=(canvas.height-height*scale)/2;
     ctx.translate(x,y);ctx.scale(scale,scale);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
-    warningScale=renderOptions.warningScale||scale;
+    warningScale=renderOptions.warningScale||scale;drawScale=scale;
     return ctx;
   }
   const brandName='Handbill';
@@ -127,14 +127,20 @@
     ctx.fillText(text,x,y,width);return actual;
   }
   let photoWarnings=[];
+  // Illustrations are rendered on demand at the size the card needs, so they stay crisp in 4K and print exports.
+  function resolveImage(image,width,height){
+    if(image&&image.illustration&&root.ShopDeskIllustrations)return root.ShopDeskIllustrations.render(image.illustration,Math.max(width,height)*drawScale,image.brand,image.accent);
+    return image;
+  }
   function contain(ctx,image,x,y,width,height,item){
-    const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height,b=trimPhotos?imageBounds(image):null;
+    image=resolveImage(image,width,height);
+    const iw=image.naturalWidth||image.width,ih=image.naturalHeight||image.height,b=trimPhotos&&!image.isIllustration?imageBounds(image):null;
     const sx=b?b.x*iw:0,sy=b?b.y*ih:0,sw=b?b.w*iw:iw,sh=b?b.h*ih:ih;
     const zoom=item?.photoScale??1,px=item?.photoX??0,py=item?.photoY??0,custom=zoom!==1||px!==0||py!==0;
     const scale=Math.min(width/sw,height/sh)*zoom,w=sw*scale,h=sh*scale;
     const dx=x+(width-w)/2+px*width*.5,dy=y+(height-h)/2+py*height*.5;
     const sourceRatio=(image.sourceWidth||iw)/iw;
-    if(item&&scale*warningScale/sourceRatio>1.5&&!photoWarnings.some(w=>w.photo===item.photo&&w.name===item.name))photoWarnings.push({photo:item.photo,name:item.name});
+    if(item&&!image.isIllustration&&scale*warningScale/sourceRatio>1.5&&!photoWarnings.some(w=>w.photo===item.photo&&w.name===item.name))photoWarnings.push({photo:item.photo,name:item.name});
     if(custom){ctx.save();ctx.beginPath();ctx.rect(x,y,width,height);ctx.clip();}
     ctx.fillStyle='#ffffff';ctx.fillRect(x,y,width,height);ctx.drawImage(image,sx,sy,sw,sh,dx,dy,w,h);
     if(custom)ctx.restore();
@@ -175,6 +181,12 @@
     priceStyle=data.priceStyle||'design';priceBrand=(themes[data.theme]||themes.green)[0];
     data={...data,items:root.ShopDeskBusiness.visibleItems(data),copy:root.ShopDeskBusiness.copy(data)};
     if(data.cleanNames)data={...data,items:data.items.map(i=>({...i,name:displayName(i.name,i.size)}))};
+    // An offer without a photo but with an illustration draws that illustration in the design's colours.
+    if(data.items.some(i=>!i.photo&&i.icon)){
+      const [brand,accent]=themes[data.theme]||themes.green,lookup=new Map(images);
+      data={...data,items:data.items.map(i=>{if(i.photo||!i.icon)return i;const key='illustration:'+i.icon;lookup.set(key,{illustration:i.icon,brand,accent,width:800,height:800,isIllustration:true});return {...i,photo:key};})};
+      images=lookup;
+    }
     if(data.purpose==='combos')return drawCombos(canvas,data,images);
     if(grocerStyles.includes(data.template)&&!['event','opening'].includes(data.purpose)&&(data.purpose!=='spotlight'||data.template==='bigprice'))return drawGrocer(canvas,data,images);
     if(['circular','frontpage','aisle','price-blocks','fresh-cut','split-banner'].includes(data.template)&&!['event','opening','spotlight'].includes(data.purpose))return drawTrade(canvas,data,images);

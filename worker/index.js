@@ -19,6 +19,7 @@ function item(value) {
   if(value.featured!==undefined){if(typeof value.featured!=='boolean')throw fail('Choose a valid featured offer.');styling.featured=value.featured;}
   if(value.wasPrice!==undefined){const was=text(value.wasPrice,20,'the previous price');if(was!==''&&(!Number.isFinite(Number(was))||Number(was)<0||Number(was)>1000000))throw fail('Previous prices must be between R0 and R1,000,000.');if(was!=='')styling.wasPrice=was;}
   if(value.section!==undefined){const section=text(value.section,24,'the section label');if(section)styling.section=section;}
+  if(value.icon!==undefined){const icon=text(value.icon,32,'the illustration');if(icon&&!/^[a-z][a-z0-9-]{0,31}$/.test(icon))throw fail('Choose a valid illustration.');if(icon)styling.icon=icon;}
   return { name:text(value.name,50,'the product name'),size:text(value.size,25,'the pack size'),price,photo,...styling };
 }
 export function validateWorkspace(data) {
